@@ -33,12 +33,16 @@ export function DispatchForm({
   categories,
   areas,
   backHref,
+  modal = false,
+  submitLabel,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   record?: DispatchFormRecord;
   categories: Array<{ value: string; label: string }>;
   areas: Array<{ value: string; label: string }>;
   backHref: string;
+  modal?: boolean;
+  submitLabel?: string;
 }) {
   const firstName = record?.person?.firstName ?? record?.nameSnapshot?.split(" ")[0] ?? "";
   const lastName = record?.person?.lastName ?? record?.nameSnapshot?.split(" ").slice(1).join(" ") ?? "";
@@ -137,8 +141,14 @@ export function DispatchForm({
       </DetailSection>
 
       <div className="flex items-center gap-2">
-        <Button type="submit">Guardar</Button>
-        <LinkButton href={backHref} variant="secondary">Cancelar</LinkButton>
+        <Button type="submit">{submitLabel ?? (record ? "Guardar cambios" : "Crear")}</Button>
+        {modal ? (
+          <Button type="button" variant="secondary" data-modal-close>
+            Cancelar
+          </Button>
+        ) : (
+          <LinkButton href={backHref} variant="secondary">Cancelar</LinkButton>
+        )}
       </div>
     </form>
   );

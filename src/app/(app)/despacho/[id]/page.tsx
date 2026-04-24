@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Edit, Send } from "lucide-react";
+import { Edit, Plus, Send, Upload } from "lucide-react";
+import { AppModal } from "@/components/ui/app-modal";
 import { AttachmentList, UploadForm } from "@/components/ui/attachments";
 import { AuditTimeline } from "@/components/ui/audit-timeline";
 import { Button, LinkButton } from "@/components/ui/button";
@@ -17,15 +18,17 @@ import {
   addDispatchFollowUp,
   deriveDispatchToJuridical,
   referDispatchToArea,
+  updateDispatchRecord,
   uploadDispatchAttachment,
 } from "../actions";
+import { DispatchForm } from "../dispatch-form";
 
 export default async function DispatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   assertAccess(canAccessDispatch(user));
   const { id } = await params;
 
-  const [record, attachments, auditLogs, areas, juridicalTypes] = await Promise.all([
+  const [record, attachments, auditLogs, categories, areas, juridicalTypes] = await Promise.all([
     prisma.dispatchRecord.findUnique({
       where: { id },
       include: {
@@ -52,6 +55,7 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
       include: { createdBy: true },
       orderBy: { createdAt: "desc" },
     }),
+    prisma.catalogItem.findMany({ where: { type: "dispatch_category", active: true }, orderBy: { sortOrder: "asc" } }),
     prisma.catalogItem.findMany({ where: { type: "dispatch_area", active: true }, orderBy: { sortOrder: "asc" } }),
     prisma.catalogItem.findMany({ where: { type: "juridical_type", active: true }, orderBy: { sortOrder: "asc" } }),
   ]);
@@ -66,10 +70,17 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
         description="Detalle de atencion de Despacho con seguimientos, adjuntos, derivaciones y auditoria."
         actions={
           <>
-            <LinkButton href={`/despacho/${record.id}/editar`} variant="secondary">
-              <Edit className="h-4 w-4" />
-              Editar
-            </LinkButton>
+            <AppModal title={`Editar ${record.internalNumber}`} trigger={<><Edit className="h-4 w-4" />Editar</>} triggerVariant="secondary" size="xl">
+              <DispatchForm
+                action={updateDispatchRecord.bind(null, record.id)}
+                record={record}
+                categories={categories.map((item) => ({ value: item.value, label: item.label }))}
+                areas={areas.map((item) => ({ value: item.value, label: item.label }))}
+                backHref={`/despacho/${record.id}`}
+                modal
+                submitLabel="Guardar cambios"
+              />
+            </AppModal>
             <LinkButton href="/despacho" variant="secondary">Volver</LinkButton>
           </>
         }
@@ -126,25 +137,30 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
             </div>
           </DetailSection>
 
-          <DetailSection title="Seguimientos">
-            <form action={addDispatchFollowUp.bind(null, record.id)} className="mb-5 space-y-3 rounded-md border border-slate-200 bg-slate-50 p-4">
-              <FormField label="Nuevo seguimiento">
-                <textarea name="content" className={textareaClass} required />
-              </FormField>
-              <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-                <FormField label="Estado posterior">
-                  <select name="statusAfter" className={inputClass} defaultValue="">
-                    <option value="">Sin cambio</option>
-                    {DISPATCH_STATUSES.map((status) => (
-                      <option key={status} value={status}>{labelFromValue(status)}</option>
-                    ))}
-                  </select>
-                </FormField>
-                <div className="flex items-end">
-                  <Button type="submit">Agregar seguimiento</Button>
-                </div>
-              </div>
-            </form>
+          <DetailSection
+            title="Seguimientos"
+            action={
+              <AppModal title="Agregar seguimiento" trigger={<><Plus className="h-4 w-4" />Agregar seguimiento</>} size="md">
+                <form action={addDispatchFollowUp.bind(null, record.id)} className="space-y-4">
+                  <FormField label="Nuevo seguimiento">
+                    <textarea name="content" className={textareaClass} required />
+                  </FormField>
+                  <FormField label="Estado posterior">
+                    <select name="statusAfter" className={inputClass} defaultValue="">
+                      <option value="">Sin cambio</option>
+                      {DISPATCH_STATUSES.map((status) => (
+                        <option key={status} value={status}>{labelFromValue(status)}</option>
+                      ))}
+                    </select>
+                  </FormField>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button type="submit">Guardar</Button>
+                    <Button type="button" variant="secondary" data-modal-close>Cancelar</Button>
+                  </div>
+                </form>
+              </AppModal>
+            }
+          >
             <div className="space-y-3">
               {record.followUps.map((followUp) => (
                 <div key={followUp.id} className="rounded-md border border-slate-200 p-3">
@@ -164,37 +180,45 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
         <aside className="space-y-5">
           <DetailSection title="Derivaciones">
             <div className="space-y-4">
-              <form action={deriveDispatchToJuridical.bind(null, record.id)} className="space-y-3">
-                <FormField label="Derivar a Intervenciones">
-                  <textarea name="summary" className={textareaClass} placeholder="Resumen necesario para continuar la intervencion" />
-                </FormField>
-                <FormField label="Tipo sugerido">
-                  <select name="type" className={inputClass} defaultValue="PRIMERA_INTERVENCION">
-                    {juridicalTypes.map((item) => (
-                      <option key={item.value} value={item.value}>{item.label}</option>
-                    ))}
-                  </select>
-                </FormField>
-                <Button type="submit" variant="secondary">
-                  <Send className="h-4 w-4" />
-                  Derivar a Intervenciones
-                </Button>
-              </form>
-
-              <form action={referDispatchToArea.bind(null, record.id)} className="space-y-3 border-t border-slate-200 pt-4">
-                <FormField label="Derivar a otra area">
-                  <select name="area" className={inputClass} defaultValue="">
-                    <option value="">Seleccionar area</option>
-                    {areas.map((item) => (
-                      <option key={item.value} value={item.label}>{item.label}</option>
-                    ))}
-                  </select>
-                </FormField>
-                <FormField label="Resumen">
-                  <textarea name="summary" className={textareaClass} />
-                </FormField>
-                <Button type="submit" variant="secondary">Derivar a area</Button>
-              </form>
+              <div className="flex flex-wrap gap-2">
+                <AppModal title="Derivar a Intervenciones" trigger={<><Send className="h-4 w-4" />Derivar a Intervenciones</>} triggerVariant="secondary" size="md">
+                  <form action={deriveDispatchToJuridical.bind(null, record.id)} className="space-y-4">
+                    <FormField label="Derivar a Intervenciones">
+                      <textarea name="summary" className={textareaClass} placeholder="Resumen necesario para continuar la intervencion" required />
+                    </FormField>
+                    <FormField label="Tipo sugerido">
+                      <select name="type" className={inputClass} defaultValue="PRIMERA_INTERVENCION">
+                        {juridicalTypes.map((item) => (
+                          <option key={item.value} value={item.value}>{item.label}</option>
+                        ))}
+                      </select>
+                    </FormField>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button type="submit">Guardar</Button>
+                      <Button type="button" variant="secondary" data-modal-close>Cancelar</Button>
+                    </div>
+                  </form>
+                </AppModal>
+                <AppModal title="Derivar a otra area" trigger="Derivar a area" triggerVariant="secondary" size="md">
+                  <form action={referDispatchToArea.bind(null, record.id)} className="space-y-4">
+                    <FormField label="Derivar a otra area">
+                      <select name="area" className={inputClass} defaultValue="" required>
+                        <option value="">Seleccionar area</option>
+                        {areas.map((item) => (
+                          <option key={item.value} value={item.label}>{item.label}</option>
+                        ))}
+                      </select>
+                    </FormField>
+                    <FormField label="Resumen">
+                      <textarea name="summary" className={textareaClass} required />
+                    </FormField>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button type="submit">Guardar</Button>
+                      <Button type="button" variant="secondary" data-modal-close>Cancelar</Button>
+                    </div>
+                  </form>
+                </AppModal>
+              </div>
 
               <div className="border-t border-slate-200 pt-4">
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Historial de derivaciones</p>
@@ -222,7 +246,9 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
           <DetailSection title="Adjuntos">
             <div className="space-y-4">
               <AttachmentList attachments={attachments} />
-              <UploadForm action={uploadDispatchAttachment.bind(null, record.id)} />
+              <AppModal title="Adjuntar archivo" trigger={<><Upload className="h-4 w-4" />Adjuntar archivo</>} triggerVariant="secondary" size="md">
+                <UploadForm action={uploadDispatchAttachment.bind(null, record.id)} modal />
+              </AppModal>
             </div>
           </DetailSection>
 

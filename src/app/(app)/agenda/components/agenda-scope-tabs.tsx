@@ -13,16 +13,16 @@ export function AgendaScopeTabs({
   query: AgendaQueryValues;
 }) {
   return (
-    <div className="mb-5 flex flex-wrap gap-2">
+    <div className="inline-flex max-w-full flex-wrap gap-2">
       {scopes.map((scope) => (
         <Link
           key={scope}
           href={agendaHref(query, { scope })}
           className={cn(
-            "rounded-md border px-3 py-2 text-sm font-medium transition",
+            "inline-flex h-9 items-center rounded-md border px-4 text-xs font-semibold transition",
             activeScope === scope
-              ? "border-sky-700 bg-sky-700 text-white"
-              : "border-slate-300 bg-white text-slate-700 hover:bg-slate-50",
+              ? "border-[#0b2a55] bg-[#0b2a55] text-white shadow-sm"
+              : "border-slate-200 bg-white text-[#14213d] hover:bg-slate-50",
           )}
         >
           {CALENDAR_SCOPE_LABELS[scope]}

@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import type { Prisma } from "@prisma/client";
+import { AppModal } from "@/components/ui/app-modal";
 import { FilterBar, FilterInput, FilterSelect } from "@/components/ui/filter-bar";
-import { LinkButton } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Table, Td } from "@/components/ui/table";
@@ -13,6 +13,8 @@ import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessDispatch } from "@/lib/rbac";
 import { dateRangeWhere, param } from "@/lib/search";
 import type { SearchParams } from "@/lib/types";
+import { createDispatchRecord } from "./actions";
+import { DispatchForm } from "./dispatch-form";
 
 export default async function DispatchListPage({
   searchParams,
@@ -57,7 +59,7 @@ export default async function DispatchListPage({
     ...(andFilters.length ? { AND: andFilters } : {}),
   };
 
-  const [records, categories, users] = await Promise.all([
+  const [records, categories, users, areas] = await Promise.all([
     prisma.dispatchRecord.findMany({
       where,
       include: { person: true, createdBy: true, originReferrals: true },
@@ -69,6 +71,7 @@ export default async function DispatchListPage({
       orderBy: { sortOrder: "asc" },
     }),
     prisma.user.findMany({ where: { role: "despacho", active: true }, orderBy: { name: "asc" } }),
+    prisma.catalogItem.findMany({ where: { type: "dispatch_area", active: true }, orderBy: { sortOrder: "asc" } }),
   ]);
 
   return (
@@ -77,10 +80,16 @@ export default async function DispatchListPage({
         title="Despacho · Atenciones / Reclamos"
         description="Registro operativo de reclamos, consultas, sugerencias, pedidos, derivaciones y seguimiento simple."
         actions={
-          <LinkButton href="/despacho/nuevo">
-            <Plus className="h-4 w-4" />
-            Nueva atencion
-          </LinkButton>
+          <AppModal title="Nueva atencion de Despacho" trigger={<><Plus className="h-4 w-4" />Nueva atencion</>} size="xl">
+            <DispatchForm
+              action={createDispatchRecord}
+              categories={categories.map((item) => ({ value: item.value, label: item.label }))}
+              areas={areas.map((item) => ({ value: item.value, label: item.label }))}
+              backHref="/despacho"
+              modal
+              submitLabel="Crear"
+            />
+          </AppModal>
         }
       />
 

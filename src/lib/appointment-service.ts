@@ -1,32 +1,44 @@
 import "server-only";
 
-import type { Prisma } from "@prisma/client";
+import { APPOINTMENT_STATUSES, APPOINTMENT_TYPES, ASSIGNED_AREAS, type AgendaViewScope } from "./appointment-constants";
+import { canViewAppointment } from "./appointment-permissions";
 import { ROLES } from "./constants";
-import { prisma } from "./prisma";
+import { sqliteQuery, sqliteQueryOne, type SqliteParam } from "./sqlite";
 import type { CurrentUser } from "./types";
-import {
-  APPOINTMENT_STATUSES,
-  APPOINTMENT_TYPES,
-  ASSIGNED_AREAS,
-  type AgendaViewScope,
-} from "./appointment-constants";
-import { canViewAppointment, isAgendaManager } from "./appointment-permissions";
-
-const appointmentInclude = {
-  owner: { select: { id: true, name: true, role: true } },
-  createdBy: { select: { id: true, name: true, role: true } },
-  assignedUser: { select: { id: true, name: true, role: true } },
-  assignedLawyer: { select: { id: true, name: true, role: true } },
-} satisfies Prisma.AppointmentInclude;
-
-export type AppointmentWithRelations = Prisma.AppointmentGetPayload<{
-  include: typeof appointmentInclude;
-}>;
 
 export type AgendaUserOption = {
   id: string;
   name: string;
   role: string;
+};
+
+export type AppointmentWithRelations = {
+  id: string;
+  title: string;
+  date: string;
+  startTime: string;
+  endTime: string | null;
+  calendarScope: string;
+  ownerUserId: string | null;
+  createdByUserId: string;
+  assignedUserId: string | null;
+  assignedLawyerId: string | null;
+  assignedArea: string | null;
+  clientName: string | null;
+  lawyerName: string | null;
+  type: string;
+  status: string;
+  location: string | null;
+  notes: string | null;
+  caseId: string | null;
+  caseTitle: string | null;
+  expedienteNumber: string | null;
+  createdAt: number | string;
+  updatedAt: number | string;
+  owner: AgendaUserOption | null;
+  createdBy: AgendaUserOption | null;
+  assignedUser: AgendaUserOption | null;
+  assignedLawyer: AgendaUserOption | null;
 };
 
 export type AgendaFilters = {
@@ -39,63 +51,127 @@ export type AgendaFilters = {
   date?: string;
 };
 
-function noAccessWhere(): Prisma.AppointmentWhereInput {
-  return { id: "__no_access__" };
+type AppointmentRow = Omit<
+  AppointmentWithRelations,
+  "owner" | "createdBy" | "assignedUser" | "assignedLawyer"
+> & {
+  ownerId: string | null;
+  ownerName: string | null;
+  ownerRole: string | null;
+  createdById: string | null;
+  createdByName: string | null;
+  createdByRole: string | null;
+  assignedUserRelationId: string | null;
+  assignedUserName: string | null;
+  assignedUserRole: string | null;
+  assignedLawyerRelationId: string | null;
+  assignedLawyerName: string | null;
+  assignedLawyerRole: string | null;
+};
+
+const appointmentSelect = `
+  SELECT
+    a.id,
+    a.title,
+    a.date,
+    a.startTime,
+    a.endTime,
+    a.calendarScope,
+    a.ownerUserId,
+    a.createdByUserId,
+    a.assignedUserId,
+    a.assignedLawyerId,
+    a.assignedArea,
+    a.clientName,
+    a.lawyerName,
+    a.type,
+    a.status,
+    a.location,
+    a.notes,
+    a.caseId,
+    a.caseTitle,
+    a.expedienteNumber,
+    a.createdAt,
+    a.updatedAt,
+    owner.id AS ownerId,
+    owner.name AS ownerName,
+    owner.role AS ownerRole,
+    createdBy.id AS createdById,
+    createdBy.name AS createdByName,
+    createdBy.role AS createdByRole,
+    assignedUser.id AS assignedUserRelationId,
+    assignedUser.name AS assignedUserName,
+    assignedUser.role AS assignedUserRole,
+    assignedLawyer.id AS assignedLawyerRelationId,
+    assignedLawyer.name AS assignedLawyerName,
+    assignedLawyer.role AS assignedLawyerRole
+  FROM Appointment a
+  LEFT JOIN User owner ON owner.id = a.ownerUserId
+  LEFT JOIN User createdBy ON createdBy.id = a.createdByUserId
+  LEFT JOIN User assignedUser ON assignedUser.id = a.assignedUserId
+  LEFT JOIN User assignedLawyer ON assignedLawyer.id = a.assignedLawyerId
+`;
+
+function relation(id: string | null, name: string | null, role: string | null): AgendaUserOption | null {
+  return id && name && role ? { id, name, role } : null;
 }
 
-function assignmentVisibilityWhere(user: CurrentUser): Prisma.AppointmentWhereInput[] {
-  const filters: Prisma.AppointmentWhereInput[] = [
-    { assignedUserId: user.id, NOT: { calendarScope: "personal" } },
-    { assignedLawyerId: user.id, NOT: { calendarScope: "personal" } },
+function rowToAppointment(row: AppointmentRow): AppointmentWithRelations {
+  return {
+    id: row.id,
+    title: row.title,
+    date: row.date,
+    startTime: row.startTime,
+    endTime: row.endTime,
+    calendarScope: row.calendarScope,
+    ownerUserId: row.ownerUserId,
+    createdByUserId: row.createdByUserId,
+    assignedUserId: row.assignedUserId,
+    assignedLawyerId: row.assignedLawyerId,
+    assignedArea: row.assignedArea,
+    clientName: row.clientName,
+    lawyerName: row.lawyerName,
+    type: row.type,
+    status: row.status,
+    location: row.location,
+    notes: row.notes,
+    caseId: row.caseId,
+    caseTitle: row.caseTitle,
+    expedienteNumber: row.expedienteNumber,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+    owner: relation(row.ownerId, row.ownerName, row.ownerRole),
+    createdBy: relation(row.createdById, row.createdByName, row.createdByRole),
+    assignedUser: relation(row.assignedUserRelationId, row.assignedUserName, row.assignedUserRole),
+    assignedLawyer: relation(row.assignedLawyerRelationId, row.assignedLawyerName, row.assignedLawyerRole),
+  };
+}
+
+function addFilter(filters: string[], params: SqliteParam[], condition: string, ...values: SqliteParam[]) {
+  filters.push(condition);
+  params.push(...values);
+}
+
+function addSearchFilter(filters: string[], params: SqliteParam[], query: string) {
+  const like = `%${query.toLowerCase()}%`;
+  const columns = [
+    "a.title",
+    "a.clientName",
+    "a.lawyerName",
+    "a.type",
+    "a.status",
+    "a.assignedArea",
+    "a.caseId",
+    "a.caseTitle",
+    "a.expedienteNumber",
+    "a.notes",
+    "a.location",
+    "assignedUser.name",
+    "assignedLawyer.name",
   ];
 
-  if (user.role === ROLES.juridico) {
-    filters.push({ assignedArea: "lawyers", NOT: { calendarScope: { in: ["personal", "lawyers"] } } });
-  }
-  if (user.role === ROLES.despacho) {
-    filters.push({ assignedArea: "dispatch", NOT: { calendarScope: { in: ["personal", "dispatch"] } } });
-  }
-
-  return filters;
-}
-
-export function appointmentVisibilityWhere(user: CurrentUser, viewScope: AgendaViewScope): Prisma.AppointmentWhereInput {
-  if (isAgendaManager(user)) {
-    if (viewScope === "all") return {};
-    if (viewScope === "personal") return { calendarScope: "personal", ownerUserId: user.id };
-    return { calendarScope: viewScope };
-  }
-
-  if (viewScope === "personal") {
-    return {
-      OR: [{ calendarScope: "personal", ownerUserId: user.id }, ...assignmentVisibilityWhere(user)],
-    };
-  }
-
-  if (viewScope === "lawyers" && user.role === ROLES.juridico) return { calendarScope: "lawyers" };
-  if (viewScope === "dispatch" && user.role === ROLES.despacho) return { calendarScope: "dispatch" };
-
-  return noAccessWhere();
-}
-
-function searchWhere(query: string): Prisma.AppointmentWhereInput {
-  return {
-    OR: [
-      { title: { contains: query } },
-      { clientName: { contains: query } },
-      { lawyerName: { contains: query } },
-      { type: { contains: query } },
-      { status: { contains: query } },
-      { assignedArea: { contains: query } },
-      { caseId: { contains: query } },
-      { caseTitle: { contains: query } },
-      { expedienteNumber: { contains: query } },
-      { notes: { contains: query } },
-      { location: { contains: query } },
-      { assignedUser: { name: { contains: query } } },
-      { assignedLawyer: { name: { contains: query } } },
-    ],
-  };
+  filters.push(`(${columns.map((column) => `LOWER(COALESCE(${column}, '')) LIKE ?`).join(" OR ")})`);
+  params.push(...columns.map(() => like));
 }
 
 export async function getVisibleAppointments(input: {
@@ -106,43 +182,53 @@ export async function getVisibleAppointments(input: {
   filters?: AgendaFilters;
 }) {
   const filters = input.filters ?? {};
-  const andFilters: Prisma.AppointmentWhereInput[] = [
-    appointmentVisibilityWhere(input.user, input.viewScope),
-    { date: { gte: input.monthStart, lte: input.monthEnd } },
-  ];
+  const where: string[] = [];
+  const params: SqliteParam[] = [];
 
-  if (filters.date) andFilters.push({ date: filters.date });
-  if (filters.q) andFilters.push(searchWhere(filters.q));
+  if (filters.date) {
+    addFilter(where, params, "a.date = ?", filters.date);
+  } else {
+    addFilter(where, params, "a.date >= ? AND a.date <= ?", input.monthStart, input.monthEnd);
+  }
+
+  if (filters.q) addSearchFilter(where, params, filters.q);
   if (filters.type && (APPOINTMENT_TYPES as readonly string[]).includes(filters.type)) {
-    andFilters.push({ type: filters.type });
+    addFilter(where, params, "a.type = ?", filters.type);
   }
   if (filters.status && (APPOINTMENT_STATUSES as readonly string[]).includes(filters.status)) {
-    andFilters.push({ status: filters.status });
+    addFilter(where, params, "a.status = ?", filters.status);
   }
-  if (filters.assignedLawyerId) andFilters.push({ assignedLawyerId: filters.assignedLawyerId });
-  if (filters.assignedUserId) andFilters.push({ assignedUserId: filters.assignedUserId });
+  if (filters.assignedLawyerId) addFilter(where, params, "a.assignedLawyerId = ?", filters.assignedLawyerId);
+  if (filters.assignedUserId) addFilter(where, params, "a.assignedUserId = ?", filters.assignedUserId);
   if (filters.assignedArea && (ASSIGNED_AREAS as readonly string[]).includes(filters.assignedArea)) {
-    andFilters.push({ assignedArea: filters.assignedArea });
+    addFilter(where, params, "a.assignedArea = ?", filters.assignedArea);
   }
+  if (input.viewScope !== "all") addFilter(where, params, "a.calendarScope = ?", input.viewScope);
 
-  const appointments = await prisma.appointment.findMany({
-    where: { AND: andFilters },
-    include: appointmentInclude,
-    orderBy: [{ date: "asc" }, { startTime: "asc" }],
-  });
+  const rows = await sqliteQuery<AppointmentRow>(
+    `${appointmentSelect}
+     WHERE ${where.join(" AND ")}
+     ORDER BY a.date ASC, a.startTime ASC`,
+    params,
+  );
 
-  return appointments.filter((appointment) => canViewAppointment(input.user, appointment));
+  return rows.map(rowToAppointment).filter((appointment) => canViewAppointment(input.user, appointment));
+}
+
+export async function getAppointmentById(id: string) {
+  const row = await sqliteQueryOne<AppointmentRow>(`${appointmentSelect} WHERE a.id = ? LIMIT 1`, [id]);
+  return row ? rowToAppointment(row) : null;
 }
 
 export async function getAgendaUserOptions() {
-  const users = await prisma.user.findMany({
-    where: {
-      active: true,
-      role: { in: [ROLES.juridico, ROLES.despacho, ROLES.directivo] },
-    },
-    select: { id: true, name: true, role: true },
-    orderBy: [{ role: "asc" }, { name: "asc" }],
-  });
+  const users = await sqliteQuery<AgendaUserOption>(
+    `SELECT id, name, role
+     FROM User
+     WHERE active = 1
+       AND role IN (?, ?, ?)
+     ORDER BY role ASC, name ASC`,
+    [ROLES.juridico, ROLES.despacho, ROLES.directivo],
+  );
 
   return {
     users,

@@ -1,15 +1,41 @@
 import type { ReactNode } from "react";
+import { SlidersHorizontal } from "lucide-react";
+import { AppModal } from "./app-modal";
 import { Button, LinkButton } from "./button";
 
 export function FilterBar({ children, resetHref }: { children: ReactNode; resetHref: string }) {
   return (
-    <form className="mb-5 rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-6">{children}</div>
-      <div className="mt-4 flex items-center gap-2">
-        <Button type="submit" variant="primary">Filtrar</Button>
-        <LinkButton href={resetHref} variant="secondary">Limpiar</LinkButton>
+    <div className="mb-5 flex flex-wrap items-center gap-2">
+      <AppModal
+        title="Filtrar resultados"
+        description="Ajusta los criterios de busqueda y listado."
+        trigger={(
+          <>
+            <SlidersHorizontal className="h-4 w-4" />
+            Filtrar
+          </>
+        )}
+        size="lg"
+      >
+        <form className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{children}</div>
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 pt-4">
+            <Button type="button" variant="secondary" data-modal-close>
+              Cancelar
+            </Button>
+            <LinkButton href={resetHref} variant="secondary">
+              Limpiar
+            </LinkButton>
+            <Button type="submit" variant="primary">
+              Aplicar filtros
+            </Button>
+          </div>
+        </form>
+      </AppModal>
+      <LinkButton href={resetHref} variant="secondary">
+        Limpiar
+      </LinkButton>
       </div>
-    </form>
   );
 }
 

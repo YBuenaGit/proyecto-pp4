@@ -23,6 +23,7 @@ type AppointmentFormProps = {
   appointment?: AppointmentWithRelations;
   submitLabel?: string;
   compact?: boolean;
+  modal?: boolean;
 };
 
 export function AppointmentForm({
@@ -34,6 +35,7 @@ export function AppointmentForm({
   appointment,
   submitLabel,
   compact,
+  modal = false,
 }: AppointmentFormProps) {
   const scope = isCalendarScope(appointment?.calendarScope)
     ? appointment.calendarScope
@@ -136,6 +138,11 @@ export function AppointmentForm({
         {appointment ? <Save className="h-4 w-4" /> : <CalendarPlus className="h-4 w-4" />}
         {submitLabel ?? (appointment ? "Guardar cambios" : "Crear cita")}
       </Button>
+      {modal ? (
+        <Button type="button" variant="secondary" className={compact ? "w-full sm:w-auto" : ""} data-modal-close>
+          Cancelar
+        </Button>
+      ) : null}
     </form>
   );
 }

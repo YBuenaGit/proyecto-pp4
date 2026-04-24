@@ -3,8 +3,8 @@ import "server-only";
 import { compare } from "bcryptjs";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { createHash, randomBytes } from "node:crypto";
-import { prisma } from "./prisma";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { sqliteExecute, sqliteNow, sqliteQueryOne } from "./sqlite";
 import type { CurrentUser } from "./types";
 
 export const SESSION_COOKIE = "seguridad_session";
@@ -14,18 +14,41 @@ function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
 
+type UserRow = CurrentUser & {
+  passwordHash: string;
+  active: number | boolean;
+};
+
+type SessionUserRow = UserRow & {
+  sessionId: string;
+  expiresAt: number | string;
+};
+
+function rowToCurrentUser(row: UserRow): CurrentUser {
+  return {
+    id: row.id,
+    name: row.name,
+    username: row.username,
+    email: row.email,
+    role: row.role,
+    active: Boolean(row.active),
+  };
+}
+
+function sqliteDate(value: number | string) {
+  return new Date(typeof value === "number" ? value : value);
+}
+
 export async function createSession(userId: string) {
   const token = randomBytes(32).toString("hex");
   const tokenHash = hashToken(token);
   const expiresAt = new Date(Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000);
 
-  await prisma.session.create({
-    data: {
-      tokenHash,
-      userId,
-      expiresAt,
-    },
-  });
+  await sqliteExecute(
+    `INSERT INTO Session (id, tokenHash, userId, expiresAt, createdAt)
+     VALUES (?, ?, ?, ?, ?)`,
+    [randomUUID(), tokenHash, userId, expiresAt.getTime(), sqliteNow()],
+  );
 
   const cookieStore = await cookies();
   cookieStore.set(SESSION_COOKIE, token, {
@@ -41,7 +64,7 @@ export async function destroySession() {
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (token) {
-    await prisma.session.deleteMany({ where: { tokenHash: hashToken(token) } });
+    await sqliteExecute("DELETE FROM Session WHERE tokenHash = ?", [hashToken(token)]);
   }
   cookieStore.delete(SESSION_COOKIE);
 }
@@ -51,24 +74,30 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) return null;
 
-  const session = await prisma.session.findUnique({
-    where: { tokenHash: hashToken(token) },
-    include: { user: true },
-  });
+  const session = await sqliteQueryOne<SessionUserRow>(
+    `SELECT
+       s.id AS sessionId,
+       s.expiresAt AS expiresAt,
+       u.id AS id,
+       u.name AS name,
+       u.username AS username,
+       u.email AS email,
+       u.passwordHash AS passwordHash,
+       u.role AS role,
+       u.active AS active
+     FROM Session s
+     INNER JOIN User u ON u.id = s.userId
+     WHERE s.tokenHash = ?
+     LIMIT 1`,
+    [hashToken(token)],
+  );
 
-  if (!session || session.expiresAt < new Date() || !session.user.active) {
-    if (session) await prisma.session.delete({ where: { id: session.id } });
+  if (!session || sqliteDate(session.expiresAt) < new Date() || !Boolean(session.active)) {
+    if (session) await sqliteExecute("DELETE FROM Session WHERE id = ?", [session.sessionId]);
     return null;
   }
 
-  return {
-    id: session.user.id,
-    name: session.user.name,
-    username: session.user.username,
-    email: session.user.email,
-    role: session.user.role,
-    active: session.user.active,
-  };
+  return rowToCurrentUser(session);
 }
 
 export async function requireUser() {
@@ -78,8 +107,14 @@ export async function requireUser() {
 }
 
 export async function verifyCredentials(username: string, password: string) {
-  const user = await prisma.user.findUnique({ where: { username } });
-  if (!user || !user.active) return null;
+  const user = await sqliteQueryOne<UserRow>(
+    `SELECT id, name, username, email, passwordHash, role, active
+     FROM User
+     WHERE username = ?
+     LIMIT 1`,
+    [username],
+  );
+  if (!user || !Boolean(user.active)) return null;
   const ok = await compare(password, user.passwordHash);
-  return ok ? user : null;
+  return ok ? rowToCurrentUser(user) : null;
 }

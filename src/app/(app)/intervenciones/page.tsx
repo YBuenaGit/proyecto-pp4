@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { Plus } from "lucide-react";
-import { LinkButton } from "@/components/ui/button";
+import { AppModal } from "@/components/ui/app-modal";
 import { FilterBar, FilterInput, FilterSelect } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -13,6 +13,8 @@ import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessJuridical } from "@/lib/rbac";
 import { dateRangeWhere, param } from "@/lib/search";
 import type { SearchParams } from "@/lib/types";
+import { createJuridicalIntervention } from "./actions";
+import { InterventionForm } from "./intervention-form";
 
 export default async function InterventionsListPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const user = await requireUser();
@@ -56,7 +58,7 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
     ...(andFilters.length ? { AND: andFilters } : {}),
   };
 
-  const [interventions, types, users] = await Promise.all([
+  const [interventions, types, users, contexts] = await Promise.all([
     prisma.juridicalIntervention.findMany({
       where,
       include: { person: true, createdBy: true, destinationReferrals: true },
@@ -65,6 +67,7 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
     }),
     prisma.catalogItem.findMany({ where: { type: "juridical_type", active: true }, orderBy: { sortOrder: "asc" } }),
     prisma.user.findMany({ where: { role: "juridico", active: true }, orderBy: { name: "asc" } }),
+    prisma.catalogItem.findMany({ where: { type: "intervention_context", active: true }, orderBy: { sortOrder: "asc" } }),
   ]);
 
   return (
@@ -72,7 +75,18 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
       <PageHeader
         title="Intervenciones Juridico-Institucionales"
         description="Registro amplio de orientaciones, contencion, informes, oficios, actuaciones y conflictos vecinales."
-        actions={<LinkButton href="/intervenciones/nueva"><Plus className="h-4 w-4" />Nueva intervencion</LinkButton>}
+        actions={
+          <AppModal title="Nueva intervencion" trigger={<><Plus className="h-4 w-4" />Nueva intervencion</>} size="xl">
+            <InterventionForm
+              action={createJuridicalIntervention}
+              types={types.map((item) => ({ value: item.value, label: item.label }))}
+              contexts={contexts.map((item) => ({ value: item.value, label: item.label }))}
+              backHref="/intervenciones"
+              modal
+              submitLabel="Crear"
+            />
+          </AppModal>
+        }
       />
 
       <FilterBar resetHref="/intervenciones">

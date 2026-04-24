@@ -1,8 +1,8 @@
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { Plus } from "lucide-react";
+import { AppModal } from "@/components/ui/app-modal";
 import { FilterBar, FilterInput, FilterSelect } from "@/components/ui/filter-bar";
-import { LinkButton } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Table, Td } from "@/components/ui/table";
@@ -13,6 +13,8 @@ import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessExpedients } from "@/lib/rbac";
 import { dateRangeWhere, param } from "@/lib/search";
 import type { SearchParams } from "@/lib/types";
+import { createExpedient } from "../actions";
+import { ExpedientForm } from "./expedient-form";
 
 export default async function ExpedientsListPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const user = await requireUser();
@@ -41,7 +43,17 @@ export default async function ExpedientsListPage({ searchParams }: { searchParam
       <PageHeader
         title="Despacho · Expedientes internos"
         description="Submodulo administrativo para compras, repuestos, sueldos, alimentos, insumos, mantenimiento y otros expedientes."
-        actions={<LinkButton href="/despacho/expedientes/nuevo"><Plus className="h-4 w-4" />Nuevo expediente</LinkButton>}
+        actions={
+          <AppModal title="Nuevo expediente interno" trigger={<><Plus className="h-4 w-4" />Nuevo expediente</>} size="lg">
+            <ExpedientForm
+              action={createExpedient}
+              categories={categories.map((item) => ({ value: item.value, label: item.label }))}
+              backHref="/despacho/expedientes"
+              modal
+              submitLabel="Crear"
+            />
+          </AppModal>
+        }
       />
 
       <FilterBar resetHref="/despacho/expedientes">

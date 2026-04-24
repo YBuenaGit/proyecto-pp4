@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Edit, Send } from "lucide-react";
+import { Edit, Plus, Send, Upload } from "lucide-react";
+import { AppModal } from "@/components/ui/app-modal";
 import { AttachmentList, UploadForm } from "@/components/ui/attachments";
 import { AuditTimeline } from "@/components/ui/audit-timeline";
 import { Button, LinkButton } from "@/components/ui/button";
@@ -16,14 +17,16 @@ import { assertAccess, canAccessDispatch, canAccessJuridical } from "@/lib/rbac"
 import {
   addJuridicalAction,
   deriveJuridicalToDispatch,
+  updateJuridicalIntervention,
   uploadJuridicalAttachment,
 } from "../actions";
+import { InterventionForm } from "../intervention-form";
 
 export default async function InterventionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
   const { id } = await params;
-  const [intervention, attachments, auditLogs, areas] = await Promise.all([
+  const [intervention, attachments, auditLogs, areas, types, contexts] = await Promise.all([
     prisma.juridicalIntervention.findUnique({
       where: { id },
       include: {
@@ -51,6 +54,8 @@ export default async function InterventionDetailPage({ params }: { params: Promi
       orderBy: { createdAt: "desc" },
     }),
     prisma.catalogItem.findMany({ where: { type: "dispatch_area", active: true }, orderBy: { sortOrder: "asc" } }),
+    prisma.catalogItem.findMany({ where: { type: "juridical_type", active: true }, orderBy: { sortOrder: "asc" } }),
+    prisma.catalogItem.findMany({ where: { type: "intervention_context", active: true }, orderBy: { sortOrder: "asc" } }),
   ]);
   if (!intervention) notFound();
   const directivoCanSeeDispatch = canAccessDispatch(user);
@@ -62,7 +67,17 @@ export default async function InterventionDetailPage({ params }: { params: Promi
         description="Detalle interno de Intervenciones Juridico-Institucionales. Este contenido no se expone a usuarios de Despacho."
         actions={
           <>
-            <LinkButton href={`/intervenciones/${intervention.id}/editar`} variant="secondary"><Edit className="h-4 w-4" />Editar</LinkButton>
+            <AppModal title={`Editar ${intervention.internalNumber}`} trigger={<><Edit className="h-4 w-4" />Editar</>} triggerVariant="secondary" size="xl">
+              <InterventionForm
+                action={updateJuridicalIntervention.bind(null, intervention.id)}
+                record={intervention}
+                types={types.map((item) => ({ value: item.value, label: item.label }))}
+                contexts={contexts.map((item) => ({ value: item.value, label: item.label }))}
+                backHref={`/intervenciones/${intervention.id}`}
+                modal
+                submitLabel="Guardar cambios"
+              />
+            </AppModal>
             <LinkButton href="/intervenciones" variant="secondary">Volver</LinkButton>
           </>
         }
@@ -122,37 +137,42 @@ export default async function InterventionDetailPage({ params }: { params: Promi
             </div>
           </DetailSection>
 
-          <DetailSection title="Actuaciones y seguimientos">
-            <form action={addJuridicalAction.bind(null, intervention.id)} className="mb-5 space-y-3 rounded-md border border-slate-200 bg-slate-50 p-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <FormField label="Tipo de actuacion">
-                  <select name="actionType" className={inputClass} defaultValue="SEGUIMIENTO">
-                    {ACTION_TYPES.map((item) => (
-                      <option key={item} value={item}>{labelFromValue(item)}</option>
-                    ))}
-                  </select>
-                </FormField>
-                <FormField label="Proximo paso">
-                  <input name="nextStepDate" type="date" className={inputClass} />
-                </FormField>
-              </div>
-              <FormField label="Contenido">
-                <textarea name="content" className={textareaClass} required />
-              </FormField>
-              <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-                <FormField label="Estado posterior">
-                  <select name="statusAfter" className={inputClass} defaultValue="">
-                    <option value="">Sin cambio</option>
-                    {JURIDICAL_STATUSES.map((status) => (
-                      <option key={status} value={status}>{labelFromValue(status)}</option>
-                    ))}
-                  </select>
-                </FormField>
-                <div className="flex items-end">
-                  <Button type="submit">Agregar actuacion</Button>
-                </div>
-              </div>
-            </form>
+          <DetailSection
+            title="Actuaciones y seguimientos"
+            action={
+              <AppModal title="Agregar actuacion" trigger={<><Plus className="h-4 w-4" />Agregar actuacion</>} size="md">
+                <form action={addJuridicalAction.bind(null, intervention.id)} className="space-y-4">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <FormField label="Tipo de actuacion">
+                      <select name="actionType" className={inputClass} defaultValue="SEGUIMIENTO">
+                        {ACTION_TYPES.map((item) => (
+                          <option key={item} value={item}>{labelFromValue(item)}</option>
+                        ))}
+                      </select>
+                    </FormField>
+                    <FormField label="Proximo paso">
+                      <input name="nextStepDate" type="date" className={inputClass} />
+                    </FormField>
+                  </div>
+                  <FormField label="Contenido">
+                    <textarea name="content" className={textareaClass} required />
+                  </FormField>
+                  <FormField label="Estado posterior">
+                    <select name="statusAfter" className={inputClass} defaultValue="">
+                      <option value="">Sin cambio</option>
+                      {JURIDICAL_STATUSES.map((status) => (
+                        <option key={status} value={status}>{labelFromValue(status)}</option>
+                      ))}
+                    </select>
+                  </FormField>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button type="submit">Guardar</Button>
+                    <Button type="button" variant="secondary" data-modal-close>Cancelar</Button>
+                  </div>
+                </form>
+              </AppModal>
+            }
+          >
 
             <div className="space-y-3">
               {intervention.actions.map((action) => (
@@ -173,20 +193,25 @@ export default async function InterventionDetailPage({ params }: { params: Promi
         <aside className="space-y-5">
           <DetailSection title="Derivaciones">
             <div className="space-y-4">
-              <form action={deriveJuridicalToDispatch.bind(null, intervention.id)} className="space-y-3">
-                <FormField label="Derivar a Despacho">
-                  <textarea name="summary" className={textareaClass} placeholder="Resumen operativo, sin notas sensibles innecesarias" />
-                </FormField>
-                <FormField label="Area sugerida">
-                  <select name="area" className={inputClass} defaultValue="">
-                    <option value="">Despacho</option>
-                    {areas.map((item) => (
-                      <option key={item.value} value={item.label}>{item.label}</option>
-                    ))}
-                  </select>
-                </FormField>
-                <Button type="submit" variant="secondary"><Send className="h-4 w-4" />Derivar a Despacho</Button>
-              </form>
+              <AppModal title="Derivar a Despacho" trigger={<><Send className="h-4 w-4" />Derivar a Despacho</>} triggerVariant="secondary" size="md">
+                <form action={deriveJuridicalToDispatch.bind(null, intervention.id)} className="space-y-4">
+                  <FormField label="Derivar a Despacho">
+                    <textarea name="summary" className={textareaClass} placeholder="Resumen operativo, sin notas sensibles innecesarias" required />
+                  </FormField>
+                  <FormField label="Area sugerida">
+                    <select name="area" className={inputClass} defaultValue="">
+                      <option value="">Despacho</option>
+                      {areas.map((item) => (
+                        <option key={item.value} value={item.label}>{item.label}</option>
+                      ))}
+                    </select>
+                  </FormField>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button type="submit">Guardar</Button>
+                    <Button type="button" variant="secondary" data-modal-close>Cancelar</Button>
+                  </div>
+                </form>
+              </AppModal>
 
               <div className="border-t border-slate-200 pt-4">
                 <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Historial de derivaciones</p>
@@ -214,7 +239,9 @@ export default async function InterventionDetailPage({ params }: { params: Promi
           <DetailSection title="Adjuntos privados">
             <div className="space-y-4">
               <AttachmentList attachments={attachments} />
-              <UploadForm action={uploadJuridicalAttachment.bind(null, intervention.id)} />
+              <AppModal title="Adjuntar archivo" trigger={<><Upload className="h-4 w-4" />Adjuntar archivo</>} triggerVariant="secondary" size="md">
+                <UploadForm action={uploadJuridicalAttachment.bind(null, intervention.id)} modal />
+              </AppModal>
             </div>
           </DetailSection>
 

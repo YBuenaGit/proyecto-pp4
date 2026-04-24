@@ -173,6 +173,7 @@ export async function addJuridicalAction(interventionId: string, formData: FormD
     after: { intervention: after, action },
   });
   revalidatePath(`/intervenciones/${interventionId}`);
+  redirect(`/intervenciones/${interventionId}`);
 }
 
 export async function deriveJuridicalToDispatch(interventionId: string, formData: FormData) {
@@ -237,6 +238,7 @@ export async function deriveJuridicalToDispatch(interventionId: string, formData
     after: { dispatchRecord, referral },
   });
   revalidatePath(`/intervenciones/${interventionId}`);
+  redirect(`/intervenciones/${interventionId}`);
 }
 
 export async function uploadJuridicalAttachment(interventionId: string, formData: FormData) {
@@ -261,4 +263,5 @@ export async function uploadJuridicalAttachment(interventionId: string, formData
     });
   }
   revalidatePath(`/intervenciones/${interventionId}`);
+  redirect(`/intervenciones/${interventionId}`);
 }

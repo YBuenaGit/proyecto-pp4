@@ -1,3 +1,5 @@
+import { Plus } from "lucide-react";
+import { AppModal } from "@/components/ui/app-modal";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -15,13 +17,23 @@ export default async function NewDispatchPage() {
 
   return (
     <>
-      <PageHeader title="Nueva atencion de Despacho" description="Carga directa de reclamo, consulta, sugerencia, pedido o situacion vecinal." />
-      <DispatchForm
-        action={createDispatchRecord}
-        categories={categories.map((item) => ({ value: item.value, label: item.label }))}
-        areas={areas.map((item) => ({ value: item.value, label: item.label }))}
-        backHref="/despacho"
+      <PageHeader
+        title="Nueva atencion de Despacho"
+        description="Carga directa de reclamo, consulta, sugerencia, pedido o situacion vecinal."
+        actions={
+          <AppModal title="Nueva atencion de Despacho" trigger={<><Plus className="h-4 w-4" />Nueva atencion</>} size="xl">
+            <DispatchForm
+              action={createDispatchRecord}
+              categories={categories.map((item) => ({ value: item.value, label: item.label }))}
+              areas={areas.map((item) => ({ value: item.value, label: item.label }))}
+              backHref="/despacho"
+              modal
+              submitLabel="Crear"
+            />
+          </AppModal>
+        }
       />
+      <p className="text-sm text-slate-600">Usa el boton Nueva atencion para abrir el formulario de carga.</p>
     </>
   );
 }

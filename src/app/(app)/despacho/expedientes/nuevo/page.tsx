@@ -1,3 +1,5 @@
+import { Plus } from "lucide-react";
+import { AppModal } from "@/components/ui/app-modal";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -12,8 +14,22 @@ export default async function NewExpedientPage() {
 
   return (
     <>
-      <PageHeader title="Nuevo expediente interno" description="Carga administrativa interna de Despacho." />
-      <ExpedientForm action={createExpedient} categories={categories.map((item) => ({ value: item.value, label: item.label }))} backHref="/despacho/expedientes" />
+      <PageHeader
+        title="Nuevo expediente interno"
+        description="Carga administrativa interna de Despacho."
+        actions={
+          <AppModal title="Nuevo expediente interno" trigger={<><Plus className="h-4 w-4" />Nuevo expediente</>} size="lg">
+            <ExpedientForm
+              action={createExpedient}
+              categories={categories.map((item) => ({ value: item.value, label: item.label }))}
+              backHref="/despacho/expedientes"
+              modal
+              submitLabel="Crear"
+            />
+          </AppModal>
+        }
+      />
+      <p className="text-sm text-slate-600">Usa el boton Nuevo expediente para abrir el formulario de carga.</p>
     </>
   );
 }

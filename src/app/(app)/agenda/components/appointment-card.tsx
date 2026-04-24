@@ -1,4 +1,19 @@
-import { Ban, BriefcaseBusiness, CalendarDays, Edit3, FileText, MapPin, Scale, StickyNote, Trash2, UserRound, type LucideIcon } from "lucide-react";
+import {
+  Ban,
+  BriefcaseBusiness,
+  CalendarClock,
+  Circle,
+  ClipboardList,
+  Edit3,
+  FileSignature,
+  FileText,
+  PhoneCall,
+  Scale,
+  Trash2,
+  UsersRound,
+  type LucideIcon,
+} from "lucide-react";
+import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/components/ui/cn";
 import { labelFromValue } from "@/lib/format";
@@ -7,7 +22,6 @@ import {
   APPOINTMENT_STATUS_LABELS,
   APPOINTMENT_STATUS_TONES,
   APPOINTMENT_TYPE_LABELS,
-  APPOINTMENT_TYPE_TONES,
   CALENDAR_SCOPE_BADGE_CLASS,
   CALENDAR_SCOPE_LABELS,
   type AppointmentStatus,
@@ -20,7 +34,25 @@ import { cancelAppointment, deleteAppointment, updateAppointment } from "../acti
 import { AppointmentForm } from "./appointment-form";
 
 function badgeClass(value: string, tones: Record<string, string>) {
-  return cn("inline-flex rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset", tones[value] ?? "bg-slate-100 text-slate-700 ring-slate-200");
+  return cn("inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset", tones[value] ?? "bg-slate-100 text-slate-700 ring-slate-200");
+}
+
+const typeVisuals: Record<AppointmentType, { border: string; iconBox: string; Icon: LucideIcon }> = {
+  CONSULTA: { border: "border-l-emerald-400", iconBox: "bg-emerald-50 text-emerald-700", Icon: UsersRound },
+  AUDIENCIA: { border: "border-l-indigo-400", iconBox: "bg-indigo-50 text-indigo-700", Icon: Scale },
+  VENCIMIENTO: { border: "border-l-orange-400", iconBox: "bg-orange-50 text-orange-700", Icon: CalendarClock },
+  REUNION: { border: "border-l-sky-400", iconBox: "bg-sky-50 text-sky-700", Icon: BriefcaseBusiness },
+  MEDIACION: { border: "border-l-violet-400", iconBox: "bg-violet-50 text-violet-700", Icon: Scale },
+  FIRMA_DOCUMENTACION: { border: "border-l-teal-400", iconBox: "bg-teal-50 text-teal-700", Icon: FileSignature },
+  LLAMADA: { border: "border-l-blue-400", iconBox: "bg-blue-50 text-blue-700", Icon: PhoneCall },
+  TAREA_ADMINISTRATIVA: { border: "border-l-cyan-400", iconBox: "bg-cyan-50 text-cyan-700", Icon: ClipboardList },
+  GESTION_DOCUMENTAL: { border: "border-l-slate-400", iconBox: "bg-slate-100 text-slate-700", Icon: FileText },
+  RECORDATORIO: { border: "border-l-amber-400", iconBox: "bg-amber-50 text-amber-700", Icon: CalendarClock },
+  OTRO: { border: "border-l-zinc-400", iconBox: "bg-zinc-100 text-zinc-700", Icon: Circle },
+};
+
+function typeVisual(type: string) {
+  return typeVisuals[type as AppointmentType] ?? typeVisuals.OTRO;
 }
 
 function scopeLabel(scope: string) {
@@ -35,14 +67,9 @@ function appointmentStatusLabel(status: string) {
   return APPOINTMENT_STATUS_LABELS[status as AppointmentStatus] ?? labelFromValue(status);
 }
 
-function DetailLine({ icon: Icon, children }: { icon: LucideIcon; children: React.ReactNode }) {
+function MetaItem({ children }: { children?: React.ReactNode }) {
   if (!children) return null;
-  return (
-    <div className="flex items-start gap-2 text-sm leading-6 text-slate-700">
-      <Icon className="mt-1 h-4 w-4 shrink-0 text-slate-400" />
-      <div>{children}</div>
-    </div>
-  );
+  return <span className="truncate">{children}</span>;
 }
 
 export function AppointmentCard({
@@ -60,96 +87,88 @@ export function AppointmentCard({
 }) {
   const canEdit = canEditAppointment(user, appointment);
   const canDelete = canDeleteAppointment(user, appointment);
-  const assignedName = appointment.assignedUser?.name ?? appointment.assignedLawyer?.name;
+  const lawyerName = appointment.lawyerName ?? appointment.assignedLawyer?.name;
+  const assignedName = appointment.assignedUser?.name;
   const assignedArea = appointment.assignedArea === "lawyers" ? "Abogados" : appointment.assignedArea === "dispatch" ? "Despacho" : null;
+  const caseLabel = [appointment.caseTitle, appointment.expedienteNumber].filter(Boolean).join(" · ");
+  const timeLabel = appointment.endTime ? `${appointment.startTime} - ${appointment.endTime}` : appointment.startTime;
+  const visual = typeVisual(appointment.type);
+  const Icon = visual.Icon;
 
   return (
-    <article className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold text-slate-950">{appointment.startTime}</span>
-            {appointment.endTime ? <span className="text-sm text-slate-500">a {appointment.endTime}</span> : null}
-            <span className={badgeClass(appointment.calendarScope, CALENDAR_SCOPE_BADGE_CLASS)}>{scopeLabel(appointment.calendarScope)}</span>
+    <article className={cn("rounded-lg border border-l-4 border-slate-200 bg-white p-3 shadow-sm", visual.border)}>
+      <div className="flex min-w-0 gap-3">
+        <div className={cn("mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full", visual.iconBox)}>
+          <Icon className="h-4 w-4" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex min-w-0 items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-semibold text-[#14213d]">{timeLabel}</span>
+                <span className="text-[11px] font-semibold text-slate-600">{appointmentTypeLabel(appointment.type)}</span>
+              </div>
+              <h3 className="mt-0.5 truncate text-sm font-semibold text-slate-950">{appointment.title}</h3>
+            </div>
+            <span className={cn("shrink-0", badgeClass(appointment.status, APPOINTMENT_STATUS_TONES))}>
+              {appointmentStatusLabel(appointment.status)}
+            </span>
           </div>
-          <h3 className="mt-2 text-base font-semibold text-slate-950">{appointment.title}</h3>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <span className={badgeClass(appointment.type, APPOINTMENT_TYPE_TONES)}>
-            {appointmentTypeLabel(appointment.type)}
-          </span>
-          <span className={badgeClass(appointment.status, APPOINTMENT_STATUS_TONES)}>
-            {appointmentStatusLabel(appointment.status)}
-          </span>
-        </div>
-      </div>
 
-      <div className="mt-4 grid gap-2 md:grid-cols-2">
-        <DetailLine icon={UserRound}>{appointment.clientName ? `Cliente: ${appointment.clientName}` : null}</DetailLine>
-        <DetailLine icon={Scale}>
-          {appointment.lawyerName ?? appointment.assignedLawyer?.name
-            ? `Abogado: ${appointment.lawyerName ?? appointment.assignedLawyer?.name}`
-            : null}
-        </DetailLine>
-        <DetailLine icon={BriefcaseBusiness}>{assignedName ? `Usuario asignado: ${assignedName}` : null}</DetailLine>
-        <DetailLine icon={CalendarDays}>{assignedArea ? `Area asignada: ${assignedArea}` : null}</DetailLine>
-        <DetailLine icon={MapPin}>{appointment.location ? `Lugar: ${appointment.location}` : null}</DetailLine>
-        <DetailLine icon={FileText}>
-          {[appointment.caseTitle, appointment.expedienteNumber].filter(Boolean).join(" · ") || null}
-        </DetailLine>
+          <div className="mt-1 grid gap-x-2 gap-y-0.5 text-[11px] leading-5 text-slate-600">
+            <MetaItem>{appointment.clientName ? `Cliente: ${appointment.clientName}` : null}</MetaItem>
+            <MetaItem>{lawyerName ? `Abogado: ${lawyerName}` : null}</MetaItem>
+            <MetaItem>{assignedName ? `Usuario: ${assignedName}` : null}</MetaItem>
+            <MetaItem>{assignedArea ? `Area: ${assignedArea}` : null}</MetaItem>
+            <MetaItem>{appointment.location ? `Lugar: ${appointment.location}` : null}</MetaItem>
+            <MetaItem>{caseLabel || null}</MetaItem>
+          </div>
+        </div>
       </div>
 
       {appointment.notes ? (
-        <div className="mt-3 flex gap-2 rounded-md bg-slate-50 px-3 py-2 text-sm leading-6 text-slate-700">
-          <StickyNote className="mt-1 h-4 w-4 shrink-0 text-slate-400" />
-          <p>{appointment.notes}</p>
-        </div>
+        <p className="mt-2 truncate rounded-md bg-slate-50 px-2 py-1.5 text-xs leading-5 text-slate-600">{appointment.notes}</p>
       ) : null}
 
-      <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3">
-        <span className="text-xs text-slate-500">
-          Creada por {appointment.createdBy.name}
-          {appointment.owner ? ` · Dueño: ${appointment.owner.name}` : ""}
-        </span>
-        <div className="ml-auto flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-2">
+        <span className={badgeClass(appointment.calendarScope, CALENDAR_SCOPE_BADGE_CLASS)}>{scopeLabel(appointment.calendarScope)}</span>
+        <div className="flex flex-wrap gap-1.5">
+          {canEdit ? (
+            <AppModal
+              title="Editar cita"
+              trigger={<Edit3 className="h-3.5 w-3.5" />}
+              triggerVariant="secondary"
+              triggerClassName="h-7 w-7 border-slate-200 px-0 text-slate-500 shadow-none hover:text-slate-900"
+              size="xl"
+            >
+              <AppointmentForm
+                action={updateAppointment.bind(null, appointment.id)}
+                allowedScopes={allowedScopes}
+                users={users}
+                lawyers={lawyers}
+                defaultDate={appointment.date}
+                appointment={appointment}
+                compact
+                modal
+              />
+            </AppModal>
+          ) : null}
           {canEdit && appointment.status !== "CANCELADA" ? (
             <form action={cancelAppointment.bind(null, appointment.id)}>
-              <Button type="submit" variant="secondary" className="h-9 px-3">
-                <Ban className="h-4 w-4" />
-                Cancelar
+              <Button type="submit" variant="secondary" className="h-7 w-7 px-0 text-slate-500 shadow-none hover:text-slate-900" title="Cancelar cita">
+                <Ban className="h-3.5 w-3.5" />
               </Button>
             </form>
           ) : null}
           {canDelete ? (
             <form action={deleteAppointment.bind(null, appointment.id)}>
-              <Button type="submit" variant="danger" className="h-9 px-3">
-                <Trash2 className="h-4 w-4" />
-                Eliminar
+              <Button type="submit" variant="danger" className="h-7 w-7 px-0 shadow-none" title="Eliminar cita">
+                <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </form>
           ) : null}
         </div>
       </div>
-
-      {canEdit ? (
-        <details className="mt-3 rounded-md border border-slate-200 bg-slate-50 p-3">
-          <summary className="flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-800">
-            <Edit3 className="h-4 w-4" />
-            Editar cita
-          </summary>
-          <div className="mt-4">
-            <AppointmentForm
-              action={updateAppointment.bind(null, appointment.id)}
-              allowedScopes={allowedScopes}
-              users={users}
-              lawyers={lawyers}
-              defaultDate={appointment.date}
-              appointment={appointment}
-              compact
-            />
-          </div>
-        </details>
-      ) : null}
     </article>
   );
 }

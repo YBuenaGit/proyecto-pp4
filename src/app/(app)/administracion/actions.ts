@@ -2,6 +2,7 @@
 
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
@@ -48,6 +49,7 @@ export async function createUser(formData: FormData) {
     after: { id: user.id, username: user.username, role: user.role },
   });
   revalidatePath("/administracion");
+  redirect("/administracion");
 }
 
 export async function toggleUserActive(userId: string) {
@@ -69,6 +71,7 @@ export async function toggleUserActive(userId: string) {
     after: { active: after.active },
   });
   revalidatePath("/administracion");
+  redirect("/administracion");
 }
 
 export async function createCatalogItem(formData: FormData) {
@@ -98,4 +101,5 @@ export async function createCatalogItem(formData: FormData) {
     after: item,
   });
   revalidatePath("/administracion");
+  redirect("/administracion");
 }

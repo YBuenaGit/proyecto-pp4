@@ -1,4 +1,7 @@
 import { notFound } from "next/navigation";
+import { Edit } from "lucide-react";
+import { AppModal } from "@/components/ui/app-modal";
+import { LinkButton } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -18,13 +21,26 @@ export default async function EditExpedientPage({ params }: { params: Promise<{ 
 
   return (
     <>
-      <PageHeader title={`Editar ${expedient.internalNumber}`} description="Actualizacion de expediente interno con auditoria." />
-      <ExpedientForm
-        action={updateExpedient.bind(null, expedient.id)}
-        record={expedient}
-        categories={categories.map((item) => ({ value: item.value, label: item.label }))}
-        backHref={`/despacho/expedientes/${expedient.id}`}
+      <PageHeader
+        title={`Editar ${expedient.internalNumber}`}
+        description="Actualizacion de expediente interno con auditoria."
+        actions={
+          <>
+            <AppModal title={`Editar ${expedient.internalNumber}`} trigger={<><Edit className="h-4 w-4" />Editar</>} size="lg">
+              <ExpedientForm
+                action={updateExpedient.bind(null, expedient.id)}
+                record={expedient}
+                categories={categories.map((item) => ({ value: item.value, label: item.label }))}
+                backHref={`/despacho/expedientes/${expedient.id}`}
+                modal
+                submitLabel="Guardar cambios"
+              />
+            </AppModal>
+            <LinkButton href={`/despacho/expedientes/${expedient.id}`} variant="secondary">Volver</LinkButton>
+          </>
+        }
       />
+      <p className="text-sm text-slate-600">La informacion se edita desde el modal para mantener separada la lectura de la modificacion.</p>
     </>
   );
 }

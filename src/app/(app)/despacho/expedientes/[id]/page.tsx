@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
-import { Edit } from "lucide-react";
+import { Edit, Upload } from "lucide-react";
+import { AppModal } from "@/components/ui/app-modal";
 import { AttachmentList, UploadForm } from "@/components/ui/attachments";
 import { AuditTimeline } from "@/components/ui/audit-timeline";
 import { LinkButton } from "@/components/ui/button";
@@ -10,13 +11,14 @@ import { requireUser } from "@/lib/auth";
 import { formatDateTime, labelFromValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessExpedients } from "@/lib/rbac";
-import { uploadExpedientAttachment } from "../../actions";
+import { updateExpedient, uploadExpedientAttachment } from "../../actions";
+import { ExpedientForm } from "../expedient-form";
 
 export default async function ExpedientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   assertAccess(canAccessExpedients(user));
   const { id } = await params;
-  const [expedient, attachments, auditLogs] = await Promise.all([
+  const [expedient, attachments, auditLogs, categories] = await Promise.all([
     prisma.internalExpedient.findUnique({ where: { id }, include: { createdBy: true } }),
     prisma.attachment.findMany({
       where: { entityType: "InternalExpedient", entityId: id },
@@ -28,6 +30,7 @@ export default async function ExpedientDetailPage({ params }: { params: Promise<
       include: { createdBy: true },
       orderBy: { createdAt: "desc" },
     }),
+    prisma.catalogItem.findMany({ where: { type: "expedient_category", active: true }, orderBy: { sortOrder: "asc" } }),
   ]);
   if (!expedient) notFound();
 
@@ -38,7 +41,16 @@ export default async function ExpedientDetailPage({ params }: { params: Promise<
         description="Detalle de expediente administrativo interno."
         actions={
           <>
-            <LinkButton href={`/despacho/expedientes/${expedient.id}/editar`} variant="secondary"><Edit className="h-4 w-4" />Editar</LinkButton>
+            <AppModal title={`Editar ${expedient.internalNumber}`} trigger={<><Edit className="h-4 w-4" />Editar</>} triggerVariant="secondary" size="lg">
+              <ExpedientForm
+                action={updateExpedient.bind(null, expedient.id)}
+                record={expedient}
+                categories={categories.map((item) => ({ value: item.value, label: item.label }))}
+                backHref={`/despacho/expedientes/${expedient.id}`}
+                modal
+                submitLabel="Guardar cambios"
+              />
+            </AppModal>
             <LinkButton href="/despacho/expedientes" variant="secondary">Volver</LinkButton>
           </>
         }
@@ -65,7 +77,9 @@ export default async function ExpedientDetailPage({ params }: { params: Promise<
           <DetailSection title="Adjuntos">
             <div className="space-y-4">
               <AttachmentList attachments={attachments} />
-              <UploadForm action={uploadExpedientAttachment.bind(null, expedient.id)} />
+              <AppModal title="Adjuntar archivo" trigger={<><Upload className="h-4 w-4" />Adjuntar archivo</>} triggerVariant="secondary" size="md">
+                <UploadForm action={uploadExpedientAttachment.bind(null, expedient.id)} modal />
+              </AppModal>
             </div>
           </DetailSection>
           <DetailSection title="Auditoria">

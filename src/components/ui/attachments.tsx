@@ -39,7 +39,13 @@ export function AttachmentList({
   );
 }
 
-export function UploadForm({ action }: { action: (formData: FormData) => void | Promise<void> }) {
+export function UploadForm({
+  action,
+  modal = false,
+}: {
+  action: (formData: FormData) => void | Promise<void>;
+  modal?: boolean;
+}) {
   return (
     <form action={action} className="flex flex-col gap-3 rounded-md border border-dashed border-slate-300 bg-slate-50 p-3">
       <label className="block">
@@ -51,10 +57,17 @@ export function UploadForm({ action }: { action: (formData: FormData) => void | 
           className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-sky-700 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-sky-800"
         />
       </label>
-      <Button type="submit" variant="secondary" className="w-fit">
-        <Upload className="h-4 w-4" />
-        Subir
-      </Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button type="submit" variant="secondary" className="w-fit">
+          <Upload className="h-4 w-4" />
+          Subir
+        </Button>
+        {modal ? (
+          <Button type="button" variant="secondary" data-modal-close>
+            Cancelar
+          </Button>
+        ) : null}
+      </div>
     </form>
   );
 }

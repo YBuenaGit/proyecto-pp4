@@ -175,6 +175,7 @@ export async function addDispatchFollowUp(recordId: string, formData: FormData) 
     after: { record: after, followUp },
   });
   revalidatePath(`/despacho/${recordId}`);
+  redirect(`/despacho/${recordId}`);
 }
 
 export async function referDispatchToArea(recordId: string, formData: FormData) {
@@ -211,6 +212,7 @@ export async function referDispatchToArea(recordId: string, formData: FormData) 
     after: { record: after, followUp },
   });
   revalidatePath(`/despacho/${recordId}`);
+  redirect(`/despacho/${recordId}`);
 }
 
 export async function deriveDispatchToJuridical(recordId: string, formData: FormData) {
@@ -287,6 +289,7 @@ export async function deriveDispatchToJuridical(recordId: string, formData: Form
     after: { dispatchRecord: after, intervention, referral },
   });
   revalidatePath(`/despacho/${recordId}`);
+  redirect(`/despacho/${recordId}`);
 }
 
 export async function uploadDispatchAttachment(recordId: string, formData: FormData) {
@@ -310,6 +313,7 @@ export async function uploadDispatchAttachment(recordId: string, formData: FormD
     });
   }
   revalidatePath(`/despacho/${recordId}`);
+  redirect(`/despacho/${recordId}`);
 }
 
 export async function createExpedient(formData: FormData) {
@@ -400,4 +404,5 @@ export async function uploadExpedientAttachment(expedientId: string, formData: F
     });
   }
   revalidatePath(`/despacho/expedientes/${expedientId}`);
+  redirect(`/despacho/expedientes/${expedientId}`);
 }

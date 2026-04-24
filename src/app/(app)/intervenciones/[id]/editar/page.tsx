@@ -1,4 +1,7 @@
 import { notFound } from "next/navigation";
+import { Edit } from "lucide-react";
+import { AppModal } from "@/components/ui/app-modal";
+import { LinkButton } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -19,14 +22,27 @@ export default async function EditInterventionPage({ params }: { params: Promise
 
   return (
     <>
-      <PageHeader title={`Editar ${intervention.internalNumber}`} description="La edicion queda auditada con usuario, fecha y estado." />
-      <InterventionForm
-        action={updateJuridicalIntervention.bind(null, intervention.id)}
-        record={intervention}
-        types={types.map((item) => ({ value: item.value, label: item.label }))}
-        contexts={contexts.map((item) => ({ value: item.value, label: item.label }))}
-        backHref={`/intervenciones/${intervention.id}`}
+      <PageHeader
+        title={`Editar ${intervention.internalNumber}`}
+        description="La edicion queda auditada con usuario, fecha y estado."
+        actions={
+          <>
+            <AppModal title={`Editar ${intervention.internalNumber}`} trigger={<><Edit className="h-4 w-4" />Editar</>} size="xl">
+              <InterventionForm
+                action={updateJuridicalIntervention.bind(null, intervention.id)}
+                record={intervention}
+                types={types.map((item) => ({ value: item.value, label: item.label }))}
+                contexts={contexts.map((item) => ({ value: item.value, label: item.label }))}
+                backHref={`/intervenciones/${intervention.id}`}
+                modal
+                submitLabel="Guardar cambios"
+              />
+            </AppModal>
+            <LinkButton href={`/intervenciones/${intervention.id}`} variant="secondary">Volver</LinkButton>
+          </>
+        }
       />
+      <p className="text-sm text-slate-600">La informacion se edita desde el modal para mantener separada la lectura de la modificacion.</p>
     </>
   );
 }

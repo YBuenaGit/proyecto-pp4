@@ -1,3 +1,5 @@
+import { Plus } from "lucide-react";
+import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { DetailSection } from "@/components/ui/detail-section";
 import { FormField, FormGrid, inputClass } from "@/components/ui/form-controls";
@@ -29,34 +31,40 @@ export default async function AdminPage() {
       />
 
       <div className="space-y-5">
-        <DetailSection title="Crear usuario">
-          <form action={createUser} className="space-y-4">
-            <FormGrid>
-              <FormField label="Nombre">
-                <input name="name" className={inputClass} required />
-              </FormField>
-              <FormField label="Usuario">
-                <input name="username" className={inputClass} required />
-              </FormField>
-              <FormField label="Email">
-                <input name="email" type="email" className={inputClass} />
-              </FormField>
-              <FormField label="Rol">
-                <select name="role" className={inputClass} defaultValue="despacho">
-                  {Object.values(ROLES).map((role) => (
-                    <option key={role} value={role}>{ROLE_LABELS[role]}</option>
-                  ))}
-                </select>
-              </FormField>
-              <FormField label="Contrasena inicial">
-                <input name="password" type="password" minLength={6} className={inputClass} required />
-              </FormField>
-            </FormGrid>
-            <Button type="submit">Crear usuario</Button>
-          </form>
-        </DetailSection>
-
-        <DetailSection title="Usuarios">
+        <DetailSection
+          title="Usuarios"
+          action={
+            <AppModal title="Crear usuario" trigger={<><Plus className="h-4 w-4" />Nuevo usuario</>} size="lg">
+              <form action={createUser} className="space-y-4">
+                <FormGrid>
+                  <FormField label="Nombre">
+                    <input name="name" className={inputClass} required />
+                  </FormField>
+                  <FormField label="Usuario">
+                    <input name="username" className={inputClass} required />
+                  </FormField>
+                  <FormField label="Email">
+                    <input name="email" type="email" className={inputClass} />
+                  </FormField>
+                  <FormField label="Rol">
+                    <select name="role" className={inputClass} defaultValue="despacho">
+                      {Object.values(ROLES).map((role) => (
+                        <option key={role} value={role}>{ROLE_LABELS[role]}</option>
+                      ))}
+                    </select>
+                  </FormField>
+                  <FormField label="Contrasena inicial">
+                    <input name="password" type="password" minLength={6} className={inputClass} required />
+                  </FormField>
+                </FormGrid>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button type="submit">Crear</Button>
+                  <Button type="button" variant="secondary" data-modal-close>Cancelar</Button>
+                </div>
+              </form>
+            </AppModal>
+          }
+        >
           <Table headers={["Nombre", "Usuario", "Rol", "Estado", "Creado", "Accion"]} empty={!users.length}>
             {users.map((item) => (
               <tr key={item.id}>
@@ -80,30 +88,36 @@ export default async function AdminPage() {
           </Table>
         </DetailSection>
 
-        <DetailSection title="Crear catalogo">
-          <form action={createCatalogItem} className="space-y-4">
-            <FormGrid>
-              <FormField label="Tipo">
-                <input name="type" className={inputClass} placeholder="dispatch_category" required />
-              </FormField>
-              <FormField label="Modulo">
-                <input name="module" className={inputClass} placeholder="DESPACHO / JURIDICO" />
-              </FormField>
-              <FormField label="Valor tecnico">
-                <input name="value" className={inputClass} placeholder="NUEVO_VALOR" required />
-              </FormField>
-              <FormField label="Etiqueta">
-                <input name="label" className={inputClass} required />
-              </FormField>
-              <FormField label="Orden">
-                <input name="sortOrder" type="number" className={inputClass} defaultValue={0} />
-              </FormField>
-            </FormGrid>
-            <Button type="submit">Crear catalogo</Button>
-          </form>
-        </DetailSection>
-
-        <DetailSection title="Catalogos">
+        <DetailSection
+          title="Catalogos"
+          action={
+            <AppModal title="Crear catalogo" trigger={<><Plus className="h-4 w-4" />Nuevo catalogo</>} size="lg">
+              <form action={createCatalogItem} className="space-y-4">
+                <FormGrid>
+                  <FormField label="Tipo">
+                    <input name="type" className={inputClass} placeholder="dispatch_category" required />
+                  </FormField>
+                  <FormField label="Modulo">
+                    <input name="module" className={inputClass} placeholder="DESPACHO / JURIDICO" />
+                  </FormField>
+                  <FormField label="Valor tecnico">
+                    <input name="value" className={inputClass} placeholder="NUEVO_VALOR" required />
+                  </FormField>
+                  <FormField label="Etiqueta">
+                    <input name="label" className={inputClass} required />
+                  </FormField>
+                  <FormField label="Orden">
+                    <input name="sortOrder" type="number" className={inputClass} defaultValue={0} />
+                  </FormField>
+                </FormGrid>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button type="submit">Crear</Button>
+                  <Button type="button" variant="secondary" data-modal-close>Cancelar</Button>
+                </div>
+              </form>
+            </AppModal>
+          }
+        >
           <Table headers={["Tipo", "Modulo", "Valor", "Etiqueta", "Estado"]} empty={!catalogItems.length}>
             {catalogItems.map((item) => (
               <tr key={item.id}>
