@@ -1,0 +1,341 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  username     String   @unique
+  email        String?  @unique
+  passwordHash String
+  role         String
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sessions               Session[]
+  dispatchRecords        DispatchRecord[]         @relation("DispatchCreatedBy")
+  dispatchFollowUps      DispatchFollowUp[]       @relation("DispatchFollowUpCreatedBy")
+  juridicalInterventions JuridicalIntervention[]  @relation("JuridicalCreatedBy")
+  juridicalActions       JuridicalAction[]        @relation("JuridicalActionCreatedBy")
+  referralsMade          Referral[]               @relation("ReferralReferredBy")
+  internalExpedients     InternalExpedient[]      @relation("ExpedientCreatedBy")
+  attachments            Attachment[]             @relation("AttachmentUploadedBy")
+  auditLogs              AuditLog[]               @relation("AuditCreatedBy")
+  catalogItems           CatalogItem[]            @relation("CatalogCreatedBy")
+  appointmentsCreated    Appointment[]            @relation("AppointmentCreatedBy")
+  personalAppointments   Appointment[]            @relation("AppointmentOwner")
+  assignedAppointments   Appointment[]            @relation("AppointmentAssignedUser")
+  lawyerAppointments     Appointment[]            @relation("AppointmentAssignedLawyer")
+
+  @@index([role])
+  @@index([active])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model ExternalPerson {
+  id                 String   @id @default(cuid())
+  dni                String?  @unique
+  firstName          String
+  lastName           String
+  fullNameNormalized String
+  phone1             String?
+  phone2             String?
+  address            String?
+  notes              String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  dispatchRecords        DispatchRecord[]
+  juridicalInterventions JuridicalIntervention[]
+
+  @@index([fullNameNormalized])
+  @@index([lastName])
+}
+
+model DispatchRecord {
+  id                  String   @id @default(cuid())
+  internalNumber      String   @unique
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  attendedAt          DateTime @default(now())
+  createdById         String
+  personId            String?
+  manualPersonName    String?
+  dniSnapshot         String?
+  nameSnapshot        String?
+  description         String
+  category            String
+  subcategory         String?
+  priority            String   @default("MEDIA")
+  status              String   @default("RECIBIDO")
+  referredArea        String?
+  notes               String?
+  confidentialSummary String?
+  origin              String   @default("DIRECT")
+  lastStatusAt        DateTime @default(now())
+
+  createdBy              User                @relation("DispatchCreatedBy", fields: [createdById], references: [id])
+  person                 ExternalPerson?     @relation(fields: [personId], references: [id], onDelete: SetNull)
+  followUps              DispatchFollowUp[]
+  originReferrals        Referral[]          @relation("OriginDispatch")
+  destinationReferrals   Referral[]          @relation("DestinationDispatch")
+
+  @@index([createdAt])
+  @@index([attendedAt])
+  @@index([category])
+  @@index([status])
+  @@index([priority])
+  @@index([createdById])
+  @@index([personId])
+}
+
+model DispatchFollowUp {
+  id               String   @id @default(cuid())
+  dispatchRecordId String
+  content          String
+  statusAfter      String?
+  createdById      String
+  createdAt        DateTime @default(now())
+
+  dispatchRecord DispatchRecord @relation(fields: [dispatchRecordId], references: [id], onDelete: Cascade)
+  createdBy      User           @relation("DispatchFollowUpCreatedBy", fields: [createdById], references: [id])
+
+  @@index([dispatchRecordId])
+  @@index([createdById])
+  @@index([createdAt])
+}
+
+model JuridicalIntervention {
+  id                   String   @id @default(cuid())
+  internalNumber       String   @unique
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  attendedAt           DateTime @default(now())
+  createdById          String
+  personId             String?
+  manualPersonName     String?
+  dniSnapshot          String?
+  nameSnapshot         String?
+  type                 String
+  subType              String?
+  urgency              String   @default("MEDIA")
+  status               String   @default("RECIBIDO")
+  oficioNumber         String?
+  expedienteNumber     String?
+  interventionContext  String?
+  counterpartType      String?
+  description          String
+  guidanceProvided     String?
+  referredToAgency     String?
+  origin               String   @default("DIRECT")
+  lastStatusAt         DateTime @default(now())
+
+  createdBy              User                 @relation("JuridicalCreatedBy", fields: [createdById], references: [id])
+  person                 ExternalPerson?      @relation(fields: [personId], references: [id], onDelete: SetNull)
+  actions                JuridicalAction[]
+  originReferrals        Referral[]           @relation("OriginJuridical")
+  destinationReferrals   Referral[]           @relation("DestinationJuridical")
+
+  @@index([createdAt])
+  @@index([attendedAt])
+  @@index([type])
+  @@index([status])
+  @@index([urgency])
+  @@index([oficioNumber])
+  @@index([expedienteNumber])
+  @@index([createdById])
+  @@index([personId])
+}
+
+model JuridicalAction {
+  id                         String    @id @default(cuid())
+  juridicalInterventionId    String
+  actionType                 String
+  content                    String
+  nextStepDate               DateTime?
+  createdById                String
+  createdAt                  DateTime  @default(now())
+
+  juridicalIntervention JuridicalIntervention @relation(fields: [juridicalInterventionId], references: [id], onDelete: Cascade)
+  createdBy             User                  @relation("JuridicalActionCreatedBy", fields: [createdById], references: [id])
+
+  @@index([juridicalInterventionId])
+  @@index([actionType])
+  @@index([nextStepDate])
+  @@index([createdById])
+  @@index([createdAt])
+}
+
+model Referral {
+  id                                String    @id @default(cuid())
+  originModule                      String
+  destinationModule                 String
+  originDispatchRecordId            String?
+  originJuridicalInterventionId     String?
+  destinationDispatchRecordId       String?
+  destinationJuridicalInterventionId String?
+  summary                           String
+  status                            String    @default("PENDIENTE")
+  visibleStatusForOrigin            String    @default("Pendiente de recepción")
+  referredById                      String
+  referredAt                        DateTime  @default(now())
+  closedAt                          DateTime?
+  createdAt                         DateTime  @default(now())
+  updatedAt                         DateTime  @updatedAt
+
+  referredBy                      User                    @relation("ReferralReferredBy", fields: [referredById], references: [id])
+  originDispatchRecord            DispatchRecord?          @relation("OriginDispatch", fields: [originDispatchRecordId], references: [id], onDelete: SetNull)
+  originJuridicalIntervention     JuridicalIntervention?   @relation("OriginJuridical", fields: [originJuridicalInterventionId], references: [id], onDelete: SetNull)
+  destinationDispatchRecord       DispatchRecord?          @relation("DestinationDispatch", fields: [destinationDispatchRecordId], references: [id], onDelete: SetNull)
+  destinationJuridicalIntervention JuridicalIntervention?  @relation("DestinationJuridical", fields: [destinationJuridicalInterventionId], references: [id], onDelete: SetNull)
+
+  @@index([originModule])
+  @@index([destinationModule])
+  @@index([status])
+  @@index([referredAt])
+  @@index([originDispatchRecordId])
+  @@index([originJuridicalInterventionId])
+  @@index([destinationDispatchRecordId])
+  @@index([destinationJuridicalInterventionId])
+}
+
+model InternalExpedient {
+  id               String   @id @default(cuid())
+  internalNumber   String   @unique
+  expedienteNumber String?
+  category         String
+  description      String
+  status           String   @default("INICIADO")
+  createdById      String
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  createdBy User @relation("ExpedientCreatedBy", fields: [createdById], references: [id])
+
+  @@index([category])
+  @@index([status])
+  @@index([createdById])
+  @@index([createdAt])
+  @@index([expedienteNumber])
+}
+
+model Appointment {
+  id               String   @id @default(cuid())
+  title            String
+  date             String
+  startTime        String
+  endTime          String?
+  calendarScope    String
+  ownerUserId      String?
+  createdByUserId  String
+  assignedUserId   String?
+  assignedLawyerId String?
+  assignedArea     String?
+  clientName       String?
+  lawyerName       String?
+  type             String
+  status           String   @default("PENDIENTE")
+  location         String?
+  notes            String?
+  caseId           String?
+  caseTitle        String?
+  expedienteNumber String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  owner          User? @relation("AppointmentOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
+  createdBy      User  @relation("AppointmentCreatedBy", fields: [createdByUserId], references: [id])
+  assignedUser   User? @relation("AppointmentAssignedUser", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  assignedLawyer User? @relation("AppointmentAssignedLawyer", fields: [assignedLawyerId], references: [id], onDelete: SetNull)
+
+  @@index([date])
+  @@index([calendarScope, date])
+  @@index([ownerUserId, date])
+  @@index([createdByUserId])
+  @@index([assignedUserId])
+  @@index([assignedLawyerId])
+  @@index([assignedArea])
+  @@index([type])
+  @@index([status])
+  @@index([expedienteNumber])
+}
+
+model Attachment {
+  id           String   @id @default(cuid())
+  module       String
+  entityType   String
+  entityId     String
+  fileName     String
+  originalName String
+  filePath     String
+  mimeType     String
+  size         Int
+  isPrivate    Boolean  @default(false)
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  uploadedBy User @relation("AttachmentUploadedBy", fields: [uploadedById], references: [id])
+
+  @@index([module])
+  @@index([entityType, entityId])
+  @@index([uploadedById])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  module      String
+  entityType  String
+  entityId    String
+  action      String
+  beforeJson  String?
+  afterJson   String?
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  createdBy User? @relation("AuditCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([module])
+  @@index([entityType, entityId])
+  @@index([action])
+  @@index([createdById])
+  @@index([createdAt])
+}
+
+model CatalogItem {
+  id          String   @id @default(cuid())
+  type        String
+  module      String?
+  value       String
+  label       String
+  active      Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  createdBy User? @relation("CatalogCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([type])
+  @@index([module])
+  @@index([value])
+  @@index([active])
+}

@@ -1,0 +1,592 @@
+import { PrismaClient } from "@prisma/client";
+import bcrypt from "bcryptjs";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+
+const prisma = new PrismaClient();
+
+const password = "seguridad123";
+
+function normalizeName(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toUpperCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function daysAgo(days: number, hour = 10) {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  date.setHours(hour, 0, 0, 0);
+  return date;
+}
+
+function internalNumber(prefix: string, index: number) {
+  return `${prefix}-2026-${String(index).padStart(4, "0")}`;
+}
+
+async function audit(
+  module: string,
+  entityType: string,
+  entityId: string,
+  action: string,
+  createdById: string | null,
+  after: unknown,
+  before: unknown = null,
+) {
+  await prisma.auditLog.create({
+    data: {
+      module,
+      entityType,
+      entityId,
+      action,
+      beforeJson: before ? JSON.stringify(before) : null,
+      afterJson: JSON.stringify(after),
+      createdById,
+    },
+  });
+}
+
+async function main() {
+  await prisma.auditLog.deleteMany();
+  await prisma.attachment.deleteMany();
+  await prisma.referral.deleteMany();
+  await prisma.juridicalAction.deleteMany();
+  await prisma.juridicalIntervention.deleteMany();
+  await prisma.dispatchFollowUp.deleteMany();
+  await prisma.dispatchRecord.deleteMany();
+  await prisma.appointment.deleteMany();
+  await prisma.internalExpedient.deleteMany();
+  await prisma.catalogItem.deleteMany();
+  await prisma.session.deleteMany();
+  await prisma.externalPerson.deleteMany();
+  await prisma.user.deleteMany();
+
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  const users = await Promise.all(
+    [
+      ["despacho1", "Marta Acosta", "marta.acosta@municipio.local", "despacho"],
+      ["despacho2", "Diego Rivas", "diego.rivas@municipio.local", "despacho"],
+      ["despacho3", "Paola Nunez", "paola.nunez@municipio.local", "despacho"],
+      ["despacho4", "Sergio Molina", "sergio.molina@municipio.local", "despacho"],
+      ["juridico1", "Laura Benitez", "laura.benitez@municipio.local", "juridico"],
+      ["juridico2", "Nicolas Ferreyra", "nicolas.ferreyra@municipio.local", "juridico"],
+      ["juridico3", "Camila Torres", "camila.torres@municipio.local", "juridico"],
+      ["directivo", "Andrea Puig", "andrea.puig@municipio.local", "directivo"],
+      ["secretario", "Secretario Municipal", "secretario@municipio.local", "directivo"],
+      ["admin", "Administrador Sistema", "admin@municipio.local", "admin"],
+    ].map(([username, name, email, role]) =>
+      prisma.user.create({
+        data: { username, name, email, role, passwordHash },
+      }),
+    ),
+  );
+
+  const byUser = Object.fromEntries(users.map((user) => [user.username, user]));
+  const adminId = byUser.admin.id;
+
+  const personalAgendaOwners = [byUser.juridico1, byUser.despacho1, byUser.directivo, byUser.secretario];
+  await prisma.appointment.createMany({
+    data: [
+      {
+        title: "Audiencia laboral",
+        date: "2026-05-15",
+        startTime: "09:00",
+        endTime: "10:00",
+        calendarScope: "lawyers",
+        createdByUserId: byUser.juridico1.id,
+        assignedLawyerId: byUser.juridico1.id,
+        assignedArea: "lawyers",
+        clientName: "Juan Gomez",
+        lawyerName: "Dra. Perez",
+        type: "AUDIENCIA",
+        status: "CONFIRMADA",
+        location: "Tribunales",
+        expedienteNumber: "LAB-1842-2026",
+      },
+      {
+        title: "Consulta inicial",
+        date: "2026-05-15",
+        startTime: "11:30",
+        endTime: "12:15",
+        calendarScope: "lawyers",
+        createdByUserId: byUser.juridico2.id,
+        assignedLawyerId: byUser.juridico2.id,
+        assignedArea: "lawyers",
+        clientName: "Maria Martinez",
+        lawyerName: "Dr. Lopez",
+        type: "CONSULTA",
+        status: "PENDIENTE",
+        location: "Oficina",
+      },
+      {
+        title: "Firma de contrato",
+        date: "2026-05-15",
+        startTime: "16:00",
+        endTime: "16:45",
+        calendarScope: "lawyers",
+        createdByUserId: byUser.directivo.id,
+        assignedLawyerId: byUser.juridico1.id,
+        assignedArea: "lawyers",
+        clientName: "Empresa Norte S.A.",
+        lawyerName: "Dra. Perez",
+        type: "FIRMA_DOCUMENTACION",
+        status: "CONFIRMADA",
+        location: "Oficina",
+      },
+      {
+        title: "Preparar documentacion de expediente",
+        date: "2026-05-15",
+        startTime: "10:00",
+        endTime: "11:00",
+        calendarScope: "dispatch",
+        createdByUserId: byUser.despacho1.id,
+        assignedUserId: byUser.despacho1.id,
+        assignedArea: "dispatch",
+        type: "TAREA_ADMINISTRATIVA",
+        status: "PENDIENTE",
+        expedienteNumber: "EXP-4521-2026",
+      },
+      {
+        title: "Presentar escrito en mesa de entrada",
+        date: "2026-05-15",
+        startTime: "12:00",
+        endTime: "12:45",
+        calendarScope: "dispatch",
+        createdByUserId: byUser.despacho2.id,
+        assignedUserId: byUser.despacho2.id,
+        assignedArea: "dispatch",
+        type: "GESTION_DOCUMENTAL",
+        status: "CONFIRMADA",
+        location: "Mesa de entrada",
+      },
+      {
+        title: "Revisar documentacion faltante",
+        date: "2026-05-15",
+        startTime: "15:00",
+        endTime: "15:45",
+        calendarScope: "dispatch",
+        createdByUserId: byUser.secretario.id,
+        assignedUserId: byUser.despacho3.id,
+        assignedArea: "dispatch",
+        type: "GESTION_DOCUMENTAL",
+        status: "PENDIENTE",
+      },
+      ...personalAgendaOwners.flatMap((owner) => [
+        {
+          title: "Recordatorio personal",
+          date: "2026-05-15",
+          startTime: "08:30",
+          calendarScope: "personal",
+          ownerUserId: owner.id,
+          createdByUserId: owner.id,
+          type: "RECORDATORIO",
+          status: "PENDIENTE",
+        },
+        {
+          title: "Llamada pendiente",
+          date: "2026-05-15",
+          startTime: "13:00",
+          endTime: "13:20",
+          calendarScope: "personal",
+          ownerUserId: owner.id,
+          createdByUserId: owner.id,
+          type: "LLAMADA",
+          status: "PENDIENTE",
+        },
+        {
+          title: "Revision de tareas del dia",
+          date: "2026-05-15",
+          startTime: "17:30",
+          endTime: "18:00",
+          calendarScope: "personal",
+          ownerUserId: owner.id,
+          createdByUserId: owner.id,
+          type: "RECORDATORIO",
+          status: "PENDIENTE",
+        },
+      ]),
+    ],
+  });
+
+  const catalogData = [
+    ["dispatch_category", "DESPACHO", "RECLAMO", "Reclamo"],
+    ["dispatch_category", "DESPACHO", "CONSULTA", "Consulta"],
+    ["dispatch_category", "DESPACHO", "SUGERENCIA", "Sugerencia"],
+    ["dispatch_category", "DESPACHO", "PEDIDO", "Pedido"],
+    ["dispatch_category", "DESPACHO", "DERIVACION_AREA", "Derivacion a otra area"],
+    ["dispatch_category", "DESPACHO", "SITUACION_VECINAL", "Situacion vecinal"],
+    ["dispatch_category", "DESPACHO", "ATENCION_GENERAL", "Atencion general"],
+    ["dispatch_area", "DESPACHO", "OBRAS_PUBLICAS", "Obras Publicas"],
+    ["dispatch_area", "DESPACHO", "SERVICIOS_URBANOS", "Servicios Urbanos"],
+    ["dispatch_area", "DESPACHO", "TRANSITO", "Transito"],
+    ["dispatch_area", "DESPACHO", "DEFENSA_CIVIL", "Defensa Civil"],
+    ["dispatch_area", "DESPACHO", "DESARROLLO_SOCIAL", "Desarrollo Social"],
+    ["juridical_type", "JURIDICO", "DENUNCIA_VECINAL", "Denuncia vecinal"],
+    ["juridical_type", "JURIDICO", "CONFLICTO_VECINAL", "Conflicto vecinal"],
+    ["juridical_type", "JURIDICO", "ORIENTACION", "Orientacion"],
+    ["juridical_type", "JURIDICO", "ABOGADOS_GRATUITOS", "Abogados gratuitos"],
+    ["juridical_type", "JURIDICO", "PRIMERA_INTERVENCION", "Primera intervencion"],
+    ["juridical_type", "JURIDICO", "CONTENCION", "Contencion"],
+    ["juridical_type", "JURIDICO", "INFORME_SITUACION", "Informe de situacion"],
+    ["juridical_type", "JURIDICO", "MPF", "Actuacion vinculada a MPF"],
+    ["juridical_type", "JURIDICO", "ASUNTOS_JURIDICOS", "Direccion de Asuntos Juridicos"],
+    ["juridical_type", "JURIDICO", "VIOLENCIA_GENERO", "Violencia de genero"],
+    ["juridical_type", "JURIDICO", "VIOLENCIA_FAMILIAR", "Violencia familiar"],
+    ["juridical_type", "JURIDICO", "RUIDOS_MOLESTOS", "Ruidos molestos"],
+    ["juridical_type", "JURIDICO", "MEDIANERAS", "Medianeras"],
+    ["juridical_type", "JURIDICO", "HABILITACIONES", "Habilitaciones"],
+    ["juridical_type", "JURIDICO", "OFICIO_URGENTE", "Oficio urgente"],
+    ["intervention_context", "JURIDICO", "ORIENTACION", "Orientacion"],
+    ["intervention_context", "JURIDICO", "MPF", "Ministerio Publico Fiscal"],
+    ["intervention_context", "JURIDICO", "ASUNTOS_JURIDICOS", "Direccion de Asuntos Juridicos"],
+    ["intervention_context", "JURIDICO", "INFORME", "Informe de situacion"],
+    ["intervention_context", "JURIDICO", "CONTENCION", "Contencion"],
+    ["expedient_category", "DESPACHO", "COMPRAS", "Compras"],
+    ["expedient_category", "DESPACHO", "REPUESTOS", "Repuestos"],
+    ["expedient_category", "DESPACHO", "SUELDOS", "Sueldos"],
+    ["expedient_category", "DESPACHO", "ALIMENTOS", "Alimentos"],
+    ["expedient_category", "DESPACHO", "INSUMOS", "Insumos"],
+    ["expedient_category", "DESPACHO", "MANTENIMIENTO", "Mantenimiento"],
+    ["expedient_category", "DESPACHO", "OTROS", "Otros"],
+  ];
+
+  await prisma.catalogItem.createMany({
+    data: catalogData.map(([type, module, value, label], index) => ({
+      type,
+      module,
+      value,
+      label,
+      sortOrder: index + 1,
+      createdById: adminId,
+    })),
+  });
+
+  const people = await Promise.all(
+    [
+      ["30111222", "Ramon", "Silva", "11 5420-1102", "Calle 12 1410"],
+      ["28555111", "Claudia", "Gomez", "11 6044-2231", "Av. San Martin 822"],
+      ["36777888", "Marina", "Ojeda", "11 5090-3377", "Los Pinos 244"],
+      ["40888999", "Ezequiel", "Paz", "11 6377-9912", "Barrio Norte Mz 4 Casa 8"],
+      ["24999123", "Silvia", "Maldonado", "11 4412-9081", "Mitre 730"],
+      ["33222111", "Hector", "Luna", "11 6020-7780", "Las Heras 188"],
+      ["42666777", "Daniela", "Ruiz", "11 4701-2233", "Sarmiento 521"],
+      ["39123456", "Luciano", "Arias", "11 6688-1290", "Belgrano 950"],
+      ["34555666", "Noelia", "Farias", "11 5577-0101", "9 de Julio 101"],
+    ].map(([dni, firstName, lastName, phone1, address]) =>
+      prisma.externalPerson.create({
+        data: {
+          dni,
+          firstName,
+          lastName,
+          fullNameNormalized: normalizeName(`${firstName} ${lastName}`),
+          phone1,
+          address,
+        },
+      }),
+    ),
+  );
+
+  const dispatchRecords = [];
+  const dispatchSeeds = [
+    [0, "RECLAMO", "ALTA", "EN_GESTION", "Falta de luminaria en esquina con alto transito peatonal.", "Servicios Urbanos", byUser.despacho1.id, daysAgo(0, 9)],
+    [1, "CONSULTA", "MEDIA", "RECIBIDO", "Consulta sobre procedimiento para denunciar ruidos reiterados en horario nocturno.", null, byUser.despacho2.id, daysAgo(1, 11)],
+    [2, "SITUACION_VECINAL", "URGENTE", "DERIVADO", "Vecina solicita intervencion por conflicto persistente con inmueble lindero.", null, byUser.despacho3.id, daysAgo(2, 12)],
+    [3, "PEDIDO", "MEDIA", "EN_ANALISIS", "Pedido de refuerzo de patrullaje preventivo en zona escolar.", "Patrulla Municipal", byUser.despacho1.id, daysAgo(3, 8)],
+    [4, "DERIVACION_AREA", "BAJA", "DERIVADO", "Solicitud por poda y despeje de camara urbana parcialmente tapada.", "Obras Publicas", byUser.despacho4.id, daysAgo(5, 10)],
+    [5, "ATENCION_GENERAL", "MEDIA", "RESUELTO", "Se informaron canales de contacto y horarios de atencion municipal.", null, byUser.despacho2.id, daysAgo(6, 14)],
+    [6, "RECLAMO", "ALTA", "EN_GESTION", "Reclamo por vehiculos abandonados en acceso a barrio.", "Transito", byUser.despacho3.id, daysAgo(7, 9)],
+    [7, "SUGERENCIA", "BAJA", "RECIBIDO", "Sugerencia para mejorar senalizacion cerca de plaza central.", null, byUser.despacho4.id, daysAgo(8, 15)],
+    [8, "PEDIDO", "URGENTE", "RECIBIDO", "Pedido recibido desde Intervenciones para preservar registro de camaras por oficio urgente.", "Centro de Monitoreo", byUser.despacho1.id, daysAgo(1, 16), "FROM_JURIDICO"],
+  ];
+
+  for (const [index, seed] of dispatchSeeds.entries()) {
+    const [personIndex, category, priority, status, description, referredArea, createdById, attendedAt, origin = "DIRECT"] = seed as [
+      number,
+      string,
+      string,
+      string,
+      string,
+      string | null,
+      string,
+      Date,
+      string?,
+    ];
+    const person = people[personIndex];
+    const record = await prisma.dispatchRecord.create({
+      data: {
+        internalNumber: internalNumber("DES", index + 1),
+        attendedAt,
+        createdById,
+        personId: person.id,
+        dniSnapshot: person.dni,
+        nameSnapshot: `${person.firstName} ${person.lastName}`,
+        description,
+        category,
+        priority,
+        status,
+        referredArea,
+        origin,
+        lastStatusAt: attendedAt,
+        notes: status === "DERIVADO" ? "Derivacion registrada con resumen funcional." : null,
+      },
+    });
+    dispatchRecords.push(record);
+    await audit("DESPACHO", "DispatchRecord", record.id, "CREATE", createdById, {
+      internalNumber: record.internalNumber,
+      status: record.status,
+      category: record.category,
+    });
+  }
+
+  await prisma.dispatchFollowUp.createMany({
+    data: [
+      {
+        dispatchRecordId: dispatchRecords[0].id,
+        content: "Se cargo reclamo y se solicito verificacion al equipo de servicios urbanos.",
+        statusAfter: "EN_GESTION",
+        createdById: byUser.despacho1.id,
+        createdAt: daysAgo(0, 10),
+      },
+      {
+        dispatchRecordId: dispatchRecords[2].id,
+        content: "Se derivo a Intervenciones Juridico-Institucionales con resumen minimo necesario.",
+        statusAfter: "DERIVADO",
+        createdById: byUser.despacho3.id,
+        createdAt: daysAgo(2, 13),
+      },
+      {
+        dispatchRecordId: dispatchRecords[5].id,
+        content: "Atencion resuelta en mostrador. Se informaron telefonos utiles.",
+        statusAfter: "RESUELTO",
+        createdById: byUser.despacho2.id,
+        createdAt: daysAgo(6, 15),
+      },
+    ],
+  });
+
+  const interventions = [];
+  const interventionSeeds = [
+    [2, "CONFLICTO_VECINAL", "ALTA", "EN_SEGUIMIENTO", "Orientacion inicial por conflicto vecinal con antecedentes de hostigamiento verbal.", "ORIENTACION", byUser.juridico1.id, daysAgo(2, 14), "FROM_DESPACHO"],
+    [1, "RUIDOS_MOLESTOS", "MEDIA", "EN_ORIENTACION", "Se recibe denuncia vecinal por ruidos nocturnos persistentes. Se brindan pautas de registro.", "ORIENTACION", byUser.juridico2.id, daysAgo(1, 12)],
+    [6, "OFICIO_URGENTE", "URGENTE", "PENDIENTE_DOCUMENTACION", "Oficio urgente vinculado a preservacion de registros municipales.", "MPF", byUser.juridico3.id, daysAgo(0, 9)],
+    [4, "VIOLENCIA_GENERO", "URGENTE", "EN_SEGUIMIENTO", "Primera intervencion y contencion. Se informa canal especializado y medidas disponibles.", "CONTENCION", byUser.juridico1.id, daysAgo(4, 11)],
+    [5, "MEDIANERAS", "MEDIA", "RECIBIDO", "Orientacion por disputa de medianera y filtraciones denunciadas por vecino.", "ORIENTACION", byUser.juridico2.id, daysAgo(5, 10)],
+    [7, "HABILITACIONES", "BAJA", "CONCLUIDO", "Consulta por requisitos y area competente en habilitaciones comerciales.", "ASUNTOS_JURIDICOS", byUser.juridico3.id, daysAgo(9, 13)],
+    [8, "ABOGADOS_GRATUITOS", "MEDIA", "CONCLUIDO", "Se brinda informacion sobre patrocinio juridico gratuito y horarios de consulta.", "ORIENTACION", byUser.juridico1.id, daysAgo(10, 10)],
+  ];
+
+  for (const [index, seed] of interventionSeeds.entries()) {
+    const [personIndex, type, urgency, status, description, interventionContext, createdById, attendedAt, origin = "DIRECT"] = seed as [
+      number,
+      string,
+      string,
+      string,
+      string,
+      string,
+      string,
+      Date,
+      string?,
+    ];
+    const person = people[personIndex];
+    const intervention = await prisma.juridicalIntervention.create({
+      data: {
+        internalNumber: internalNumber("JI", index + 1),
+        attendedAt,
+        createdById,
+        personId: person.id,
+        dniSnapshot: person.dni,
+        nameSnapshot: `${person.firstName} ${person.lastName}`,
+        type,
+        urgency,
+        status,
+        description,
+        interventionContext,
+        counterpartType: type === "CONFLICTO_VECINAL" ? "AMBAS_PARTES" : "DENUNCIANTE",
+        guidanceProvided:
+          type === "ABOGADOS_GRATUITOS"
+            ? "Se informaron instituciones y dias de atencion gratuita."
+            : "Se registro orientacion inicial y pasos recomendados.",
+        oficioNumber: type === "OFICIO_URGENTE" ? "OF-2026-1187-MPF" : null,
+        expedienteNumber: type === "OFICIO_URGENTE" ? "MPF-2026-0442" : null,
+        origin,
+        lastStatusAt: attendedAt,
+      },
+    });
+    interventions.push(intervention);
+    await audit("JURIDICO", "JuridicalIntervention", intervention.id, "CREATE", createdById, {
+      internalNumber: intervention.internalNumber,
+      status: intervention.status,
+      type: intervention.type,
+    });
+  }
+
+  await prisma.juridicalAction.createMany({
+    data: [
+      {
+        juridicalInterventionId: interventions[0].id,
+        actionType: "PRIMERA_INTERVENCION",
+        content: "Se realiza entrevista inicial y se delimita informacion derivada desde Despacho.",
+        nextStepDate: daysAgo(-3, 10),
+        createdById: byUser.juridico1.id,
+        createdAt: daysAgo(2, 15),
+      },
+      {
+        juridicalInterventionId: interventions[2].id,
+        actionType: "OFICIO",
+        content: "Se verifica documentacion recibida y se solicita preservacion de camaras a Despacho.",
+        nextStepDate: daysAgo(-1, 9),
+        createdById: byUser.juridico3.id,
+        createdAt: daysAgo(0, 10),
+      },
+      {
+        juridicalInterventionId: interventions[3].id,
+        actionType: "CONTENCION",
+        content: "Se brinda contencion, se registran organismos de contacto y se agenda seguimiento.",
+        nextStepDate: daysAgo(-2, 11),
+        createdById: byUser.juridico1.id,
+        createdAt: daysAgo(4, 12),
+      },
+      {
+        juridicalInterventionId: interventions[5].id,
+        actionType: "ORIENTACION",
+        content: "Consulta finalizada con indicacion del area competente.",
+        createdById: byUser.juridico3.id,
+        createdAt: daysAgo(9, 14),
+      },
+    ],
+  });
+
+  const referralOne = await prisma.referral.create({
+    data: {
+      originModule: "DESPACHO",
+      destinationModule: "JURIDICO",
+      originDispatchRecordId: dispatchRecords[2].id,
+      destinationJuridicalInterventionId: interventions[0].id,
+      summary: "Conflicto vecinal persistente. Se remite resumen de atencion y datos de contacto.",
+      status: "RECIBIDA",
+      visibleStatusForOrigin: "Recibida por Intervenciones - en seguimiento",
+      referredById: byUser.despacho3.id,
+      referredAt: daysAgo(2, 13),
+    },
+  });
+  await audit("DESPACHO", "Referral", referralOne.id, "REFERRAL", byUser.despacho3.id, referralOne);
+
+  const referralTwo = await prisma.referral.create({
+    data: {
+      originModule: "JURIDICO",
+      destinationModule: "DESPACHO",
+      originJuridicalInterventionId: interventions[2].id,
+      destinationDispatchRecordId: dispatchRecords[8].id,
+      summary: "Solicitud operativa para preservar registros de camaras segun oficio urgente.",
+      status: "PENDIENTE",
+      visibleStatusForOrigin: "Pendiente de gestion en Despacho",
+      referredById: byUser.juridico3.id,
+      referredAt: daysAgo(0, 11),
+    },
+  });
+  await audit("JURIDICO", "Referral", referralTwo.id, "REFERRAL", byUser.juridico3.id, referralTwo);
+
+  const expedients = [];
+  const expedientSeeds = [
+    ["COMPRAS", "EXP-4521-2026", "Compra de linternas, chalecos reflectivos y elementos de apoyo operativo.", "EN_TRAMITE", byUser.despacho1.id],
+    ["REPUESTOS", "EXP-4522-2026", "Repuestos para mantenimiento preventivo de moviles municipales.", "OBSERVADO", byUser.despacho2.id],
+    ["SUELDOS", "EXP-4523-2026", "Expediente interno de liquidacion de horas adicionales.", "EN_APROBACION", byUser.despacho3.id],
+    ["ALIMENTOS", "EXP-4524-2026", "Solicitud de alimentos secos para guardias extendidas.", "APROBADO", byUser.despacho4.id],
+    ["INSUMOS", "EXP-4525-2026", "Reposicion de toner, papel y carpetas para despacho.", "INICIADO", byUser.despacho1.id],
+    ["MANTENIMIENTO", "EXP-4526-2026", "Mantenimiento de equipos de comunicacion interna.", "EN_TRAMITE", byUser.despacho2.id],
+    ["OTROS", "EXP-4527-2026", "Gestion administrativa por renovacion de credenciales internas.", "FINALIZADO", byUser.despacho3.id],
+  ];
+
+  for (const [index, [category, expedienteNumber, description, status, createdById]] of expedientSeeds.entries()) {
+    const expedient = await prisma.internalExpedient.create({
+      data: {
+        internalNumber: internalNumber("ADM", index + 1),
+        expedienteNumber,
+        category,
+        description,
+        status,
+        createdById,
+      },
+    });
+    expedients.push(expedient);
+    await audit("DESPACHO", "InternalExpedient", expedient.id, "CREATE", createdById, {
+      internalNumber: expedient.internalNumber,
+      status: expedient.status,
+      category: expedient.category,
+    });
+  }
+
+  const uploadDir = path.join(process.cwd(), "storage", "uploads");
+  await mkdir(uploadDir, { recursive: true });
+  const sampleFiles = [
+    {
+      name: "seed-despacho-luminaria.txt",
+      content: "Adjunto semilla: fotografia referenciada de luminaria sin funcionar.",
+      module: "DESPACHO",
+      entityType: "DispatchRecord",
+      entityId: dispatchRecords[0].id,
+      uploadedById: byUser.despacho1.id,
+      isPrivate: false,
+    },
+    {
+      name: "seed-juridico-oficio.txt",
+      content: "Adjunto semilla privado: referencia interna de oficio urgente.",
+      module: "JURIDICO",
+      entityType: "JuridicalIntervention",
+      entityId: interventions[2].id,
+      uploadedById: byUser.juridico3.id,
+      isPrivate: true,
+    },
+    {
+      name: "seed-expediente-compra.txt",
+      content: "Adjunto semilla: presupuesto preliminar de insumos operativos.",
+      module: "DESPACHO",
+      entityType: "InternalExpedient",
+      entityId: expedients[0].id,
+      uploadedById: byUser.despacho1.id,
+      isPrivate: false,
+    },
+  ];
+
+  for (const file of sampleFiles) {
+    const filePath = path.join("storage", "uploads", file.name);
+    await writeFile(path.join(process.cwd(), filePath), file.content, "utf8");
+    await prisma.attachment.create({
+      data: {
+        module: file.module,
+        entityType: file.entityType,
+        entityId: file.entityId,
+        fileName: file.name,
+        originalName: file.name,
+        filePath,
+        mimeType: "text/plain",
+        size: Buffer.byteLength(file.content),
+        uploadedById: file.uploadedById,
+        isPrivate: file.isPrivate,
+      },
+    });
+  }
+
+  console.log("Seed completado");
+  console.table(
+    users.map((user) => ({
+      username: user.username,
+      role: user.role,
+      password,
+    })),
+  );
+}
+
+main()
+  .then(async () => {
+    await prisma.$disconnect();
+  })
+  .catch(async (error) => {
+    console.error(error);
+    await prisma.$disconnect();
+    process.exit(1);
+  });

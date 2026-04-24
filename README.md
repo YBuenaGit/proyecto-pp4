@@ -1,36 +1,146 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Secretaria de Seguridad Municipal - MVP local
 
-## Getting Started
+Aplicacion web interna para una Secretaria de Seguridad municipal. Implementa dos modulos separados por permisos y una base compartida:
 
-First, run the development server:
+- Despacho de la Secretaria
+- Intervenciones Juridico-Institucionales
+- Expedientes internos dentro de Despacho
+- Personas compartidas
+- Reportes simples
+- Administracion tecnica
+
+No hay portal ciudadano, registro publico ni mesa de entrada comun. Los registros se cargan directamente en cada modulo.
+
+## Stack
+
+- Next.js App Router
+- TypeScript
+- Tailwind CSS
+- Prisma
+- SQLite local
+- Autenticacion local con credenciales y sesiones en base
+- Adjuntos en disco local (`storage/uploads`)
+
+## Puesta en marcha
+
+1. Instalar dependencias:
+
+```bash
+npm install
+```
+
+2. Verificar `.env`:
+
+```env
+DATABASE_URL="file:./dev.db"
+```
+
+3. Crear/aplicar migraciones y generar Prisma Client:
+
+```bash
+npm run db:migrate
+```
+
+4. Cargar datos semilla:
+
+```bash
+npm run db:seed
+```
+
+5. Ejecutar en local:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abrir [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Usuarios seed
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Todos usan la contrasena `seguridad123`.
 
-## Learn More
+| Usuario | Rol |
+| --- | --- |
+| `despacho1` | despacho |
+| `despacho2` | despacho |
+| `despacho3` | despacho |
+| `despacho4` | despacho |
+| `juridico1` | juridico |
+| `juridico2` | juridico |
+| `juridico3` | juridico |
+| `directivo` | directivo |
+| `secretario` | directivo |
+| `admin` | admin |
 
-To learn more about Next.js, take a look at the following resources:
+## Permisos implementados
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- `despacho`: atenciones/reclamos, seguimientos, adjuntos, derivaciones, expedientes internos y busquedas de Despacho.
+- `juridico`: intervenciones, actuaciones, adjuntos privados, derivaciones recibidas y busquedas juridico-institucionales.
+- `directivo`: visibilidad completa de Despacho, Intervenciones, Expedientes, Personas y Reportes.
+- `admin`: administracion tecnica de usuarios, catalogos y auditoria. No se usa como rol operativo de detalle sensible.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+La privacidad entre modulos se resuelve con registros separados (`DispatchRecord` y `JuridicalIntervention`) unidos por `Referral`. Una derivacion comparte un resumen funcional, pero el detalle posterior del modulo destino no queda expuesto al modulo origen.
 
-## Deploy on Vercel
+## Funcionalidades incluidas
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- Login local sin servicios externos.
+- Sidebar institucional responsive.
+- Dashboard con KPIs y actividad reciente.
+- Listados con filtros por fecha, DNI, nombre, categoria/tipo, estado y usuario.
+- Formularios de alta y edicion.
+- Detalle con secciones, badges de estado, seguimientos/actuaciones y auditoria.
+- Adjuntos locales con descarga controlada por permisos.
+- Derivacion Despacho -> Intervenciones.
+- Derivacion Intervenciones -> Despacho preparada y funcional.
+- Expedientes internos administrativos.
+- Personas compartidas con historial visible segun rol.
+- Reportes simples por categoria, estado, tipo, usuario y periodo.
+- Administracion basica de usuarios y catalogos.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Estructura relevante
+
+```text
+prisma/
+  schema.prisma
+  seed.ts
+  migrations/
+src/
+  app/
+    (auth)/login
+    (app)/despacho
+    (app)/intervenciones
+    (app)/personas
+    (app)/reportes
+    (app)/administracion
+    adjuntos/[id]
+  components/
+    layout/
+    ui/
+  lib/
+    auth.ts
+    rbac.ts
+    prisma.ts
+    audit.ts
+    files.ts
+storage/
+  uploads/
+```
+
+## Migracion futura a PostgreSQL
+
+El modelo evita tipos especificos de SQLite y guarda estados/categorias como strings mas catalogos administrables. Para migrar:
+
+1. Cambiar el provider de Prisma a `postgresql`.
+2. Actualizar `DATABASE_URL`.
+3. Crear una nueva migracion contra PostgreSQL.
+4. Mantener los mismos modelos y relaciones principales.
+
+## Comandos utiles
+
+```bash
+npm run lint
+npm run build
+npm run db:migrate
+npm run db:seed
+npm run db:reset
+```

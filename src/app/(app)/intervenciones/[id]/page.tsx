@@ -1,0 +1,228 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { Edit, Send } from "lucide-react";
+import { AttachmentList, UploadForm } from "@/components/ui/attachments";
+import { AuditTimeline } from "@/components/ui/audit-timeline";
+import { Button, LinkButton } from "@/components/ui/button";
+import { DetailField, DetailSection, FieldGrid } from "@/components/ui/detail-section";
+import { FormField, inputClass, textareaClass } from "@/components/ui/form-controls";
+import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { ACTION_TYPES, JURIDICAL_STATUSES } from "@/lib/constants";
+import { requireUser } from "@/lib/auth";
+import { formatDateTime, formatDate, labelFromValue } from "@/lib/format";
+import { prisma } from "@/lib/prisma";
+import { assertAccess, canAccessDispatch, canAccessJuridical } from "@/lib/rbac";
+import {
+  addJuridicalAction,
+  deriveJuridicalToDispatch,
+  uploadJuridicalAttachment,
+} from "../actions";
+
+export default async function InterventionDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const user = await requireUser();
+  assertAccess(canAccessJuridical(user));
+  const { id } = await params;
+  const [intervention, attachments, auditLogs, areas] = await Promise.all([
+    prisma.juridicalIntervention.findUnique({
+      where: { id },
+      include: {
+        person: true,
+        createdBy: true,
+        actions: { include: { createdBy: true }, orderBy: { createdAt: "desc" } },
+        destinationReferrals: {
+          include: { originDispatchRecord: true, referredBy: true },
+          orderBy: { referredAt: "desc" },
+        },
+        originReferrals: {
+          include: { destinationDispatchRecord: true, referredBy: true },
+          orderBy: { referredAt: "desc" },
+        },
+      },
+    }),
+    prisma.attachment.findMany({
+      where: { entityType: "JuridicalIntervention", entityId: id },
+      include: { uploadedBy: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.auditLog.findMany({
+      where: { entityType: "JuridicalIntervention", entityId: id },
+      include: { createdBy: true },
+      orderBy: { createdAt: "desc" },
+    }),
+    prisma.catalogItem.findMany({ where: { type: "dispatch_area", active: true }, orderBy: { sortOrder: "asc" } }),
+  ]);
+  if (!intervention) notFound();
+  const directivoCanSeeDispatch = canAccessDispatch(user);
+
+  return (
+    <>
+      <PageHeader
+        title={intervention.internalNumber}
+        description="Detalle interno de Intervenciones Juridico-Institucionales. Este contenido no se expone a usuarios de Despacho."
+        actions={
+          <>
+            <LinkButton href={`/intervenciones/${intervention.id}/editar`} variant="secondary"><Edit className="h-4 w-4" />Editar</LinkButton>
+            <LinkButton href="/intervenciones" variant="secondary">Volver</LinkButton>
+          </>
+        }
+      />
+
+      <div className="grid gap-5 xl:grid-cols-[1fr_380px]">
+        <div className="space-y-5">
+          <DetailSection title="Datos principales">
+            <FieldGrid>
+              <DetailField label="Estado" value={<StatusBadge value={intervention.status} />} />
+              <DetailField label="Urgencia" value={<StatusBadge value={intervention.urgency} />} />
+              <DetailField label="Tipo" value={labelFromValue(intervention.type)} />
+              <DetailField label="Subtipo" value={intervention.subType} />
+              <DetailField label="Contexto" value={labelFromValue(intervention.interventionContext)} />
+              <DetailField label="Parte vinculada" value={labelFromValue(intervention.counterpartType)} />
+              <DetailField label="Oficio" value={intervention.oficioNumber} />
+              <DetailField label="Expediente" value={intervention.expedienteNumber} />
+              <DetailField label="Fecha de atencion" value={formatDateTime(intervention.attendedAt)} />
+              <DetailField label="Usuario que atendio" value={intervention.createdBy.name} />
+              <DetailField label="Origen" value={labelFromValue(intervention.origin)} />
+              <DetailField label="Ultimo estado" value={formatDateTime(intervention.lastStatusAt)} />
+            </FieldGrid>
+          </DetailSection>
+
+          <DetailSection title="Persona">
+            <FieldGrid>
+              <DetailField label="Nombre" value={intervention.nameSnapshot ?? intervention.manualPersonName ?? "Sin identificar"} />
+              <DetailField label="DNI" value={intervention.dniSnapshot} />
+              <DetailField label="Telefono 1" value={intervention.person?.phone1} />
+              <DetailField label="Telefono 2" value={intervention.person?.phone2} />
+              <DetailField label="Domicilio" value={intervention.person?.address} />
+              <DetailField
+                label="Perfil"
+                value={intervention.personId ? <Link className="text-sky-800 hover:underline" href={`/personas/${intervention.personId}`}>Ver persona</Link> : "-"}
+              />
+            </FieldGrid>
+          </DetailSection>
+
+          <DetailSection title="Contenido interno">
+            <div className="space-y-4 text-sm leading-6 text-slate-800">
+              <div>
+                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Descripcion</p>
+                <p className="whitespace-pre-wrap">{intervention.description}</p>
+              </div>
+              {intervention.guidanceProvided ? (
+                <div>
+                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Orientacion / intervencion realizada</p>
+                  <p className="whitespace-pre-wrap">{intervention.guidanceProvided}</p>
+                </div>
+              ) : null}
+              {intervention.referredToAgency ? (
+                <div>
+                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Derivado a organismo</p>
+                  <p>{intervention.referredToAgency}</p>
+                </div>
+              ) : null}
+            </div>
+          </DetailSection>
+
+          <DetailSection title="Actuaciones y seguimientos">
+            <form action={addJuridicalAction.bind(null, intervention.id)} className="mb-5 space-y-3 rounded-md border border-slate-200 bg-slate-50 p-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <FormField label="Tipo de actuacion">
+                  <select name="actionType" className={inputClass} defaultValue="SEGUIMIENTO">
+                    {ACTION_TYPES.map((item) => (
+                      <option key={item} value={item}>{labelFromValue(item)}</option>
+                    ))}
+                  </select>
+                </FormField>
+                <FormField label="Proximo paso">
+                  <input name="nextStepDate" type="date" className={inputClass} />
+                </FormField>
+              </div>
+              <FormField label="Contenido">
+                <textarea name="content" className={textareaClass} required />
+              </FormField>
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                <FormField label="Estado posterior">
+                  <select name="statusAfter" className={inputClass} defaultValue="">
+                    <option value="">Sin cambio</option>
+                    {JURIDICAL_STATUSES.map((status) => (
+                      <option key={status} value={status}>{labelFromValue(status)}</option>
+                    ))}
+                  </select>
+                </FormField>
+                <div className="flex items-end">
+                  <Button type="submit">Agregar actuacion</Button>
+                </div>
+              </div>
+            </form>
+
+            <div className="space-y-3">
+              {intervention.actions.map((action) => (
+                <div key={action.id} className="rounded-md border border-slate-200 p-3">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-medium text-slate-900">{labelFromValue(action.actionType)} · {action.createdBy.name}</p>
+                    <span className="text-xs text-slate-500">{formatDateTime(action.createdAt)}</span>
+                  </div>
+                  <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">{action.content}</p>
+                  {action.nextStepDate ? <p className="mt-2 text-xs text-slate-500">Proximo paso: {formatDate(action.nextStepDate)}</p> : null}
+                </div>
+              ))}
+              {!intervention.actions.length ? <p className="text-sm text-slate-500">Sin actuaciones.</p> : null}
+            </div>
+          </DetailSection>
+        </div>
+
+        <aside className="space-y-5">
+          <DetailSection title="Derivaciones">
+            <div className="space-y-4">
+              <form action={deriveJuridicalToDispatch.bind(null, intervention.id)} className="space-y-3">
+                <FormField label="Derivar a Despacho">
+                  <textarea name="summary" className={textareaClass} placeholder="Resumen operativo, sin notas sensibles innecesarias" />
+                </FormField>
+                <FormField label="Area sugerida">
+                  <select name="area" className={inputClass} defaultValue="">
+                    <option value="">Despacho</option>
+                    {areas.map((item) => (
+                      <option key={item.value} value={item.label}>{item.label}</option>
+                    ))}
+                  </select>
+                </FormField>
+                <Button type="submit" variant="secondary"><Send className="h-4 w-4" />Derivar a Despacho</Button>
+              </form>
+
+              <div className="border-t border-slate-200 pt-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Historial de derivaciones</p>
+                <div className="space-y-2">
+                  {[...intervention.destinationReferrals, ...intervention.originReferrals].map((referral) => (
+                    <div key={referral.id} className="rounded-md bg-slate-50 p-3 text-sm">
+                      <p className="font-medium text-slate-900">{referral.originModule} → {referral.destinationModule}</p>
+                      <p className="mt-1 text-slate-600">{referral.summary}</p>
+                      <p className="mt-1 text-xs text-slate-500">{formatDateTime(referral.referredAt)}</p>
+                      {directivoCanSeeDispatch && referral.destinationDispatchRecordId ? (
+                        <Link className="mt-2 inline-block text-xs font-medium text-sky-800 hover:underline" href={`/despacho/${referral.destinationDispatchRecordId}`}>
+                          Ver atencion vinculada
+                        </Link>
+                      ) : null}
+                    </div>
+                  ))}
+                  {!intervention.destinationReferrals.length && !intervention.originReferrals.length ? (
+                    <p className="text-sm text-slate-500">Sin derivaciones.</p>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </DetailSection>
+
+          <DetailSection title="Adjuntos privados">
+            <div className="space-y-4">
+              <AttachmentList attachments={attachments} />
+              <UploadForm action={uploadJuridicalAttachment.bind(null, intervention.id)} />
+            </div>
+          </DetailSection>
+
+          <DetailSection title="Auditoria">
+            <AuditTimeline logs={auditLogs} />
+          </DetailSection>
+        </aside>
+      </div>
+    </>
+  );
+}
