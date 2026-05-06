@@ -5,10 +5,17 @@ import { COUNTERPART_TYPES, JURIDICAL_STATUSES, PRIORITIES } from "@/lib/constan
 import { labelFromValue, toDateInputValue } from "@/lib/format";
 
 type InterventionRecord = {
+  createdAt?: Date | null;
   attendedAt?: Date | null;
   dniSnapshot?: string | null;
   nameSnapshot?: string | null;
-  manualPersonName?: string | null;
+  complainantIsAnonymous?: boolean | null;
+  complainantDni?: string | null;
+  complainantFirstName?: string | null;
+  complainantLastName?: string | null;
+  complainantPhone1?: string | null;
+  complainantPhone2?: string | null;
+  complainantAddress?: string | null;
   person?: {
     dni: string | null;
     firstName: string;
@@ -55,7 +62,14 @@ export function InterventionForm({
       <DetailSection title="Datos de intervencion">
         <FormGrid>
           <FormField label="Fecha y hora">
-            <input name="attendedAt" type="datetime-local" defaultValue={toDateInputValue(record?.attendedAt ?? new Date())} className={inputClass} />
+            {record ? (
+              <input name="attendedAt" type="datetime-local" defaultValue={toDateInputValue(record.attendedAt)} className={inputClass} />
+            ) : (
+              <details className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2">
+                <summary className="cursor-pointer text-sm font-medium text-slate-700">Usar fecha historica</summary>
+                <input name="attendedAt" type="datetime-local" className={`${inputClass} mt-3`} />
+              </details>
+            )}
           </FormField>
           <FormField label="Tipo">
             <select name="type" defaultValue={record?.type ?? ""} className={inputClass} required>
@@ -107,7 +121,41 @@ export function InterventionForm({
         </FormGrid>
       </DetailSection>
 
-      <DetailSection title="Persona vinculada">
+      <DetailSection title="Persona denunciante">
+        <div className="space-y-4">
+          <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+            <input
+              name="complainantIsAnonymous"
+              type="checkbox"
+              defaultChecked={Boolean(record?.complainantIsAnonymous)}
+              className="h-4 w-4 rounded border-slate-300 text-sky-700 focus:ring-sky-600"
+            />
+            Denunciante anonimo
+          </label>
+          <FormGrid>
+            <FormField label="DNI">
+              <input name="complainantDni" defaultValue={record?.complainantDni ?? ""} className={inputClass} />
+            </FormField>
+            <FormField label="Nombre">
+              <input name="complainantFirstName" defaultValue={record?.complainantFirstName ?? ""} className={inputClass} />
+            </FormField>
+            <FormField label="Apellido">
+              <input name="complainantLastName" defaultValue={record?.complainantLastName ?? ""} className={inputClass} />
+            </FormField>
+            <FormField label="Telefono 1">
+              <input name="complainantPhone1" defaultValue={record?.complainantPhone1 ?? ""} className={inputClass} />
+            </FormField>
+            <FormField label="Telefono 2">
+              <input name="complainantPhone2" defaultValue={record?.complainantPhone2 ?? ""} className={inputClass} />
+            </FormField>
+            <FormField label="Domicilio">
+              <input name="complainantAddress" defaultValue={record?.complainantAddress ?? ""} className={inputClass} />
+            </FormField>
+          </FormGrid>
+        </div>
+      </DetailSection>
+
+      <DetailSection title="Persona vinculada / denunciada">
         <FormGrid>
           <FormField label="DNI">
             <input name="dni" defaultValue={record?.person?.dni ?? record?.dniSnapshot ?? ""} className={inputClass} />
@@ -126,9 +174,6 @@ export function InterventionForm({
           </FormField>
           <FormField label="Domicilio">
             <input name="address" defaultValue={record?.person?.address ?? ""} className={inputClass} />
-          </FormField>
-          <FormField label="Nombre manual excepcional" className="md:col-span-2 xl:col-span-3">
-            <input name="manualPersonName" defaultValue={record?.manualPersonName ?? ""} className={inputClass} />
           </FormField>
         </FormGrid>
       </DetailSection>

@@ -1,14 +1,14 @@
-import { Button, LinkButton } from "@/components/ui/button";
-import { DetailSection } from "@/components/ui/detail-section";
-import { FormField, FormGrid, inputClass, textareaClass } from "@/components/ui/form-controls";
-import { DISPATCH_STATUSES, PRIORITIES } from "@/lib/constants";
-import { labelFromValue, toDateInputValue } from "@/lib/format";
+import { toDateInputValue } from "@/lib/format";
+import { DispatchWizardForm, type DispatchWizardValues, type LinkedPersonDraft } from "./dispatch-wizard-form";
 
 type DispatchFormRecord = {
+  createdAt?: Date | null;
   attendedAt?: Date | null;
+  usesHistoricalDate?: boolean | null;
   dniSnapshot?: string | null;
   nameSnapshot?: string | null;
-  manualPersonName?: string | null;
+  complainants?: StoredComplainant[] | null;
+  linkedPersons?: StoredLinkedPerson[] | null;
   person?: {
     dni: string | null;
     firstName: string;
@@ -18,13 +18,33 @@ type DispatchFormRecord = {
     address: string | null;
   } | null;
   description?: string | null;
+  initialGuidance?: string | null;
   category?: string | null;
-  subcategory?: string | null;
   priority?: string | null;
   status?: string | null;
   referredArea?: string | null;
-  notes?: string | null;
-  confidentialSummary?: string | null;
+  confidentialNotes?: string | null;
+};
+
+type StoredComplainant = {
+  id?: string;
+  isAnonymous?: boolean;
+  dni?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
+  phone1?: string | null;
+  phone2?: string | null;
+  address?: string | null;
+};
+
+type StoredLinkedPerson = {
+  id?: string;
+  dni?: string | null;
+  firstName?: string | null;
+  apellidoApodoManual?: string | null;
+  phone1?: string | null;
+  phone2?: string | null;
+  address?: string | null;
 };
 
 export function DispatchForm({
@@ -45,111 +65,62 @@ export function DispatchForm({
   submitLabel?: string;
 }) {
   const firstName = record?.person?.firstName ?? record?.nameSnapshot?.split(" ")[0] ?? "";
-  const lastName = record?.person?.lastName ?? record?.nameSnapshot?.split(" ").slice(1).join(" ") ?? "";
+  const apellidoApodoManual = record?.person?.lastName ?? record?.nameSnapshot?.split(" ").slice(1).join(" ") ?? "";
+  const complainants = record?.complainants ?? [];
+  const linkedPersons = record?.linkedPersons ?? [];
+  const fallbackComplainants: StoredComplainant[] = [{ isAnonymous: false }];
+  const fallbackLinkedPerson: Omit<LinkedPersonDraft, "id"> = {
+    dni: record?.person?.dni ?? record?.dniSnapshot ?? "",
+    firstName,
+    apellidoApodoManual,
+    phone1: record?.person?.phone1 ?? "",
+    phone2: record?.person?.phone2 ?? "",
+    address: record?.person?.address ?? "",
+  };
+  const initialComplainants = (complainants.length ? complainants : fallbackComplainants).map((person, index) => ({
+    id: `complainant-${index}`,
+    isAnonymous: Boolean(person.isAnonymous),
+    dni: person.dni ?? "",
+    firstName: person.firstName ?? "",
+    lastName: person.lastName ?? "",
+    phone1: person.phone1 ?? "",
+    phone2: person.phone2 ?? "",
+    address: person.address ?? "",
+  }));
+  const initialLinkedPersons = (linkedPersons.length ? linkedPersons : [fallbackLinkedPerson]).map((person, index) => ({
+    id: `linked-person-${index}`,
+    dni: person.dni ?? "",
+    firstName: person.firstName ?? "",
+    apellidoApodoManual: person.apellidoApodoManual ?? "",
+    phone1: person.phone1 ?? "",
+    phone2: person.phone2 ?? "",
+    address: person.address ?? "",
+  }));
+
+  const initialValues: DispatchWizardValues = {
+    attendedAt: toDateInputValue(record?.attendedAt ?? new Date()),
+    usesHistoricalDate: record ? Boolean(record.usesHistoricalDate) : false,
+    category: record?.category ?? "",
+    priority: record?.priority ?? "MEDIA",
+    status: record?.status ?? "RECIBIDO",
+    referredArea: record?.referredArea ?? "",
+    complainants: initialComplainants,
+    linkedPersons: initialLinkedPersons,
+    description: record?.description ?? "",
+    initialGuidance: record?.initialGuidance ?? "",
+    confidentialNotes: record?.confidentialNotes ?? "",
+  };
 
   return (
-    <form action={action} className="space-y-5">
-      <DetailSection title="Datos de atencion">
-        <FormGrid>
-          <FormField label="Fecha y hora">
-            <input name="attendedAt" type="datetime-local" defaultValue={toDateInputValue(record?.attendedAt ?? new Date())} className={inputClass} />
-          </FormField>
-          <FormField label="Categoria">
-            <select name="category" defaultValue={record?.category ?? ""} className={inputClass} required>
-              <option value="">Seleccionar</option>
-              {categories.map((item) => (
-                <option key={item.value} value={item.value}>{item.label}</option>
-              ))}
-            </select>
-          </FormField>
-          <FormField label="Subcategoria">
-            <input name="subcategory" defaultValue={record?.subcategory ?? ""} className={inputClass} />
-          </FormField>
-          <FormField label="Prioridad">
-            <select name="priority" defaultValue={record?.priority ?? "MEDIA"} className={inputClass}>
-              {PRIORITIES.map((item) => (
-                <option key={item} value={item}>{labelFromValue(item)}</option>
-              ))}
-            </select>
-          </FormField>
-          <FormField label="Estado">
-            <select name="status" defaultValue={record?.status ?? "RECIBIDO"} className={inputClass}>
-              {DISPATCH_STATUSES.map((item) => (
-                <option key={item} value={item}>{labelFromValue(item)}</option>
-              ))}
-            </select>
-          </FormField>
-          <FormField label="Area derivada">
-            <select name="referredArea" defaultValue={record?.referredArea ?? ""} className={inputClass}>
-              <option value="">Sin derivacion</option>
-              {areas.map((item) => (
-                <option key={item.value} value={item.label}>{item.label}</option>
-              ))}
-            </select>
-          </FormField>
-        </FormGrid>
-      </DetailSection>
-
-      <DetailSection title="Persona vinculada">
-        <FormGrid>
-          <FormField label="DNI">
-            <input name="dni" defaultValue={record?.person?.dni ?? record?.dniSnapshot ?? ""} className={inputClass} />
-          </FormField>
-          <FormField label="Nombre">
-            <input name="firstName" defaultValue={firstName} className={inputClass} />
-          </FormField>
-          <FormField label="Apellido">
-            <input name="lastName" defaultValue={lastName} className={inputClass} />
-          </FormField>
-          <FormField label="Telefono 1">
-            <input name="phone1" defaultValue={record?.person?.phone1 ?? ""} className={inputClass} />
-          </FormField>
-          <FormField label="Telefono 2">
-            <input name="phone2" defaultValue={record?.person?.phone2 ?? ""} className={inputClass} />
-          </FormField>
-          <FormField label="Domicilio">
-            <input name="address" defaultValue={record?.person?.address ?? ""} className={inputClass} />
-          </FormField>
-          <FormField label="Nombre manual excepcional" className="md:col-span-2 xl:col-span-3">
-            <input name="manualPersonName" defaultValue={record?.manualPersonName ?? ""} className={inputClass} />
-          </FormField>
-        </FormGrid>
-      </DetailSection>
-
-      <DetailSection title="Contenido">
-        <div className="space-y-4">
-          <FormField label="Descripcion redactada">
-            <textarea name="description" defaultValue={record?.description ?? ""} className={textareaClass} required />
-          </FormField>
-          <FormField label="Notas internas de Despacho">
-            <textarea name="notes" defaultValue={record?.notes ?? ""} className={textareaClass} />
-          </FormField>
-          <FormField label="Resumen confidencial opcional">
-            <textarea name="confidentialSummary" defaultValue={record?.confidentialSummary ?? ""} className={textareaClass} />
-          </FormField>
-          {!record ? (
-            <FormField label="Adjuntos">
-              <input
-                name="attachments"
-                type="file"
-                multiple
-                className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-sky-700 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-sky-800"
-              />
-            </FormField>
-          ) : null}
-        </div>
-      </DetailSection>
-
-      <div className="flex items-center gap-2">
-        <Button type="submit">{submitLabel ?? (record ? "Guardar cambios" : "Crear")}</Button>
-        {modal ? (
-          <Button type="button" variant="secondary" data-modal-close>
-            Cancelar
-          </Button>
-        ) : (
-          <LinkButton href={backHref} variant="secondary">Cancelar</LinkButton>
-        )}
-      </div>
-    </form>
+    <DispatchWizardForm
+      action={action}
+      initialValues={initialValues}
+      categories={categories}
+      areas={areas}
+      backHref={backHref}
+      modal={modal}
+      allowAttachments={!record}
+      submitLabel={submitLabel ?? (record ? "Guardar cambios" : "Crear atencion")}
+    />
   );
 }

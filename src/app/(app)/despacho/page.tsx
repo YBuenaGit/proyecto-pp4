@@ -37,15 +37,23 @@ export default async function DispatchListPage({
   const andFilters: Prisma.DispatchRecordWhereInput[] = [];
   if (dni) {
     andFilters.push({
-      OR: [{ dniSnapshot: { contains: dni } }, { person: { dni: { contains: dni } } }],
+      OR: [
+        { dniSnapshot: { contains: dni } },
+        { person: { dni: { contains: dni } } },
+        { complainants: { some: { dni: { contains: dni } } } },
+        { linkedPersons: { some: { dni: { contains: dni } } } },
+      ],
     });
   }
   if (name) {
     andFilters.push({
       OR: [
         { nameSnapshot: { contains: name } },
-        { manualPersonName: { contains: name } },
         { person: { fullNameNormalized: { contains: normalizeName(name) } } },
+        { complainants: { some: { firstName: { contains: name } } } },
+        { complainants: { some: { lastName: { contains: name } } } },
+        { linkedPersons: { some: { firstName: { contains: name } } } },
+        { linkedPersons: { some: { apellidoApodoManual: { contains: name } } } },
       ],
     });
   }
@@ -62,7 +70,12 @@ export default async function DispatchListPage({
   const [records, categories, users, areas] = await Promise.all([
     prisma.dispatchRecord.findMany({
       where,
-      include: { person: true, createdBy: true, originReferrals: true },
+      include: {
+        person: true,
+        createdBy: true,
+        originReferrals: true,
+        linkedPersons: { orderBy: { sortOrder: "asc" } },
+      },
       orderBy: { attendedAt: "desc" },
       take: 100,
     }),
@@ -125,9 +138,16 @@ export default async function DispatchListPage({
                 <p className="mt-1 text-xs text-slate-500">{record.originReferrals[0].visibleStatusForOrigin}</p>
               ) : null}
             </Td>
-            <Td>{formatDateTime(record.attendedAt)}</Td>
             <Td>
-              <div className="font-medium text-slate-900">{record.nameSnapshot ?? record.manualPersonName ?? "Sin identificar"}</div>
+              <div>{formatDateTime(record.attendedAt)}</div>
+              <div className="text-xs text-slate-500">Carga: {formatDateTime(record.createdAt)}</div>
+            </Td>
+            <Td>
+              <div className="font-medium text-slate-900">
+                {record.nameSnapshot ??
+                  ([record.linkedPersons[0]?.firstName, record.linkedPersons[0]?.apellidoApodoManual].filter(Boolean).join(" ") ||
+                    "Sin identificar")}
+              </div>
               <div className="text-xs text-slate-500">{record.dniSnapshot ?? "Sin DNI"}</div>
             </Td>
             <Td>{categories.find((item) => item.value === record.category)?.label ?? labelFromValue(record.category)}</Td>

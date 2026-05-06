@@ -20,9 +20,40 @@ export function optionalText(formData: FormData, key: string) {
   return value.length ? value : null;
 }
 
+export function checkbox(formData: FormData, key: string) {
+  const value = formData.get(key);
+  return value === "on" || value === "true" || value === "1";
+}
+
 export function optionalDate(formData: FormData, key: string) {
   const value = text(formData, key);
   return value ? new Date(value) : null;
+}
+
+export function complainantFromForm(formData: FormData) {
+  const complainantIsAnonymous = checkbox(formData, "complainantIsAnonymous");
+
+  if (complainantIsAnonymous) {
+    return {
+      complainantIsAnonymous,
+      complainantDni: null,
+      complainantFirstName: null,
+      complainantLastName: null,
+      complainantPhone1: null,
+      complainantPhone2: null,
+      complainantAddress: null,
+    };
+  }
+
+  return {
+    complainantIsAnonymous,
+    complainantDni: optionalText(formData, "complainantDni"),
+    complainantFirstName: optionalText(formData, "complainantFirstName"),
+    complainantLastName: optionalText(formData, "complainantLastName"),
+    complainantPhone1: optionalText(formData, "complainantPhone1"),
+    complainantPhone2: optionalText(formData, "complainantPhone2"),
+    complainantAddress: optionalText(formData, "complainantAddress"),
+  };
 }
 
 export async function upsertPersonFromForm(formData: FormData) {

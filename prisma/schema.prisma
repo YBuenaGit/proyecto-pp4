@@ -19,19 +19,19 @@ model User {
   updatedAt    DateTime @updatedAt
 
   sessions               Session[]
-  dispatchRecords        DispatchRecord[]         @relation("DispatchCreatedBy")
-  dispatchFollowUps      DispatchFollowUp[]       @relation("DispatchFollowUpCreatedBy")
-  juridicalInterventions JuridicalIntervention[]  @relation("JuridicalCreatedBy")
-  juridicalActions       JuridicalAction[]        @relation("JuridicalActionCreatedBy")
-  referralsMade          Referral[]               @relation("ReferralReferredBy")
-  internalExpedients     InternalExpedient[]      @relation("ExpedientCreatedBy")
-  attachments            Attachment[]             @relation("AttachmentUploadedBy")
-  auditLogs              AuditLog[]               @relation("AuditCreatedBy")
-  catalogItems           CatalogItem[]            @relation("CatalogCreatedBy")
-  appointmentsCreated    Appointment[]            @relation("AppointmentCreatedBy")
-  personalAppointments   Appointment[]            @relation("AppointmentOwner")
-  assignedAppointments   Appointment[]            @relation("AppointmentAssignedUser")
-  lawyerAppointments     Appointment[]            @relation("AppointmentAssignedLawyer")
+  dispatchRecords        DispatchRecord[]        @relation("DispatchCreatedBy")
+  dispatchFollowUps      DispatchFollowUp[]      @relation("DispatchFollowUpCreatedBy")
+  juridicalInterventions JuridicalIntervention[] @relation("JuridicalCreatedBy")
+  juridicalActions       JuridicalAction[]       @relation("JuridicalActionCreatedBy")
+  referralsMade          Referral[]              @relation("ReferralReferredBy")
+  internalExpedients     InternalExpedient[]     @relation("ExpedientCreatedBy")
+  attachments            Attachment[]            @relation("AttachmentUploadedBy")
+  auditLogs              AuditLog[]              @relation("AuditCreatedBy")
+  catalogItems           CatalogItem[]           @relation("CatalogCreatedBy")
+  appointmentsCreated    Appointment[]           @relation("AppointmentCreatedBy")
+  personalAppointments   Appointment[]           @relation("AppointmentOwner")
+  assignedAppointments   Appointment[]           @relation("AppointmentAssignedUser")
+  lawyerAppointments     Appointment[]           @relation("AppointmentAssignedLawyer")
 
   @@index([role])
   @@index([active])
@@ -76,27 +76,28 @@ model DispatchRecord {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
   attendedAt          DateTime @default(now())
+  usesHistoricalDate  Boolean  @default(false)
   createdById         String
   personId            String?
-  manualPersonName    String?
   dniSnapshot         String?
   nameSnapshot        String?
   description         String
+  initialGuidance     String?
+  confidentialNotes   String?
   category            String
-  subcategory         String?
   priority            String   @default("MEDIA")
   status              String   @default("RECIBIDO")
   referredArea        String?
-  notes               String?
-  confidentialSummary String?
   origin              String   @default("DIRECT")
   lastStatusAt        DateTime @default(now())
 
-  createdBy              User                @relation("DispatchCreatedBy", fields: [createdById], references: [id])
-  person                 ExternalPerson?     @relation(fields: [personId], references: [id], onDelete: SetNull)
-  followUps              DispatchFollowUp[]
-  originReferrals        Referral[]          @relation("OriginDispatch")
-  destinationReferrals   Referral[]          @relation("DestinationDispatch")
+  createdBy            User               @relation("DispatchCreatedBy", fields: [createdById], references: [id])
+  person               ExternalPerson?    @relation(fields: [personId], references: [id], onDelete: SetNull)
+  complainants         DispatchComplainant[]
+  linkedPersons        DispatchLinkedPerson[]
+  followUps            DispatchFollowUp[]
+  originReferrals      Referral[]         @relation("OriginDispatch")
+  destinationReferrals Referral[]         @relation("DestinationDispatch")
 
   @@index([createdAt])
   @@index([attendedAt])
@@ -105,6 +106,46 @@ model DispatchRecord {
   @@index([priority])
   @@index([createdById])
   @@index([personId])
+}
+
+model DispatchComplainant {
+  id               String   @id @default(cuid())
+  dispatchRecordId String
+  sortOrder        Int      @default(0)
+  isAnonymous      Boolean  @default(false)
+  dni              String?
+  firstName        String?
+  lastName         String?
+  phone1           String?
+  phone2           String?
+  address          String?
+  createdAt        DateTime @default(now())
+
+  dispatchRecord DispatchRecord @relation(fields: [dispatchRecordId], references: [id], onDelete: Cascade)
+
+  @@index([dispatchRecordId])
+  @@index([dni])
+  @@index([lastName])
+}
+
+model DispatchLinkedPerson {
+  id                  String   @id @default(cuid())
+  dispatchRecordId    String
+  sortOrder           Int      @default(0)
+  dni                 String?
+  firstName           String?
+  apellidoApodoManual String?
+  phone1              String?
+  phone2              String?
+  address             String?
+  createdAt           DateTime @default(now())
+
+  dispatchRecord DispatchRecord @relation(fields: [dispatchRecordId], references: [id], onDelete: Cascade)
+
+  @@index([dispatchRecordId])
+  @@index([dni])
+  @@index([firstName])
+  @@index([apellidoApodoManual])
 }
 
 model DispatchFollowUp {
@@ -124,35 +165,41 @@ model DispatchFollowUp {
 }
 
 model JuridicalIntervention {
-  id                   String   @id @default(cuid())
-  internalNumber       String   @unique
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
-  attendedAt           DateTime @default(now())
-  createdById          String
-  personId             String?
-  manualPersonName     String?
-  dniSnapshot          String?
-  nameSnapshot         String?
-  type                 String
-  subType              String?
-  urgency              String   @default("MEDIA")
-  status               String   @default("RECIBIDO")
-  oficioNumber         String?
-  expedienteNumber     String?
-  interventionContext  String?
-  counterpartType      String?
-  description          String
-  guidanceProvided     String?
-  referredToAgency     String?
-  origin               String   @default("DIRECT")
-  lastStatusAt         DateTime @default(now())
+  id                     String   @id @default(cuid())
+  internalNumber         String   @unique
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+  attendedAt             DateTime @default(now())
+  createdById            String
+  personId               String?
+  dniSnapshot            String?
+  nameSnapshot           String?
+  complainantIsAnonymous Boolean  @default(false)
+  complainantDni         String?
+  complainantFirstName   String?
+  complainantLastName    String?
+  complainantPhone1      String?
+  complainantPhone2      String?
+  complainantAddress     String?
+  type                   String
+  subType                String?
+  urgency                String   @default("MEDIA")
+  status                 String   @default("RECIBIDO")
+  oficioNumber           String?
+  expedienteNumber       String?
+  interventionContext    String?
+  counterpartType        String?
+  description            String
+  guidanceProvided       String?
+  referredToAgency       String?
+  origin                 String   @default("DIRECT")
+  lastStatusAt           DateTime @default(now())
 
-  createdBy              User                 @relation("JuridicalCreatedBy", fields: [createdById], references: [id])
-  person                 ExternalPerson?      @relation(fields: [personId], references: [id], onDelete: SetNull)
-  actions                JuridicalAction[]
-  originReferrals        Referral[]           @relation("OriginJuridical")
-  destinationReferrals   Referral[]           @relation("DestinationJuridical")
+  createdBy            User              @relation("JuridicalCreatedBy", fields: [createdById], references: [id])
+  person               ExternalPerson?   @relation(fields: [personId], references: [id], onDelete: SetNull)
+  actions              JuridicalAction[]
+  originReferrals      Referral[]        @relation("OriginJuridical")
+  destinationReferrals Referral[]        @relation("DestinationJuridical")
 
   @@index([createdAt])
   @@index([attendedAt])
@@ -163,16 +210,17 @@ model JuridicalIntervention {
   @@index([expedienteNumber])
   @@index([createdById])
   @@index([personId])
+  @@index([complainantDni])
 }
 
 model JuridicalAction {
-  id                         String    @id @default(cuid())
-  juridicalInterventionId    String
-  actionType                 String
-  content                    String
-  nextStepDate               DateTime?
-  createdById                String
-  createdAt                  DateTime  @default(now())
+  id                      String    @id @default(cuid())
+  juridicalInterventionId String
+  actionType              String
+  content                 String
+  nextStepDate            DateTime?
+  createdById             String
+  createdAt               DateTime  @default(now())
 
   juridicalIntervention JuridicalIntervention @relation(fields: [juridicalInterventionId], references: [id], onDelete: Cascade)
   createdBy             User                  @relation("JuridicalActionCreatedBy", fields: [createdById], references: [id])
@@ -185,27 +233,27 @@ model JuridicalAction {
 }
 
 model Referral {
-  id                                String    @id @default(cuid())
-  originModule                      String
-  destinationModule                 String
-  originDispatchRecordId            String?
-  originJuridicalInterventionId     String?
-  destinationDispatchRecordId       String?
+  id                                 String    @id @default(cuid())
+  originModule                       String
+  destinationModule                  String
+  originDispatchRecordId             String?
+  originJuridicalInterventionId      String?
+  destinationDispatchRecordId        String?
   destinationJuridicalInterventionId String?
-  summary                           String
-  status                            String    @default("PENDIENTE")
-  visibleStatusForOrigin            String    @default("Pendiente de recepción")
-  referredById                      String
-  referredAt                        DateTime  @default(now())
-  closedAt                          DateTime?
-  createdAt                         DateTime  @default(now())
-  updatedAt                         DateTime  @updatedAt
+  summary                            String
+  status                             String    @default("PENDIENTE")
+  visibleStatusForOrigin             String    @default("Pendiente de recepción")
+  referredById                       String
+  referredAt                         DateTime  @default(now())
+  closedAt                           DateTime?
+  createdAt                          DateTime  @default(now())
+  updatedAt                          DateTime  @updatedAt
 
-  referredBy                      User                    @relation("ReferralReferredBy", fields: [referredById], references: [id])
-  originDispatchRecord            DispatchRecord?          @relation("OriginDispatch", fields: [originDispatchRecordId], references: [id], onDelete: SetNull)
-  originJuridicalIntervention     JuridicalIntervention?   @relation("OriginJuridical", fields: [originJuridicalInterventionId], references: [id], onDelete: SetNull)
-  destinationDispatchRecord       DispatchRecord?          @relation("DestinationDispatch", fields: [destinationDispatchRecordId], references: [id], onDelete: SetNull)
-  destinationJuridicalIntervention JuridicalIntervention?  @relation("DestinationJuridical", fields: [destinationJuridicalInterventionId], references: [id], onDelete: SetNull)
+  referredBy                       User                   @relation("ReferralReferredBy", fields: [referredById], references: [id])
+  originDispatchRecord             DispatchRecord?        @relation("OriginDispatch", fields: [originDispatchRecordId], references: [id], onDelete: SetNull)
+  originJuridicalIntervention      JuridicalIntervention? @relation("OriginJuridical", fields: [originJuridicalInterventionId], references: [id], onDelete: SetNull)
+  destinationDispatchRecord        DispatchRecord?        @relation("DestinationDispatch", fields: [destinationDispatchRecordId], references: [id], onDelete: SetNull)
+  destinationJuridicalIntervention JuridicalIntervention? @relation("DestinationJuridical", fields: [destinationJuridicalInterventionId], references: [id], onDelete: SetNull)
 
   @@index([originModule])
   @@index([destinationModule])

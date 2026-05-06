@@ -7,7 +7,7 @@ import { ACTION_TYPES, JURIDICAL_STATUSES, PRIORITIES } from "@/lib/constants";
 import { requireUser } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { saveAttachments } from "@/lib/files";
-import { nextInternalNumber, optionalDate, optionalText, text, upsertPersonFromForm } from "@/lib/form";
+import { complainantFromForm, nextInternalNumber, optionalDate, optionalText, text, upsertPersonFromForm } from "@/lib/form";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessJuridical } from "@/lib/rbac";
 
@@ -40,6 +40,7 @@ export async function createJuridicalIntervention(formData: FormData) {
   });
   const person = await upsertPersonFromForm(formData);
   const attendedAt = optionalDate(formData, "attendedAt") ?? new Date();
+  const complainant = complainantFromForm(formData);
 
   const intervention = await prisma.juridicalIntervention.create({
     data: {
@@ -47,9 +48,9 @@ export async function createJuridicalIntervention(formData: FormData) {
       attendedAt,
       createdById: user.id,
       personId: person?.id,
-      manualPersonName: person ? null : optionalText(formData, "manualPersonName"),
       dniSnapshot: person?.dni ?? optionalText(formData, "dni"),
-      nameSnapshot: person ? `${person.firstName} ${person.lastName}` : optionalText(formData, "manualPersonName"),
+      nameSnapshot: person ? `${person.firstName} ${person.lastName}` : null,
+      ...complainant,
       type: parsed.type,
       subType: optionalText(formData, "subType"),
       urgency: parsed.urgency,
@@ -96,15 +97,16 @@ export async function updateJuridicalIntervention(interventionId: string, formDa
   });
   const person = await upsertPersonFromForm(formData);
   const attendedAt = optionalDate(formData, "attendedAt") ?? before.attendedAt;
+  const complainant = complainantFromForm(formData);
 
   const after = await prisma.juridicalIntervention.update({
     where: { id: interventionId },
     data: {
       attendedAt,
       personId: person?.id ?? null,
-      manualPersonName: person ? null : optionalText(formData, "manualPersonName"),
       dniSnapshot: person?.dni ?? optionalText(formData, "dni"),
-      nameSnapshot: person ? `${person.firstName} ${person.lastName}` : optionalText(formData, "manualPersonName"),
+      nameSnapshot: person ? `${person.firstName} ${person.lastName}` : null,
+      ...complainant,
       type: parsed.type,
       subType: optionalText(formData, "subType"),
       urgency: parsed.urgency,
@@ -186,13 +188,24 @@ export async function deriveJuridicalToDispatch(interventionId: string, formData
     where: { id: interventionId },
     include: { person: true },
   });
+  const hasComplainant =
+    source.complainantIsAnonymous ||
+    Boolean(
+      source.complainantDni ||
+        source.complainantFirstName ||
+        source.complainantLastName ||
+        source.complainantPhone1 ||
+        source.complainantPhone2 ||
+        source.complainantAddress,
+    );
+  const linkedName = source.nameSnapshot;
+  const hasLinkedPerson = Boolean(source.person || source.dniSnapshot || linkedName);
 
   const dispatchRecord = await prisma.dispatchRecord.create({
     data: {
       internalNumber: await nextInternalNumber("DES", "dispatch"),
       createdById: user.id,
       personId: source.personId,
-      manualPersonName: source.manualPersonName,
       dniSnapshot: source.dniSnapshot,
       nameSnapshot: source.nameSnapshot,
       description: summary,
@@ -203,6 +216,37 @@ export async function deriveJuridicalToDispatch(interventionId: string, formData
       origin: "FROM_JURIDICO",
       attendedAt: new Date(),
       lastStatusAt: new Date(),
+      complainants: hasComplainant
+        ? {
+            create: [
+              {
+                sortOrder: 0,
+                isAnonymous: source.complainantIsAnonymous,
+                dni: source.complainantIsAnonymous ? null : source.complainantDni,
+                firstName: source.complainantIsAnonymous ? null : source.complainantFirstName,
+                lastName: source.complainantIsAnonymous ? null : source.complainantLastName,
+                phone1: source.complainantIsAnonymous ? null : source.complainantPhone1,
+                phone2: source.complainantIsAnonymous ? null : source.complainantPhone2,
+                address: source.complainantIsAnonymous ? null : source.complainantAddress,
+              },
+            ],
+          }
+        : undefined,
+      linkedPersons: hasLinkedPerson
+        ? {
+            create: [
+              {
+                sortOrder: 0,
+                dni: source.person?.dni ?? source.dniSnapshot,
+                firstName: source.person?.firstName,
+                apellidoApodoManual: source.person?.lastName ?? linkedName,
+                phone1: source.person?.phone1,
+                phone2: source.person?.phone2,
+                address: source.person?.address,
+              },
+            ],
+          }
+        : undefined,
     },
   });
 

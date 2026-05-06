@@ -14,7 +14,14 @@ export default async function EditDispatchPage({ params }: { params: Promise<{ i
   assertAccess(canAccessDispatch(user));
   const { id } = await params;
   const [record, categories, areas] = await Promise.all([
-    prisma.dispatchRecord.findUnique({ where: { id }, include: { person: true } }),
+    prisma.dispatchRecord.findUnique({
+      where: { id },
+      include: {
+        person: true,
+        complainants: { orderBy: { sortOrder: "asc" } },
+        linkedPersons: { orderBy: { sortOrder: "asc" } },
+      },
+    }),
     prisma.catalogItem.findMany({ where: { type: "dispatch_category", active: true }, orderBy: { sortOrder: "asc" } }),
     prisma.catalogItem.findMany({ where: { type: "dispatch_area", active: true }, orderBy: { sortOrder: "asc" } }),
   ]);

@@ -320,6 +320,7 @@ async function main() {
       data: {
         internalNumber: internalNumber("DES", index + 1),
         attendedAt,
+        usesHistoricalDate: true,
         createdById,
         personId: person.id,
         dniSnapshot: person.dni,
@@ -331,7 +332,20 @@ async function main() {
         referredArea,
         origin,
         lastStatusAt: attendedAt,
-        notes: status === "DERIVADO" ? "Derivacion registrada con resumen funcional." : null,
+        confidentialNotes: status === "DERIVADO" ? "Derivacion registrada con resumen funcional." : null,
+        linkedPersons: {
+          create: [
+            {
+              sortOrder: 0,
+              dni: person.dni,
+              firstName: person.firstName,
+              apellidoApodoManual: person.lastName,
+              phone1: person.phone1,
+              phone2: person.phone2,
+              address: person.address,
+            },
+          ],
+        },
       },
     });
     dispatchRecords.push(record);

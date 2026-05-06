@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { DISPATCH_STATUSES, EXPEDIENT_STATUSES, PRIORITIES } from "@/lib/constants";
-import { optionalDate, optionalText, text, nextInternalNumber, upsertPersonFromForm } from "@/lib/form";
+import { checkbox, optionalDate, optionalText, text, nextInternalNumber } from "@/lib/form";
 import { saveAttachments } from "@/lib/files";
 import { prisma } from "@/lib/prisma";
 import { canAccessDispatch, canAccessExpedients, assertAccess } from "@/lib/rbac";
@@ -12,7 +12,7 @@ import { requireUser } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 
 const dispatchSchema = z.object({
-  description: z.string().min(8),
+  description: z.string().trim().min(1),
   category: z.string().min(1),
   priority: z.string().refine((value) => PRIORITIES.includes(value)),
   status: z.string().refine((value) => DISPATCH_STATUSES.includes(value)),
@@ -24,6 +24,122 @@ const expedientSchema = z.object({
   description: z.string().min(8),
   status: z.string().refine((value) => EXPEDIENT_STATUSES.includes(value)),
 });
+
+const dniPattern = /^\d{7,8}$/;
+const phonePattern = /^\d{7,10}$/;
+const namePattern = /^[\p{L} ]+$/u;
+const addressPattern = /^[\p{L}\d .,\-/]+$/u;
+
+const optionalDniSchema = z
+  .string()
+  .trim()
+  .refine((value) => !value || dniPattern.test(value), "El DNI debe tener entre 7 y 8 numeros.");
+
+const optionalPhoneSchema = z
+  .string()
+  .trim()
+  .refine((value) => !value || phonePattern.test(value), "El telefono debe tener entre 7 y 10 numeros.");
+
+const optionalNameSchema = z
+  .string()
+  .trim()
+  .refine((value) => !value || namePattern.test(value), "El nombre y apellido solo pueden tener letras y espacios.");
+
+const optionalAddressSchema = z
+  .string()
+  .trim()
+  .refine((value) => !value || addressPattern.test(value), "El domicilio contiene caracteres no permitidos.");
+
+const complainantPayloadSchema = z.object({
+  isAnonymous: z.boolean().default(false),
+  dni: optionalDniSchema.default(""),
+  firstName: optionalNameSchema.default(""),
+  lastName: optionalNameSchema.default(""),
+  phone1: optionalPhoneSchema.default(""),
+  phone2: optionalPhoneSchema.default(""),
+  address: optionalAddressSchema.default(""),
+});
+
+const linkedPersonPayloadSchema = z.object({
+  dni: optionalDniSchema.default(""),
+  firstName: optionalNameSchema.default(""),
+  apellidoApodoManual: optionalNameSchema.default(""),
+  phone1: optionalPhoneSchema.default(""),
+  phone2: optionalPhoneSchema.default(""),
+  address: optionalAddressSchema.default(""),
+});
+
+type ComplainantPayload = z.infer<typeof complainantPayloadSchema>;
+type LinkedPersonPayload = z.infer<typeof linkedPersonPayloadSchema>;
+
+function hasLinkedPersonData(person: LinkedPersonPayload) {
+  return Boolean(person.dni || person.firstName || person.apellidoApodoManual || person.phone1 || person.phone2 || person.address);
+}
+
+function hasComplainantData(person: ComplainantPayload) {
+  return Boolean(person.isAnonymous || person.dni || person.firstName || person.lastName || person.phone1 || person.phone2 || person.address);
+}
+
+function parseJsonArray(formData: FormData, key: string) {
+  const raw = text(formData, key);
+  if (!raw) return [];
+  const parsed: unknown = JSON.parse(raw);
+  return Array.isArray(parsed) ? parsed : [];
+}
+
+function parseComplainants(formData: FormData) {
+  return z.array(complainantPayloadSchema).parse(parseJsonArray(formData, "complainantsPayload")).map((person) =>
+    person.isAnonymous
+      ? {
+          isAnonymous: true,
+          dni: "",
+          firstName: "",
+          lastName: "",
+          phone1: "",
+          phone2: "",
+          address: "",
+        }
+      : person,
+  ).filter(hasComplainantData);
+}
+
+function parseLinkedPersons(formData: FormData) {
+  return z.array(linkedPersonPayloadSchema).parse(parseJsonArray(formData, "linkedPersonsPayload")).filter(hasLinkedPersonData);
+}
+
+function nullable(value: string) {
+  return value.trim() || null;
+}
+
+function linkedPersonName(person: LinkedPersonPayload | undefined) {
+  if (!person) return null;
+  return [person.firstName, person.apellidoApodoManual].filter(Boolean).join(" ").trim() || null;
+}
+
+function complainantCreateData(person: ComplainantPayload, index: number) {
+  return {
+    sortOrder: index,
+    isAnonymous: person.isAnonymous,
+    dni: person.isAnonymous ? null : nullable(person.dni),
+    firstName: person.isAnonymous ? null : nullable(person.firstName),
+    lastName: person.isAnonymous ? null : nullable(person.lastName),
+    phone1: person.isAnonymous ? null : nullable(person.phone1),
+    phone2: person.isAnonymous ? null : nullable(person.phone2),
+    address: person.isAnonymous ? null : nullable(person.address),
+  };
+}
+
+function linkedPersonCreateData(person: LinkedPersonPayload, index: number) {
+  return {
+    sortOrder: index,
+    dni: nullable(person.dni),
+    firstName: nullable(person.firstName),
+    apellidoApodoManual: nullable(person.apellidoApodoManual),
+    phone1: nullable(person.phone1),
+    phone2: nullable(person.phone2),
+    address: nullable(person.address),
+  };
+}
 
 async function syncDispatchReferralSummary(recordId: string, status: string) {
   await prisma.referral.updateMany({
@@ -47,26 +163,38 @@ export async function createDispatchRecord(formData: FormData) {
     status: text(formData, "status") || "RECIBIDO",
   });
 
-  const person = await upsertPersonFromForm(formData);
-  const attendedAt = optionalDate(formData, "attendedAt") ?? new Date();
+  const complainants = parseComplainants(formData);
+  const linkedPersons = parseLinkedPersons(formData);
+  const firstLinkedPerson = linkedPersons[0];
+  const usesHistoricalDate = checkbox(formData, "usesHistoricalDate");
+  const attendedAt = usesHistoricalDate ? optionalDate(formData, "attendedAt") : new Date();
+  if (!attendedAt || Number.isNaN(attendedAt.getTime())) {
+    throw new Error("La fecha y hora de atención no es válida.");
+  }
+
   const record = await prisma.dispatchRecord.create({
     data: {
       internalNumber: await nextInternalNumber("DES", "dispatch"),
       attendedAt,
+      usesHistoricalDate,
       createdById: user.id,
-      personId: person?.id,
-      manualPersonName: person ? null : optionalText(formData, "manualPersonName"),
-      dniSnapshot: person?.dni ?? optionalText(formData, "dni"),
-      nameSnapshot: person ? `${person.firstName} ${person.lastName}` : optionalText(formData, "manualPersonName"),
+      personId: null,
+      dniSnapshot: firstLinkedPerson?.dni || null,
+      nameSnapshot: linkedPersonName(firstLinkedPerson),
       description: parsed.description,
+      initialGuidance: optionalText(formData, "initialGuidance"),
+      confidentialNotes: optionalText(formData, "confidentialNotes"),
       category: parsed.category,
-      subcategory: optionalText(formData, "subcategory"),
       priority: parsed.priority,
       status: parsed.status,
       referredArea: optionalText(formData, "referredArea"),
-      notes: optionalText(formData, "notes"),
-      confidentialSummary: optionalText(formData, "confidentialSummary"),
       lastStatusAt: attendedAt,
+      complainants: {
+        create: complainants.map(complainantCreateData),
+      },
+      linkedPersons: {
+        create: linkedPersons.map(linkedPersonCreateData),
+      },
     },
   });
 
@@ -101,25 +229,40 @@ export async function updateDispatchRecord(recordId: string, formData: FormData)
     status: text(formData, "status") || "RECIBIDO",
   });
 
-  const person = await upsertPersonFromForm(formData);
-  const attendedAt = optionalDate(formData, "attendedAt") ?? before.attendedAt;
+  const complainants = parseComplainants(formData);
+  const linkedPersons = parseLinkedPersons(formData);
+  const firstLinkedPerson = linkedPersons[0];
+  const usesHistoricalDate = checkbox(formData, "usesHistoricalDate");
+  const historicalDate = optionalDate(formData, "attendedAt");
+  const attendedAt = usesHistoricalDate ? historicalDate : before.attendedAt;
+  if (!attendedAt || Number.isNaN(attendedAt.getTime())) {
+    throw new Error("La fecha y hora de atención no es válida.");
+  }
+
   const after = await prisma.dispatchRecord.update({
     where: { id: recordId },
     data: {
       attendedAt,
-      personId: person?.id ?? null,
-      manualPersonName: person ? null : optionalText(formData, "manualPersonName"),
-      dniSnapshot: person?.dni ?? optionalText(formData, "dni"),
-      nameSnapshot: person ? `${person.firstName} ${person.lastName}` : optionalText(formData, "manualPersonName"),
+      usesHistoricalDate,
+      personId: null,
+      dniSnapshot: firstLinkedPerson?.dni || null,
+      nameSnapshot: linkedPersonName(firstLinkedPerson),
       description: parsed.description,
+      initialGuidance: optionalText(formData, "initialGuidance"),
+      confidentialNotes: optionalText(formData, "confidentialNotes"),
       category: parsed.category,
-      subcategory: optionalText(formData, "subcategory"),
       priority: parsed.priority,
       status: parsed.status,
       referredArea: optionalText(formData, "referredArea"),
-      notes: optionalText(formData, "notes"),
-      confidentialSummary: optionalText(formData, "confidentialSummary"),
       lastStatusAt: before.status !== parsed.status ? new Date() : before.lastStatusAt,
+      complainants: {
+        deleteMany: {},
+        create: complainants.map(complainantCreateData),
+      },
+      linkedPersons: {
+        deleteMany: {},
+        create: linkedPersons.map(linkedPersonCreateData),
+      },
     },
   });
 
@@ -224,17 +367,28 @@ export async function deriveDispatchToJuridical(recordId: string, formData: Form
 
   const source = await prisma.dispatchRecord.findUniqueOrThrow({
     where: { id: recordId },
-    include: { person: true },
+    include: {
+      person: true,
+      complainants: { orderBy: { sortOrder: "asc" } },
+      linkedPersons: { orderBy: { sortOrder: "asc" } },
+    },
   });
+  const complainant = source.complainants[0];
 
   const intervention = await prisma.juridicalIntervention.create({
     data: {
       internalNumber: await nextInternalNumber("JI", "juridical"),
       createdById: user.id,
       personId: source.personId,
-      manualPersonName: source.manualPersonName,
       dniSnapshot: source.dniSnapshot,
       nameSnapshot: source.nameSnapshot,
+      complainantIsAnonymous: Boolean(complainant?.isAnonymous),
+      complainantDni: complainant?.isAnonymous ? null : complainant?.dni,
+      complainantFirstName: complainant?.isAnonymous ? null : complainant?.firstName,
+      complainantLastName: complainant?.isAnonymous ? null : complainant?.lastName,
+      complainantPhone1: complainant?.isAnonymous ? null : complainant?.phone1,
+      complainantPhone2: complainant?.isAnonymous ? null : complainant?.phone2,
+      complainantAddress: complainant?.isAnonymous ? null : complainant?.address,
       type,
       urgency: source.priority,
       status: "RECIBIDO",

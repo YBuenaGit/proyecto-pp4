@@ -22,6 +22,16 @@ import {
 } from "../actions";
 import { InterventionForm } from "../intervention-form";
 
+function complainantName(record: {
+  complainantIsAnonymous: boolean;
+  complainantFirstName: string | null;
+  complainantLastName: string | null;
+}) {
+  if (record.complainantIsAnonymous) return "Anonimo";
+  const name = [record.complainantFirstName, record.complainantLastName].filter(Boolean).join(" ");
+  return name || "Sin datos";
+}
+
 export default async function InterventionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
@@ -96,15 +106,26 @@ export default async function InterventionDetailPage({ params }: { params: Promi
               <DetailField label="Oficio" value={intervention.oficioNumber} />
               <DetailField label="Expediente" value={intervention.expedienteNumber} />
               <DetailField label="Fecha de atencion" value={formatDateTime(intervention.attendedAt)} />
+              <DetailField label="Carga en sistema" value={formatDateTime(intervention.createdAt)} />
               <DetailField label="Usuario que atendio" value={intervention.createdBy.name} />
               <DetailField label="Origen" value={labelFromValue(intervention.origin)} />
               <DetailField label="Ultimo estado" value={formatDateTime(intervention.lastStatusAt)} />
             </FieldGrid>
           </DetailSection>
 
-          <DetailSection title="Persona">
+          <DetailSection title="Persona denunciante">
             <FieldGrid>
-              <DetailField label="Nombre" value={intervention.nameSnapshot ?? intervention.manualPersonName ?? "Sin identificar"} />
+              <DetailField label="Nombre" value={complainantName(intervention)} />
+              <DetailField label="DNI" value={intervention.complainantIsAnonymous ? null : intervention.complainantDni} />
+              <DetailField label="Telefono 1" value={intervention.complainantIsAnonymous ? null : intervention.complainantPhone1} />
+              <DetailField label="Telefono 2" value={intervention.complainantIsAnonymous ? null : intervention.complainantPhone2} />
+              <DetailField label="Domicilio" value={intervention.complainantIsAnonymous ? null : intervention.complainantAddress} />
+            </FieldGrid>
+          </DetailSection>
+
+          <DetailSection title="Persona vinculada / denunciada">
+            <FieldGrid>
+              <DetailField label="Nombre" value={intervention.nameSnapshot ?? "Sin identificar"} />
               <DetailField label="DNI" value={intervention.dniSnapshot} />
               <DetailField label="Telefono 1" value={intervention.person?.phone1} />
               <DetailField label="Telefono 2" value={intervention.person?.phone2} />

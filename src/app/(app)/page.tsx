@@ -42,7 +42,6 @@ type DispatchDashboardRow = {
   internalNumber: string;
   attendedAt: number | string;
   nameSnapshot: string | null;
-  manualPersonName: string | null;
   category: string;
   priority: string;
   status: string;
@@ -54,7 +53,6 @@ type JuridicalDashboardRow = {
   internalNumber: string;
   attendedAt: number | string;
   nameSnapshot: string | null;
-  manualPersonName: string | null;
   type: string;
   urgency: string;
   status: string;
@@ -70,7 +68,6 @@ type FollowUpDashboardRow = {
   createdByName: string | null;
   internalNumber: string;
   nameSnapshot: string | null;
-  manualPersonName: string | null;
   urgency: string;
   status: string;
 };
@@ -122,8 +119,8 @@ function truncate(value: string | null | undefined, max = 86) {
   return value.length > max ? `${value.slice(0, max - 3)}...` : value;
 }
 
-function requesterFrom(record: { nameSnapshot?: string | null; manualPersonName?: string | null }) {
-  return record.nameSnapshot ?? record.manualPersonName ?? "Sin datos";
+function requesterFrom(record: { nameSnapshot?: string | null }) {
+  return record.nameSnapshot ?? "Sin datos";
 }
 
 function categoryLabel(labels: Record<string, string>, value: string | null | undefined) {
@@ -189,7 +186,6 @@ async function getRowsForPanel({
          record.internalNumber,
          record.attendedAt,
          record.nameSnapshot,
-         record.manualPersonName,
          record.category,
          record.priority,
          record.status,
@@ -230,7 +226,6 @@ async function getRowsForPanel({
          intervention.internalNumber,
          intervention.attendedAt,
          intervention.nameSnapshot,
-         intervention.manualPersonName,
          intervention.type,
          intervention.urgency,
          intervention.status,
@@ -276,7 +271,6 @@ async function getRowsForPanel({
          user.name AS createdByName,
          intervention.internalNumber,
          intervention.nameSnapshot,
-         intervention.manualPersonName,
          intervention.urgency,
          intervention.status
        FROM JuridicalAction action

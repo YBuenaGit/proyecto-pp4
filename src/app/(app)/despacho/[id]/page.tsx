@@ -23,6 +23,23 @@ import {
 } from "../actions";
 import { DispatchForm } from "../dispatch-form";
 
+type StoredLinkedPerson = {
+  dni?: string | null;
+  firstName?: string | null;
+  apellidoApodoManual?: string | null;
+  phone1?: string | null;
+  phone2?: string | null;
+  address?: string | null;
+};
+
+function display(value: string | null | undefined) {
+  return value?.trim() || "Sin dato";
+}
+
+function hasLinkedPersonData(person: StoredLinkedPerson) {
+  return Boolean(person.dni || person.firstName || person.apellidoApodoManual || person.phone1 || person.phone2 || person.address);
+}
+
 export default async function DispatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   assertAccess(canAccessDispatch(user));
@@ -34,6 +51,8 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
       include: {
         person: true,
         createdBy: true,
+        complainants: { orderBy: { sortOrder: "asc" } },
+        linkedPersons: { orderBy: { sortOrder: "asc" } },
         followUps: { include: { createdBy: true }, orderBy: { createdAt: "desc" } },
         originReferrals: {
           include: { destinationJuridicalIntervention: true, referredBy: true },
@@ -62,6 +81,19 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
 
   if (!record) notFound();
   const directivoCanSeeJuridical = canAccessJuridical(user);
+  const complainants = record.complainants;
+  const linkedPersons = record.linkedPersons.length
+    ? record.linkedPersons
+    : [
+        {
+          dni: record.dniSnapshot,
+          firstName: record.person?.firstName,
+          apellidoApodoManual: record.person?.lastName ?? record.nameSnapshot,
+          phone1: record.person?.phone1,
+          phone2: record.person?.phone2,
+          address: record.person?.address,
+        },
+      ].filter(hasLinkedPersonData);
 
   return (
     <>
@@ -93,8 +125,8 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
               <DetailField label="Estado" value={<StatusBadge value={record.status} />} />
               <DetailField label="Prioridad" value={<StatusBadge value={record.priority} />} />
               <DetailField label="Categoria" value={labelFromValue(record.category)} />
-              <DetailField label="Subcategoria" value={record.subcategory} />
               <DetailField label="Fecha de atencion" value={formatDateTime(record.attendedAt)} />
+              <DetailField label="Carga en sistema" value={formatDateTime(record.createdAt)} />
               <DetailField label="Usuario que atendio" value={record.createdBy.name} />
               <DetailField label="Origen" value={labelFromValue(record.origin)} />
               <DetailField label="Area derivada" value={record.referredArea} />
@@ -102,18 +134,51 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
             </FieldGrid>
           </DetailSection>
 
-          <DetailSection title="Persona">
-            <FieldGrid>
-              <DetailField label="Nombre" value={record.nameSnapshot ?? record.manualPersonName ?? "Sin identificar"} />
-              <DetailField label="DNI" value={record.dniSnapshot} />
-              <DetailField label="Telefono 1" value={record.person?.phone1} />
-              <DetailField label="Telefono 2" value={record.person?.phone2} />
-              <DetailField label="Domicilio" value={record.person?.address} />
-              <DetailField
-                label="Perfil"
-                value={record.personId ? <Link className="text-sky-800 hover:underline" href={`/personas/${record.personId}`}>Ver persona</Link> : "-"}
-              />
-            </FieldGrid>
+          <DetailSection title="Personas denunciantes">
+            <div className="space-y-4">
+              {complainants.map((complainant, index) => (
+                <div key={`complainant-${index}`} className="rounded-md border border-slate-200 p-3">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Denunciante {index + 1}</p>
+                  {complainant.isAnonymous ? (
+                    <p className="text-sm font-medium text-slate-900">Denunciante anónimo</p>
+                  ) : (
+                    <FieldGrid>
+                      <DetailField label="Nombre" value={display([complainant.firstName, complainant.lastName].filter(Boolean).join(" "))} />
+                      <DetailField label="DNI" value={display(complainant.dni)} />
+                      <DetailField label="Telefono 1" value={display(complainant.phone1)} />
+                      <DetailField label="Telefono 2" value={display(complainant.phone2)} />
+                      <DetailField label="Domicilio" value={display(complainant.address)} />
+                    </FieldGrid>
+                  )}
+                </div>
+              ))}
+              {!complainants.length ? <p className="text-sm text-slate-500">Sin denunciantes cargados.</p> : null}
+            </div>
+          </DetailSection>
+
+          <DetailSection title="Personas denunciadas / vinculadas">
+            <div className="space-y-4">
+              {linkedPersons.map((person, index) => (
+                <div key={`linked-person-${index}`} className="rounded-md border border-slate-200 p-3">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Persona {index + 1}</p>
+                  <FieldGrid>
+                    <DetailField label="Nombre" value={display(person.firstName)} />
+                    <DetailField label="Apellido / Apodo manual" value={display(person.apellidoApodoManual)} />
+                    <DetailField label="DNI" value={display(person.dni)} />
+                    <DetailField label="Telefono 1" value={display(person.phone1)} />
+                    <DetailField label="Telefono 2" value={display(person.phone2)} />
+                    <DetailField label="Domicilio" value={display(person.address)} />
+                    {index === 0 ? (
+                      <DetailField
+                        label="Perfil"
+                        value={record.personId ? <Link className="text-sky-800 hover:underline" href={`/personas/${record.personId}`}>Ver persona</Link> : "-"}
+                      />
+                    ) : null}
+                  </FieldGrid>
+                </div>
+              ))}
+              {!linkedPersons.length ? <p className="text-sm text-slate-500">Sin personas denunciadas o vinculadas cargadas.</p> : null}
+            </div>
           </DetailSection>
 
           <DetailSection title="Descripcion y notas">
@@ -122,16 +187,16 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
                 <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Descripcion</p>
                 <p className="whitespace-pre-wrap">{record.description}</p>
               </div>
-              {record.notes ? (
+              {record.initialGuidance ? (
                 <div>
-                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Notas internas</p>
-                  <p className="whitespace-pre-wrap">{record.notes}</p>
+                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Orientacion brindada / intervencion inicial</p>
+                  <p className="whitespace-pre-wrap">{record.initialGuidance}</p>
                 </div>
               ) : null}
-              {record.confidentialSummary ? (
+              {record.confidentialNotes ? (
                 <div>
-                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Resumen confidencial</p>
-                  <p className="whitespace-pre-wrap">{record.confidentialSummary}</p>
+                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Notas internas confidenciales</p>
+                  <p className="whitespace-pre-wrap">{record.confidentialNotes}</p>
                 </div>
               ) : null}
             </div>

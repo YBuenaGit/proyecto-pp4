@@ -41,7 +41,6 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
     andFilters.push({
       OR: [
         { nameSnapshot: { contains: name } },
-        { manualPersonName: { contains: name } },
         { person: { fullNameNormalized: { contains: normalizeName(name) } } },
       ],
     });
@@ -111,9 +110,12 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
               </Link>
               {intervention.origin === "FROM_DESPACHO" ? <p className="mt-1 text-xs text-slate-500">Derivada desde Despacho</p> : null}
             </Td>
-            <Td>{formatDateTime(intervention.attendedAt)}</Td>
             <Td>
-              <div className="font-medium text-slate-900">{intervention.nameSnapshot ?? intervention.manualPersonName ?? "Sin identificar"}</div>
+              <div>{formatDateTime(intervention.attendedAt)}</div>
+              <div className="text-xs text-slate-500">Carga: {formatDateTime(intervention.createdAt)}</div>
+            </Td>
+            <Td>
+              <div className="font-medium text-slate-900">{intervention.nameSnapshot ?? "Sin identificar"}</div>
               <div className="text-xs text-slate-500">{intervention.dniSnapshot ?? "Sin DNI"}</div>
             </Td>
             <Td>{types.find((item) => item.value === intervention.type)?.label ?? labelFromValue(intervention.type)}</Td>
