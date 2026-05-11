@@ -6,7 +6,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Table, Td } from "@/components/ui/table";
 import { requireUser } from "@/lib/auth";
 import { formatDateTime, labelFromValue } from "@/lib/format";
-import { prisma } from "@/lib/prisma";
+import { getPeopleProfile, roleLabel } from "@/lib/people-index";
 import { assertAccess, canAccessDispatch, canAccessJuridical, canAccessPeople } from "@/lib/rbac";
 
 export default async function PersonDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -16,32 +16,18 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
   const canDispatch = canAccessDispatch(user);
   const canJuridical = canAccessJuridical(user);
 
-  const [person, dispatchRecords, interventions] = await Promise.all([
-    prisma.externalPerson.findUnique({ where: { id } }),
-    canDispatch
-      ? prisma.dispatchRecord.findMany({
-          where: { personId: id },
-          include: { createdBy: true },
-          orderBy: { attendedAt: "desc" },
-          take: 50,
-        })
-      : [],
-    canJuridical
-      ? prisma.juridicalIntervention.findMany({
-          where: { personId: id },
-          include: { createdBy: true },
-          orderBy: { attendedAt: "desc" },
-          take: 50,
-        })
-      : [],
-  ]);
+  const person = await getPeopleProfile(id, { canDispatch, canJuridical });
   if (!person) notFound();
+
+  const dispatchCases = person.cases.filter((item) => item.module === "DESPACHO");
+  const juridicalCases = person.cases.filter((item) => item.module === "JURIDICO");
+  const roles = person.roles.filter((role) => role !== "REGISTRO").map(roleLabel).join(" / ") || "Registro";
 
   return (
     <>
       <PageHeader
-        title={`${person.firstName} ${person.lastName}`}
-        description="Perfil central compartido. Los listados de historial respetan permisos por modulo."
+        title={person.displayName}
+        description="Perfil unificado. Los listados de historial respetan permisos por modulo e indican el rol de la persona en cada caso."
       />
 
       <div className="space-y-5">
@@ -51,26 +37,27 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
             <DetailField label="Telefono 1" value={person.phone1} />
             <DetailField label="Telefono 2" value={person.phone2} />
             <DetailField label="Domicilio" value={person.address} />
-            <DetailField label="Creado" value={formatDateTime(person.createdAt)} />
-            <DetailField label="Actualizado" value={formatDateTime(person.updatedAt)} />
-            <DetailField label="Notas" value={person.notes} />
+            <DetailField label="Roles" value={roles} />
+            <DetailField label="Casos asociados" value={person.caseCount} />
+            <DetailField label="Ultimo registro" value={person.updatedAt ? formatDateTime(person.updatedAt) : null} />
           </FieldGrid>
         </DetailSection>
 
         <DetailSection title="Historial de Despacho">
           {canDispatch ? (
-            <Table headers={["Numero", "Fecha", "Categoria", "Estado", "Usuario"]} empty={!dispatchRecords.length}>
-              {dispatchRecords.map((record) => (
-                <tr key={record.id}>
+            <Table headers={["Numero", "Fecha", "Categoria", "Estado", "Rol", "Usuario"]} empty={!dispatchCases.length}>
+              {dispatchCases.map((record) => (
+                <tr key={`${record.module}-${record.id}-${record.role}`}>
                   <Td>
-                    <Link href={`/despacho/${record.id}`} className="font-medium text-sky-800 hover:underline">
+                    <Link href={record.href} className="font-medium text-sky-800 hover:underline">
                       {record.internalNumber}
                     </Link>
                   </Td>
                   <Td>{formatDateTime(record.attendedAt)}</Td>
-                  <Td>{labelFromValue(record.category)}</Td>
+                  <Td>{labelFromValue(record.kind)}</Td>
                   <Td><StatusBadge value={record.status} /></Td>
-                  <Td>{record.createdBy.name}</Td>
+                  <Td>{roleLabel(record.role)}</Td>
+                  <Td>{record.createdByName}</Td>
                 </tr>
               ))}
             </Table>
@@ -81,18 +68,19 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
 
         <DetailSection title="Historial de Intervenciones">
           {canJuridical ? (
-            <Table headers={["Numero", "Fecha", "Tipo", "Estado", "Usuario"]} empty={!interventions.length}>
-              {interventions.map((intervention) => (
-                <tr key={intervention.id}>
+            <Table headers={["Numero", "Fecha", "Tipo", "Estado", "Rol", "Usuario"]} empty={!juridicalCases.length}>
+              {juridicalCases.map((intervention) => (
+                <tr key={`${intervention.module}-${intervention.id}-${intervention.role}`}>
                   <Td>
-                    <Link href={`/intervenciones/${intervention.id}`} className="font-medium text-sky-800 hover:underline">
+                    <Link href={intervention.href} className="font-medium text-sky-800 hover:underline">
                       {intervention.internalNumber}
                     </Link>
                   </Td>
                   <Td>{formatDateTime(intervention.attendedAt)}</Td>
-                  <Td>{labelFromValue(intervention.type)}</Td>
+                  <Td>{labelFromValue(intervention.kind)}</Td>
                   <Td><StatusBadge value={intervention.status} /></Td>
-                  <Td>{intervention.createdBy.name}</Td>
+                  <Td>{roleLabel(intervention.role)}</Td>
+                  <Td>{intervention.createdByName}</Td>
                 </tr>
               ))}
             </Table>

@@ -1,11 +1,10 @@
 import Link from "next/link";
-import type { Prisma } from "@prisma/client";
 import { FilterBar, FilterInput } from "@/components/ui/filter-bar";
 import { PageHeader } from "@/components/ui/page-header";
 import { Table, Td } from "@/components/ui/table";
 import { requireUser } from "@/lib/auth";
-import { formatDateTime, normalizeName } from "@/lib/format";
-import { prisma } from "@/lib/prisma";
+import { formatDateTime } from "@/lib/format";
+import { getPeopleIndex, roleLabel } from "@/lib/people-index";
 import { assertAccess, canAccessDispatch, canAccessJuridical, canAccessPeople } from "@/lib/rbac";
 import { param } from "@/lib/search";
 import type { SearchParams } from "@/lib/types";
@@ -20,25 +19,11 @@ export default async function PeoplePage({ searchParams }: { searchParams?: Prom
   const firstName = param(params, "firstName");
   const lastName = param(params, "lastName");
   const name = param(params, "name");
+  const caseQuery = param(params, "case");
 
-  const where: Prisma.ExternalPersonWhereInput = {
-    ...(dni ? { dni: { contains: dni } } : {}),
-    ...(firstName ? { firstName: { contains: firstName } } : {}),
-    ...(lastName ? { lastName: { contains: lastName } } : {}),
-    ...(name ? { fullNameNormalized: { contains: normalizeName(name) } } : {}),
-  };
-
-  const people = await prisma.externalPerson.findMany({
-    where,
-    include: {
-      _count: {
-        select: {
-          dispatchRecords: true,
-          juridicalInterventions: true,
-        },
-      },
-    },
-    orderBy: [{ lastName: "asc" }, { firstName: "asc" }],
+  const people = await getPeopleIndex({
+    permissions: { canDispatch, canJuridical },
+    filters: { dni, firstName, lastName, name, caseQuery },
     take: 100,
   });
 
@@ -46,7 +31,7 @@ export default async function PeoplePage({ searchParams }: { searchParams?: Prom
     <>
       <PageHeader
         title="Personas"
-        description="Busqueda central por DNI, nombre y apellido. El historial visible depende de los permisos del usuario."
+        description="Indice unificado de denunciantes y personas denunciadas o vinculadas. El historial visible depende de los permisos del usuario."
       />
 
       <FilterBar resetHref="/personas">
@@ -54,26 +39,36 @@ export default async function PeoplePage({ searchParams }: { searchParams?: Prom
         <FilterInput label="Nombre" name="firstName" defaultValue={firstName} />
         <FilterInput label="Apellido" name="lastName" defaultValue={lastName} />
         <FilterInput label="Nombre completo" name="name" defaultValue={name} />
+        <FilterInput label="Caso" name="case" defaultValue={caseQuery} />
       </FilterBar>
 
-      <Table headers={["Persona", "DNI", "Telefono", "Domicilio", "Historial", "Actualizado"]} empty={!people.length}>
+      <Table headers={["Persona", "DNI", "Telefono", "Domicilio", "Roles", "Casos", "Ultimo caso"]} empty={!people.length}>
         {people.map((person) => (
           <tr key={person.id}>
             <Td>
               <Link href={`/personas/${person.id}`} className="font-medium text-sky-800 hover:underline">
-                {person.firstName} {person.lastName}
+                {person.displayName}
               </Link>
             </Td>
             <Td>{person.dni ?? "-"}</Td>
-            <Td>{person.phone1 ?? "-"}</Td>
+            <Td>{[person.phone1, person.phone2].filter(Boolean).join(" / ") || "-"}</Td>
             <Td className="whitespace-normal">{person.address ?? "-"}</Td>
-            <Td>
-              <span className="text-xs text-slate-600">
-                Despacho: {canDispatch ? person._count.dispatchRecords : "restringido"} · Intervenciones:{" "}
-                {canJuridical ? person._count.juridicalInterventions : "restringido"}
-              </span>
+            <Td className="whitespace-normal">
+              {person.roles.filter((role) => role !== "REGISTRO").map(roleLabel).join(" / ") || "Registro"}
             </Td>
-            <Td>{formatDateTime(person.updatedAt)}</Td>
+            <Td>{person.caseCount}</Td>
+            <Td>
+              {person.latestCase ? (
+                <div>
+                  <Link href={person.latestCase.href} className="font-medium text-sky-800 hover:underline">
+                    {person.latestCase.internalNumber}
+                  </Link>
+                  <div className="text-xs text-slate-500">{formatDateTime(person.latestCase.attendedAt)}</div>
+                </div>
+              ) : (
+                "-"
+              )}
+            </Td>
           </tr>
         ))}
       </Table>

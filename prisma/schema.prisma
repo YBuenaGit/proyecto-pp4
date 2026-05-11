@@ -125,6 +125,7 @@ model DispatchComplainant {
 
   @@index([dispatchRecordId])
   @@index([dni])
+  @@index([firstName])
   @@index([lastName])
 }
 
@@ -234,6 +235,7 @@ model JuridicalComplainant {
 
   @@index([juridicalInterventionId])
   @@index([dni])
+  @@index([firstName])
   @@index([lastName])
 }
 
