@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { Edit, Plus, Send, Upload } from "lucide-react";
 import { AppModal } from "@/components/ui/app-modal";
 import { AttachmentList, UploadForm } from "@/components/ui/attachments";
-import { AuditTimeline } from "@/components/ui/audit-timeline";
+import { AuditTimeline, auditLogActionId, describeAuditLog } from "@/components/ui/audit-timeline";
 import { Button, LinkButton } from "@/components/ui/button";
 import { DetailField, DetailSection, FieldGrid } from "@/components/ui/detail-section";
 import { FormField, inputClass, textareaClass } from "@/components/ui/form-controls";
@@ -24,6 +24,39 @@ import { InterventionForm } from "../intervention-form";
 
 function display(value: string | null | undefined) {
   return value?.trim() || "-";
+}
+
+type CaseHistoryEvent = {
+  id: string;
+  date: Date;
+  title: string;
+  actor: string;
+  details: string[];
+};
+
+function CaseHistoryTimeline({ events }: { events: CaseHistoryEvent[] }) {
+  if (!events.length) return <p className="text-sm text-slate-500">Sin movimientos registrados.</p>;
+
+  return (
+    <ol className="space-y-4">
+      {events.map((event) => (
+        <li key={event.id} className="border-l-2 border-sky-200 pl-4">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-semibold text-slate-900">{event.title}</p>
+            <span className="text-xs text-slate-500">{formatDateTime(event.date)}</span>
+          </div>
+          <p className="mt-1 text-sm text-slate-600">{event.actor}</p>
+          {event.details.length ? (
+            <ul className="mt-2 space-y-1 text-sm leading-6 text-slate-700">
+              {event.details.map((detail) => (
+                <li key={detail}>{detail}</li>
+              ))}
+            </ul>
+          ) : null}
+        </li>
+      ))}
+    </ol>
+  );
 }
 
 export default async function InterventionDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -100,6 +133,59 @@ export default async function InterventionDetailPage({ params }: { params: Promi
           },
         ]
       : [];
+  const auditedActionIds = new Set(auditLogs.map(auditLogActionId).filter((value): value is string => Boolean(value)));
+  const auditHistoryEvents: CaseHistoryEvent[] = auditLogs
+    .filter((log) => ["CREATE", "UPDATE", "STATUS_CHANGE", "ACTION"].includes(log.action))
+    .map((log) => {
+      const description = describeAuditLog(log);
+      return {
+        id: `audit-${log.id}`,
+        date: log.createdAt,
+        title: description.title,
+        actor: description.actorLine,
+        details: description.details,
+      };
+    });
+  const actionHistoryEvents: CaseHistoryEvent[] = intervention.actions
+    .filter((action) => !auditedActionIds.has(action.id))
+    .filter((action) => !(action.actionType === "DERIVACION" && action.content.startsWith("Derivacion a Despacho:")))
+    .map((action) => ({
+      id: `action-${action.id}`,
+      date: action.createdAt,
+      title: labelFromValue(action.actionType),
+      actor: `${action.createdBy.name} (${labelFromValue(action.createdBy.role)})`,
+      details: [
+        action.content,
+        action.nextStepDate ? `Proximo paso: ${formatDate(action.nextStepDate)}.` : null,
+      ].filter((item): item is string => Boolean(item)),
+    }));
+  const referralHistoryEvents: CaseHistoryEvent[] = [...intervention.destinationReferrals, ...intervention.originReferrals].map((referral) => ({
+    id: `referral-${referral.id}`,
+    date: referral.referredAt,
+    title:
+      referral.originJuridicalInterventionId === intervention.id
+        ? `Derivacion a ${labelFromValue(referral.destinationModule)}`
+        : `Derivacion recibida de ${labelFromValue(referral.originModule)}`,
+    actor: `${referral.referredBy.name} (${labelFromValue(referral.referredBy.role)})`,
+    details: [
+      referral.summary,
+      referral.status ? `Estado de derivacion: ${labelFromValue(referral.status)}.` : null,
+      referral.visibleStatusForOrigin ? referral.visibleStatusForOrigin : null,
+    ].filter((item): item is string => Boolean(item)),
+  }));
+  const attachmentHistoryEvents: CaseHistoryEvent[] = attachments.map((attachment) => ({
+    id: `attachment-${attachment.id}`,
+    date: attachment.createdAt,
+    title: "Adjunto privado",
+    actor: `${attachment.uploadedBy.name} (${labelFromValue(attachment.uploadedBy.role)})`,
+    details: [`Adjunto ${attachment.originalName}.`],
+  }));
+  const caseHistoryEvents = [
+    ...auditHistoryEvents,
+    ...actionHistoryEvents,
+    ...referralHistoryEvents,
+    ...attachmentHistoryEvents,
+  ].sort((a, b) => b.date.getTime() - a.date.getTime());
 
   return (
     <>
@@ -216,9 +302,9 @@ export default async function InterventionDetailPage({ params }: { params: Promi
           </DetailSection>
 
           <DetailSection
-            title="Actuaciones y seguimientos"
+            title={`Historial de seguimiento del caso ${intervention.internalNumber}`}
             action={
-              <AppModal title="Agregar actuacion" trigger={<><Plus className="h-4 w-4" />Agregar actuacion</>} size="md">
+              <AppModal title="Agregar seguimiento" trigger={<><Plus className="h-4 w-4" />Agregar seguimiento</>} size="md">
                 <form action={addJuridicalAction.bind(null, intervention.id)} className="space-y-4">
                   <div className="grid gap-3 sm:grid-cols-2">
                     <FormField label="Tipo de actuacion">
@@ -251,8 +337,8 @@ export default async function InterventionDetailPage({ params }: { params: Promi
               </AppModal>
             }
           >
-
-            <div className="space-y-3">
+            <CaseHistoryTimeline events={caseHistoryEvents} />
+            <div className="hidden" aria-hidden="true">
               {intervention.actions.map((action) => (
                 <div key={action.id} className="rounded-md border border-slate-200 p-3">
                   <div className="mb-2 flex flex-wrap items-center justify-between gap-2">

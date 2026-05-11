@@ -126,6 +126,18 @@ function linkedPersonName(person: LinkedPersonPayload | undefined) {
   return [person.firstName, person.apellidoApodoManual].filter(Boolean).join(" ").trim() || null;
 }
 
+const juridicalAuditInclude = {
+  complainants: { orderBy: { sortOrder: "asc" as const } },
+  linkedPersons: { orderBy: { sortOrder: "asc" as const } },
+};
+
+async function juridicalAuditSnapshot(interventionId: string) {
+  return prisma.juridicalIntervention.findUniqueOrThrow({
+    where: { id: interventionId },
+    include: juridicalAuditInclude,
+  });
+}
+
 async function syncJuridicalReferralSummary(interventionId: string, status: string) {
   await prisma.referral.updateMany({
     where: { destinationJuridicalInterventionId: interventionId },
@@ -191,6 +203,7 @@ export async function createJuridicalIntervention(formData: FormData) {
         create: linkedPersons.map(linkedPersonCreateData),
       },
     },
+    include: juridicalAuditInclude,
   });
 
   await saveAttachments({
@@ -215,7 +228,7 @@ export async function createJuridicalIntervention(formData: FormData) {
 export async function updateJuridicalIntervention(interventionId: string, formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
-  const before = await prisma.juridicalIntervention.findUniqueOrThrow({ where: { id: interventionId } });
+  const before = await juridicalAuditSnapshot(interventionId);
   const parsed = interventionSchema.parse({
     description: text(formData, "description"),
     type: text(formData, "type"),
@@ -268,6 +281,7 @@ export async function updateJuridicalIntervention(interventionId: string, formDa
         create: linkedPersons.map(linkedPersonCreateData),
       },
     },
+    include: juridicalAuditInclude,
   });
   await writeAuditLog({
     module: "JURIDICO",
@@ -293,7 +307,7 @@ export async function addJuridicalAction(interventionId: string, formData: FormD
   const statusAfter = optionalText(formData, "statusAfter");
   if (!ACTION_TYPES.includes(actionType) || content.length < 3) return;
 
-  const before = await prisma.juridicalIntervention.findUniqueOrThrow({ where: { id: interventionId } });
+  const before = await juridicalAuditSnapshot(interventionId);
   const action = await prisma.juridicalAction.create({
     data: {
       juridicalInterventionId: interventionId,
@@ -309,6 +323,7 @@ export async function addJuridicalAction(interventionId: string, formData: FormD
     after = await prisma.juridicalIntervention.update({
       where: { id: interventionId },
       data: { status: statusAfter, lastStatusAt: new Date() },
+      include: juridicalAuditInclude,
     });
     await syncJuridicalReferralSummary(interventionId, statusAfter);
   }
