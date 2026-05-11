@@ -192,6 +192,8 @@ model JuridicalIntervention {
   description            String
   guidanceProvided       String?
   referredToAgency       String?
+  derivedArea            String?
+  confidentialNotes      String?
   origin                 String   @default("DIRECT")
   lastStatusAt           DateTime @default(now())
 

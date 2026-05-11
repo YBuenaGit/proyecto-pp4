@@ -141,6 +141,7 @@ export default async function InterventionDetailPage({ params }: { params: Promi
               />
               <DetailField label="Oficio" value={intervention.oficioNumber} />
               <DetailField label="Expediente" value={intervention.expedienteNumber} />
+              <DetailField label="Area derivada" value={intervention.derivedArea} />
               <DetailField label="Fecha de atencion" value={formatDateTime(intervention.attendedAt)} />
               <DetailField label="Carga en sistema" value={formatDateTime(intervention.createdAt)} />
               <DetailField label="Usuario que atendio" value={intervention.createdBy.name} />
@@ -205,10 +206,10 @@ export default async function InterventionDetailPage({ params }: { params: Promi
                   <p className="whitespace-pre-wrap">{intervention.guidanceProvided}</p>
                 </div>
               ) : null}
-              {intervention.referredToAgency ? (
+              {intervention.confidentialNotes ? (
                 <div>
-                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Derivado a organismo</p>
-                  <p>{intervention.referredToAgency}</p>
+                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Notas internas confidenciales</p>
+                  <p className="whitespace-pre-wrap">{intervention.confidentialNotes}</p>
                 </div>
               ) : null}
             </div>

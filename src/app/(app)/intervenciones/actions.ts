@@ -12,31 +12,54 @@ import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessJuridical } from "@/lib/rbac";
 
 const interventionSchema = z.object({
-  description: z.string().min(8),
+  description: z.string().trim().min(1),
   type: z.string().min(1),
   urgency: z.string().refine((value) => PRIORITIES.includes(value)),
   status: z.string().refine((value) => JURIDICAL_STATUSES.includes(value)),
 });
 
-const optionalTextSchema = z.string().trim().default("");
+const dniPattern = /^\d{7,8}$/;
+const phonePattern = /^\d{7,10}$/;
+const namePattern = /^[\p{L} ]+$/u;
+const addressPattern = /^[\p{L}\d .,\-/]+$/u;
+
+const optionalDniSchema = z
+  .string()
+  .trim()
+  .refine((value) => !value || dniPattern.test(value), "El DNI debe tener entre 7 y 8 numeros.");
+
+const optionalPhoneSchema = z
+  .string()
+  .trim()
+  .refine((value) => !value || phonePattern.test(value), "El telefono debe tener entre 7 y 10 numeros.");
+
+const optionalNameSchema = z
+  .string()
+  .trim()
+  .refine((value) => !value || namePattern.test(value), "El nombre y apellido solo pueden tener letras y espacios.");
+
+const optionalAddressSchema = z
+  .string()
+  .trim()
+  .refine((value) => !value || addressPattern.test(value), "El domicilio contiene caracteres no permitidos.");
 
 const complainantPayloadSchema = z.object({
   isAnonymous: z.boolean().default(false),
-  dni: optionalTextSchema,
-  firstName: optionalTextSchema,
-  lastName: optionalTextSchema,
-  phone1: optionalTextSchema,
-  phone2: optionalTextSchema,
-  address: optionalTextSchema,
+  dni: optionalDniSchema.default(""),
+  firstName: optionalNameSchema.default(""),
+  lastName: optionalNameSchema.default(""),
+  phone1: optionalPhoneSchema.default(""),
+  phone2: optionalPhoneSchema.default(""),
+  address: optionalAddressSchema.default(""),
 });
 
 const linkedPersonPayloadSchema = z.object({
-  dni: optionalTextSchema,
-  firstName: optionalTextSchema,
-  apellidoApodoManual: optionalTextSchema,
-  phone1: optionalTextSchema,
-  phone2: optionalTextSchema,
-  address: optionalTextSchema,
+  dni: optionalDniSchema.default(""),
+  firstName: optionalNameSchema.default(""),
+  apellidoApodoManual: optionalNameSchema.default(""),
+  phone1: optionalPhoneSchema.default(""),
+  phone2: optionalPhoneSchema.default(""),
+  address: optionalAddressSchema.default(""),
 });
 
 type ComplainantPayload = z.infer<typeof complainantPayloadSchema>;
@@ -128,6 +151,9 @@ export async function createJuridicalIntervention(formData: FormData) {
   const firstComplainant = complainants[0];
   const firstLinkedPerson = linkedPersons[0];
   const attendedAt = optionalDate(formData, "attendedAt") ?? new Date();
+  if (Number.isNaN(attendedAt.getTime())) {
+    throw new Error("La fecha y hora de atencion no es valida.");
+  }
 
   const intervention = await prisma.juridicalIntervention.create({
     data: {
@@ -155,6 +181,8 @@ export async function createJuridicalIntervention(formData: FormData) {
       description: parsed.description,
       guidanceProvided: optionalText(formData, "guidanceProvided"),
       referredToAgency: optionalText(formData, "referredToAgency"),
+      derivedArea: optionalText(formData, "derivedArea"),
+      confidentialNotes: optionalText(formData, "confidentialNotes"),
       lastStatusAt: attendedAt,
       complainants: {
         create: complainants.map(complainantCreateData),
@@ -199,6 +227,9 @@ export async function updateJuridicalIntervention(interventionId: string, formDa
   const firstComplainant = complainants[0];
   const firstLinkedPerson = linkedPersons[0];
   const attendedAt = optionalDate(formData, "attendedAt") ?? before.attendedAt;
+  if (Number.isNaN(attendedAt.getTime())) {
+    throw new Error("La fecha y hora de atencion no es valida.");
+  }
 
   const after = await prisma.juridicalIntervention.update({
     where: { id: interventionId },
@@ -225,6 +256,8 @@ export async function updateJuridicalIntervention(interventionId: string, formDa
       description: parsed.description,
       guidanceProvided: optionalText(formData, "guidanceProvided"),
       referredToAgency: optionalText(formData, "referredToAgency"),
+      derivedArea: optionalText(formData, "derivedArea"),
+      confidentialNotes: optionalText(formData, "confidentialNotes"),
       lastStatusAt: before.status !== parsed.status ? new Date() : before.lastStatusAt,
       complainants: {
         deleteMany: {},

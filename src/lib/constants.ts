@@ -65,6 +65,16 @@ export const ACTION_TYPES = [
   "CIERRE",
 ];
 
+export const JURIDICAL_DERIVED_AREAS = [
+  "Obras Publicas",
+  "Servicios Urbanos",
+  "Transito",
+  "Defensa Civil",
+  "Desarrollo Social",
+  "gum",
+  "area directivos",
+];
+
 export const DISPATCH_CATEGORY_LABELS: Record<string, string> = {
   RECLAMO: "Reclamo",
   CONSULTA: "Consulta",
