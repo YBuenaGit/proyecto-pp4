@@ -93,6 +93,18 @@ export const JURIDICAL_TYPE_LABELS: Record<string, string> = {
   OFICIO_URGENTE: "Oficio urgente",
 };
 
+export const JURIDICAL_CONTEXT_LABELS: Record<string, string> = {
+  ASUNTOS_JURIDICOS: "Direccion de Asuntos Juridicos",
+  GUM: "GUM",
+  INFORMACION_SITUACIONES: "Informacion de situaciones",
+  MESA_DENUNCIAS: "Mesa de denuncias",
+  MPF: "Ministerio Publico Fiscal",
+  OJOS_ALERTA: "Ojos en alerta",
+  ORIENTACION: "Orientacion",
+  INFORME: "Informe de situacion",
+  CONTENCION: "Contencion",
+};
+
 export const EXPEDIENT_CATEGORY_LABELS: Record<string, string> = {
   COMPRAS: "Compras",
   REPUESTOS: "Repuestos",

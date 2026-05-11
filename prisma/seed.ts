@@ -240,11 +240,12 @@ async function main() {
     ["juridical_type", "JURIDICO", "MEDIANERAS", "Medianeras"],
     ["juridical_type", "JURIDICO", "HABILITACIONES", "Habilitaciones"],
     ["juridical_type", "JURIDICO", "OFICIO_URGENTE", "Oficio urgente"],
-    ["intervention_context", "JURIDICO", "ORIENTACION", "Orientacion"],
-    ["intervention_context", "JURIDICO", "MPF", "Ministerio Publico Fiscal"],
     ["intervention_context", "JURIDICO", "ASUNTOS_JURIDICOS", "Direccion de Asuntos Juridicos"],
-    ["intervention_context", "JURIDICO", "INFORME", "Informe de situacion"],
-    ["intervention_context", "JURIDICO", "CONTENCION", "Contencion"],
+    ["intervention_context", "JURIDICO", "GUM", "GUM"],
+    ["intervention_context", "JURIDICO", "INFORMACION_SITUACIONES", "Informacion de situaciones"],
+    ["intervention_context", "JURIDICO", "MESA_DENUNCIAS", "Mesa de denuncias"],
+    ["intervention_context", "JURIDICO", "MPF", "Ministerio Publico Fiscal"],
+    ["intervention_context", "JURIDICO", "OJOS_ALERTA", "Ojos en alerta"],
     ["expedient_category", "DESPACHO", "COMPRAS", "Compras"],
     ["expedient_category", "DESPACHO", "REPUESTOS", "Repuestos"],
     ["expedient_category", "DESPACHO", "SUELDOS", "Sueldos"],
@@ -419,7 +420,7 @@ async function main() {
         status,
         description,
         interventionContext,
-        counterpartType: type === "CONFLICTO_VECINAL" ? "AMBAS_PARTES" : "DENUNCIANTE",
+        counterpartType: null,
         guidanceProvided:
           type === "ABOGADOS_GRATUITOS"
             ? "Se informaron instituciones y dias de atencion gratuita."
@@ -428,6 +429,19 @@ async function main() {
         expedienteNumber: type === "OFICIO_URGENTE" ? "MPF-2026-0442" : null,
         origin,
         lastStatusAt: attendedAt,
+        linkedPersons: {
+          create: [
+            {
+              sortOrder: 0,
+              dni: person.dni,
+              firstName: person.firstName,
+              apellidoApodoManual: person.lastName,
+              phone1: person.phone1,
+              phone2: person.phone2,
+              address: person.address,
+            },
+          ],
+        },
       },
     });
     interventions.push(intervention);

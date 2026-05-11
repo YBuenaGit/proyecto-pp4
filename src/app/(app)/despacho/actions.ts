@@ -111,7 +111,7 @@ function nullable(value: string) {
   return value.trim() || null;
 }
 
-function linkedPersonName(person: LinkedPersonPayload | undefined) {
+function linkedPersonName(person: { firstName: string | null; apellidoApodoManual: string | null } | undefined) {
   if (!person) return null;
   return [person.firstName, person.apellidoApodoManual].filter(Boolean).join(" ").trim() || null;
 }
@@ -374,14 +374,15 @@ export async function deriveDispatchToJuridical(recordId: string, formData: Form
     },
   });
   const complainant = source.complainants[0];
+  const firstLinkedPerson = source.linkedPersons[0];
 
   const intervention = await prisma.juridicalIntervention.create({
     data: {
       internalNumber: await nextInternalNumber("JI", "juridical"),
       createdById: user.id,
-      personId: source.personId,
-      dniSnapshot: source.dniSnapshot,
-      nameSnapshot: source.nameSnapshot,
+      personId: null,
+      dniSnapshot: firstLinkedPerson?.dni ?? source.dniSnapshot,
+      nameSnapshot: linkedPersonName(firstLinkedPerson) ?? source.nameSnapshot,
       complainantIsAnonymous: Boolean(complainant?.isAnonymous),
       complainantDni: complainant?.isAnonymous ? null : complainant?.dni,
       complainantFirstName: complainant?.isAnonymous ? null : complainant?.firstName,
@@ -393,12 +394,35 @@ export async function deriveDispatchToJuridical(recordId: string, formData: Form
       urgency: source.priority,
       status: "RECIBIDO",
       interventionContext: "ORIENTACION",
-      counterpartType: "NO_APLICA",
+      counterpartType: null,
       description: summary,
       guidanceProvided: "Derivacion recibida desde Despacho para primera evaluacion.",
       origin: "FROM_DESPACHO",
       attendedAt: new Date(),
       lastStatusAt: new Date(),
+      complainants: {
+        create: source.complainants.map((person, index) => ({
+          sortOrder: index,
+          isAnonymous: person.isAnonymous,
+          dni: person.isAnonymous ? null : person.dni,
+          firstName: person.isAnonymous ? null : person.firstName,
+          lastName: person.isAnonymous ? null : person.lastName,
+          phone1: person.isAnonymous ? null : person.phone1,
+          phone2: person.isAnonymous ? null : person.phone2,
+          address: person.isAnonymous ? null : person.address,
+        })),
+      },
+      linkedPersons: {
+        create: source.linkedPersons.map((person, index) => ({
+          sortOrder: index,
+          dni: person.dni,
+          firstName: person.firstName,
+          apellidoApodoManual: person.apellidoApodoManual,
+          phone1: person.phone1,
+          phone2: person.phone2,
+          address: person.address,
+        })),
+      },
     },
   });
 

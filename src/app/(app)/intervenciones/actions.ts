@@ -7,7 +7,7 @@ import { ACTION_TYPES, JURIDICAL_STATUSES, PRIORITIES } from "@/lib/constants";
 import { requireUser } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { saveAttachments } from "@/lib/files";
-import { complainantFromForm, nextInternalNumber, optionalDate, optionalText, text, upsertPersonFromForm } from "@/lib/form";
+import { nextInternalNumber, optionalDate, optionalText, text } from "@/lib/form";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessJuridical } from "@/lib/rbac";
 
@@ -17,6 +17,91 @@ const interventionSchema = z.object({
   urgency: z.string().refine((value) => PRIORITIES.includes(value)),
   status: z.string().refine((value) => JURIDICAL_STATUSES.includes(value)),
 });
+
+const optionalTextSchema = z.string().trim().default("");
+
+const complainantPayloadSchema = z.object({
+  isAnonymous: z.boolean().default(false),
+  dni: optionalTextSchema,
+  firstName: optionalTextSchema,
+  lastName: optionalTextSchema,
+  phone1: optionalTextSchema,
+  phone2: optionalTextSchema,
+  address: optionalTextSchema,
+});
+
+const linkedPersonPayloadSchema = z.object({
+  dni: optionalTextSchema,
+  firstName: optionalTextSchema,
+  apellidoApodoManual: optionalTextSchema,
+  phone1: optionalTextSchema,
+  phone2: optionalTextSchema,
+  address: optionalTextSchema,
+});
+
+type ComplainantPayload = z.infer<typeof complainantPayloadSchema>;
+type LinkedPersonPayload = z.infer<typeof linkedPersonPayloadSchema>;
+
+function parseJsonArray(formData: FormData, key: string) {
+  const raw = text(formData, key);
+  if (!raw) return [];
+  const parsed: unknown = JSON.parse(raw);
+  return Array.isArray(parsed) ? parsed : [];
+}
+
+function hasComplainantData(person: ComplainantPayload) {
+  return Boolean(person.isAnonymous || person.dni || person.firstName || person.lastName || person.phone1 || person.phone2 || person.address);
+}
+
+function hasLinkedPersonData(person: LinkedPersonPayload) {
+  return Boolean(person.dni || person.firstName || person.apellidoApodoManual || person.phone1 || person.phone2 || person.address);
+}
+
+function parseComplainants(formData: FormData) {
+  return z.array(complainantPayloadSchema).parse(parseJsonArray(formData, "complainantsPayload")).map((person) =>
+    person.isAnonymous
+      ? { isAnonymous: true, dni: "", firstName: "", lastName: "", phone1: "", phone2: "", address: "" }
+      : person,
+  ).filter(hasComplainantData);
+}
+
+function parseLinkedPersons(formData: FormData) {
+  return z.array(linkedPersonPayloadSchema).parse(parseJsonArray(formData, "linkedPersonsPayload")).filter(hasLinkedPersonData);
+}
+
+function nullable(value: string | null | undefined) {
+  return value?.trim() || null;
+}
+
+function complainantCreateData(person: ComplainantPayload, index: number) {
+  return {
+    sortOrder: index,
+    isAnonymous: person.isAnonymous,
+    dni: person.isAnonymous ? null : nullable(person.dni),
+    firstName: person.isAnonymous ? null : nullable(person.firstName),
+    lastName: person.isAnonymous ? null : nullable(person.lastName),
+    phone1: person.isAnonymous ? null : nullable(person.phone1),
+    phone2: person.isAnonymous ? null : nullable(person.phone2),
+    address: person.isAnonymous ? null : nullable(person.address),
+  };
+}
+
+function linkedPersonCreateData(person: LinkedPersonPayload, index: number) {
+  return {
+    sortOrder: index,
+    dni: nullable(person.dni),
+    firstName: nullable(person.firstName),
+    apellidoApodoManual: nullable(person.apellidoApodoManual),
+    phone1: nullable(person.phone1),
+    phone2: nullable(person.phone2),
+    address: nullable(person.address),
+  };
+}
+
+function linkedPersonName(person: LinkedPersonPayload | undefined) {
+  if (!person) return null;
+  return [person.firstName, person.apellidoApodoManual].filter(Boolean).join(" ").trim() || null;
+}
 
 async function syncJuridicalReferralSummary(interventionId: string, status: string) {
   await prisma.referral.updateMany({
@@ -38,31 +123,45 @@ export async function createJuridicalIntervention(formData: FormData) {
     urgency: text(formData, "urgency") || "MEDIA",
     status: text(formData, "status") || "RECIBIDO",
   });
-  const person = await upsertPersonFromForm(formData);
+  const complainants = parseComplainants(formData);
+  const linkedPersons = parseLinkedPersons(formData);
+  const firstComplainant = complainants[0];
+  const firstLinkedPerson = linkedPersons[0];
   const attendedAt = optionalDate(formData, "attendedAt") ?? new Date();
-  const complainant = complainantFromForm(formData);
 
   const intervention = await prisma.juridicalIntervention.create({
     data: {
       internalNumber: await nextInternalNumber("JI", "juridical"),
       attendedAt,
       createdById: user.id,
-      personId: person?.id,
-      dniSnapshot: person?.dni ?? optionalText(formData, "dni"),
-      nameSnapshot: person ? `${person.firstName} ${person.lastName}` : null,
-      ...complainant,
+      personId: null,
+      dniSnapshot: firstLinkedPerson?.dni || null,
+      nameSnapshot: linkedPersonName(firstLinkedPerson),
+      complainantIsAnonymous: Boolean(firstComplainant?.isAnonymous),
+      complainantDni: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.dni),
+      complainantFirstName: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.firstName),
+      complainantLastName: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.lastName),
+      complainantPhone1: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.phone1),
+      complainantPhone2: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.phone2),
+      complainantAddress: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.address),
       type: parsed.type,
-      subType: optionalText(formData, "subType"),
+      subType: null,
       urgency: parsed.urgency,
       status: parsed.status,
       oficioNumber: optionalText(formData, "oficioNumber"),
       expedienteNumber: optionalText(formData, "expedienteNumber"),
       interventionContext: optionalText(formData, "interventionContext"),
-      counterpartType: optionalText(formData, "counterpartType"),
+      counterpartType: null,
       description: parsed.description,
       guidanceProvided: optionalText(formData, "guidanceProvided"),
       referredToAgency: optionalText(formData, "referredToAgency"),
       lastStatusAt: attendedAt,
+      complainants: {
+        create: complainants.map(complainantCreateData),
+      },
+      linkedPersons: {
+        create: linkedPersons.map(linkedPersonCreateData),
+      },
     },
   });
 
@@ -95,30 +194,46 @@ export async function updateJuridicalIntervention(interventionId: string, formDa
     urgency: text(formData, "urgency") || "MEDIA",
     status: text(formData, "status") || "RECIBIDO",
   });
-  const person = await upsertPersonFromForm(formData);
+  const complainants = parseComplainants(formData);
+  const linkedPersons = parseLinkedPersons(formData);
+  const firstComplainant = complainants[0];
+  const firstLinkedPerson = linkedPersons[0];
   const attendedAt = optionalDate(formData, "attendedAt") ?? before.attendedAt;
-  const complainant = complainantFromForm(formData);
 
   const after = await prisma.juridicalIntervention.update({
     where: { id: interventionId },
     data: {
       attendedAt,
-      personId: person?.id ?? null,
-      dniSnapshot: person?.dni ?? optionalText(formData, "dni"),
-      nameSnapshot: person ? `${person.firstName} ${person.lastName}` : null,
-      ...complainant,
+      personId: null,
+      dniSnapshot: firstLinkedPerson?.dni || null,
+      nameSnapshot: linkedPersonName(firstLinkedPerson),
+      complainantIsAnonymous: Boolean(firstComplainant?.isAnonymous),
+      complainantDni: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.dni),
+      complainantFirstName: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.firstName),
+      complainantLastName: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.lastName),
+      complainantPhone1: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.phone1),
+      complainantPhone2: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.phone2),
+      complainantAddress: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.address),
       type: parsed.type,
-      subType: optionalText(formData, "subType"),
+      subType: null,
       urgency: parsed.urgency,
       status: parsed.status,
       oficioNumber: optionalText(formData, "oficioNumber"),
       expedienteNumber: optionalText(formData, "expedienteNumber"),
       interventionContext: optionalText(formData, "interventionContext"),
-      counterpartType: optionalText(formData, "counterpartType"),
+      counterpartType: null,
       description: parsed.description,
       guidanceProvided: optionalText(formData, "guidanceProvided"),
       referredToAgency: optionalText(formData, "referredToAgency"),
       lastStatusAt: before.status !== parsed.status ? new Date() : before.lastStatusAt,
+      complainants: {
+        deleteMany: {},
+        create: complainants.map(complainantCreateData),
+      },
+      linkedPersons: {
+        deleteMany: {},
+        create: linkedPersons.map(linkedPersonCreateData),
+      },
     },
   });
   await writeAuditLog({
@@ -186,20 +301,47 @@ export async function deriveJuridicalToDispatch(interventionId: string, formData
 
   const source = await prisma.juridicalIntervention.findUniqueOrThrow({
     where: { id: interventionId },
-    include: { person: true },
+    include: {
+      person: true,
+      complainants: { orderBy: { sortOrder: "asc" } },
+      linkedPersons: { orderBy: { sortOrder: "asc" } },
+    },
   });
-  const hasComplainant =
-    source.complainantIsAnonymous ||
-    Boolean(
-      source.complainantDni ||
+  const complainants = source.complainants.length
+    ? source.complainants
+    : source.complainantIsAnonymous ||
+        source.complainantDni ||
         source.complainantFirstName ||
         source.complainantLastName ||
         source.complainantPhone1 ||
         source.complainantPhone2 ||
-        source.complainantAddress,
-    );
-  const linkedName = source.nameSnapshot;
-  const hasLinkedPerson = Boolean(source.person || source.dniSnapshot || linkedName);
+        source.complainantAddress
+      ? [
+          {
+            isAnonymous: source.complainantIsAnonymous,
+            dni: source.complainantDni,
+            firstName: source.complainantFirstName,
+            lastName: source.complainantLastName,
+            phone1: source.complainantPhone1,
+            phone2: source.complainantPhone2,
+            address: source.complainantAddress,
+          },
+        ]
+      : [];
+  const linkedPersons = source.linkedPersons.length
+    ? source.linkedPersons
+    : source.person || source.dniSnapshot || source.nameSnapshot
+      ? [
+          {
+            dni: source.person?.dni ?? source.dniSnapshot,
+            firstName: source.person?.firstName ?? null,
+            apellidoApodoManual: source.person?.lastName ?? source.nameSnapshot,
+            phone1: source.person?.phone1 ?? null,
+            phone2: source.person?.phone2 ?? null,
+            address: source.person?.address ?? null,
+          },
+        ]
+      : [];
 
   const dispatchRecord = await prisma.dispatchRecord.create({
     data: {
@@ -216,37 +358,29 @@ export async function deriveJuridicalToDispatch(interventionId: string, formData
       origin: "FROM_JURIDICO",
       attendedAt: new Date(),
       lastStatusAt: new Date(),
-      complainants: hasComplainant
-        ? {
-            create: [
-              {
-                sortOrder: 0,
-                isAnonymous: source.complainantIsAnonymous,
-                dni: source.complainantIsAnonymous ? null : source.complainantDni,
-                firstName: source.complainantIsAnonymous ? null : source.complainantFirstName,
-                lastName: source.complainantIsAnonymous ? null : source.complainantLastName,
-                phone1: source.complainantIsAnonymous ? null : source.complainantPhone1,
-                phone2: source.complainantIsAnonymous ? null : source.complainantPhone2,
-                address: source.complainantIsAnonymous ? null : source.complainantAddress,
-              },
-            ],
-          }
-        : undefined,
-      linkedPersons: hasLinkedPerson
-        ? {
-            create: [
-              {
-                sortOrder: 0,
-                dni: source.person?.dni ?? source.dniSnapshot,
-                firstName: source.person?.firstName,
-                apellidoApodoManual: source.person?.lastName ?? linkedName,
-                phone1: source.person?.phone1,
-                phone2: source.person?.phone2,
-                address: source.person?.address,
-              },
-            ],
-          }
-        : undefined,
+      complainants: {
+        create: complainants.map((person, index) => ({
+          sortOrder: index,
+          isAnonymous: person.isAnonymous,
+          dni: person.isAnonymous ? null : person.dni,
+          firstName: person.isAnonymous ? null : person.firstName,
+          lastName: person.isAnonymous ? null : person.lastName,
+          phone1: person.isAnonymous ? null : person.phone1,
+          phone2: person.isAnonymous ? null : person.phone2,
+          address: person.isAnonymous ? null : person.address,
+        })),
+      },
+      linkedPersons: {
+        create: linkedPersons.map((person, index) => ({
+          sortOrder: index,
+          dni: person.dni,
+          firstName: person.firstName,
+          apellidoApodoManual: person.apellidoApodoManual,
+          phone1: person.phone1,
+          phone2: person.phone2,
+          address: person.address,
+        })),
+      },
     },
   });
 

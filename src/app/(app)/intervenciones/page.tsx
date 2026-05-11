@@ -34,7 +34,12 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
   const andFilters: Prisma.JuridicalInterventionWhereInput[] = [];
   if (dni) {
     andFilters.push({
-      OR: [{ dniSnapshot: { contains: dni } }, { person: { dni: { contains: dni } } }],
+      OR: [
+        { dniSnapshot: { contains: dni } },
+        { person: { dni: { contains: dni } } },
+        { complainants: { some: { dni: { contains: dni } } } },
+        { linkedPersons: { some: { dni: { contains: dni } } } },
+      ],
     });
   }
   if (name) {
@@ -42,6 +47,10 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
       OR: [
         { nameSnapshot: { contains: name } },
         { person: { fullNameNormalized: { contains: normalizeName(name) } } },
+        { complainants: { some: { firstName: { contains: name } } } },
+        { complainants: { some: { lastName: { contains: name } } } },
+        { linkedPersons: { some: { firstName: { contains: name } } } },
+        { linkedPersons: { some: { apellidoApodoManual: { contains: name } } } },
       ],
     });
   }

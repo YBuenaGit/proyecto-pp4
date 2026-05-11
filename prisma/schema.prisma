@@ -197,6 +197,8 @@ model JuridicalIntervention {
 
   createdBy            User              @relation("JuridicalCreatedBy", fields: [createdById], references: [id])
   person               ExternalPerson?   @relation(fields: [personId], references: [id], onDelete: SetNull)
+  complainants         JuridicalComplainant[]
+  linkedPersons        JuridicalLinkedPerson[]
   actions              JuridicalAction[]
   originReferrals      Referral[]        @relation("OriginJuridical")
   destinationReferrals Referral[]        @relation("DestinationJuridical")
@@ -211,6 +213,46 @@ model JuridicalIntervention {
   @@index([createdById])
   @@index([personId])
   @@index([complainantDni])
+}
+
+model JuridicalComplainant {
+  id                       String   @id @default(cuid())
+  juridicalInterventionId  String
+  sortOrder                Int      @default(0)
+  isAnonymous              Boolean  @default(false)
+  dni                      String?
+  firstName                String?
+  lastName                 String?
+  phone1                   String?
+  phone2                   String?
+  address                  String?
+  createdAt                DateTime @default(now())
+
+  juridicalIntervention JuridicalIntervention @relation(fields: [juridicalInterventionId], references: [id], onDelete: Cascade)
+
+  @@index([juridicalInterventionId])
+  @@index([dni])
+  @@index([lastName])
+}
+
+model JuridicalLinkedPerson {
+  id                       String   @id @default(cuid())
+  juridicalInterventionId  String
+  sortOrder                Int      @default(0)
+  dni                      String?
+  firstName                String?
+  apellidoApodoManual      String?
+  phone1                   String?
+  phone2                   String?
+  address                  String?
+  createdAt                DateTime @default(now())
+
+  juridicalIntervention JuridicalIntervention @relation(fields: [juridicalInterventionId], references: [id], onDelete: Cascade)
+
+  @@index([juridicalInterventionId])
+  @@index([dni])
+  @@index([firstName])
+  @@index([apellidoApodoManual])
 }
 
 model JuridicalAction {

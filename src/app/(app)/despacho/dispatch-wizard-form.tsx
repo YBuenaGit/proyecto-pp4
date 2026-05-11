@@ -387,6 +387,7 @@ export function DispatchWizardForm({
   submitLabel: string;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const createRequestedRef = useRef(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [furthestStep, setFurthestStep] = useState(0);
   const [visitedSteps, setVisitedSteps] = useState([true, false, false, false]);
@@ -491,13 +492,20 @@ export function DispatchWizardForm({
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     if (currentStep < steps.length - 1) {
       event.preventDefault();
+      createRequestedRef.current = false;
       goNext();
+      return;
+    }
+
+    if (!createRequestedRef.current) {
+      event.preventDefault();
       return;
     }
 
     const invalidStep = stepErrors.findIndex((errors) => errors.length > 0);
     if (invalidStep >= 0) {
       event.preventDefault();
+      createRequestedRef.current = false;
       setAttemptedSteps([true, true, true, true]);
       setCurrentStep(invalidStep);
       markVisited(invalidStep);
@@ -577,30 +585,32 @@ export function DispatchWizardForm({
         <div className={cn(currentStep === 0 ? "grid gap-4" : "hidden")} aria-hidden={currentStep !== 0}>
           <StepCard title="Situación">
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              <label className="flex min-h-11 items-center gap-2 rounded-lg border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={values.usesHistoricalDate}
-                  onChange={(event) =>
+              <Field label="Fecha y hora" error={errorFor("attendedAt")}>
+                <details
+                  open={values.usesHistoricalDate}
+                  onToggle={(event) => {
+                    const isOpen = event.currentTarget.open;
                     setValues((current) => ({
                       ...current,
-                      usesHistoricalDate: event.target.checked,
-                      attendedAt: event.target.checked ? current.attendedAt : currentDateTimeInputValue(),
-                    }))
-                  }
-                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                />
-                Usar fecha histórica
-              </label>
-              <Field label="Fecha y hora" error={errorFor("attendedAt")}>
-                <input
-                  name="attendedAt"
-                  type="datetime-local"
-                  value={values.attendedAt}
-                  onChange={(event) => setValue("attendedAt", event.target.value)}
-                  readOnly={!values.usesHistoricalDate}
-                  className={inputClass}
-                />
+                      usesHistoricalDate: isOpen,
+                      attendedAt: isOpen ? current.attendedAt : currentDateTimeInputValue(),
+                    }));
+                  }}
+                  className="rounded-lg border border-slate-300 bg-slate-50 text-sm text-slate-700 shadow-sm open:bg-white"
+                >
+                  <summary className="cursor-pointer select-none px-3 py-2.5 font-semibold outline-none transition hover:bg-slate-100 focus-visible:ring-4 focus-visible:ring-blue-100">
+                    Usar fecha histórica
+                  </summary>
+                  <div className="border-t border-slate-200 bg-white p-3">
+                    <input
+                      name="attendedAt"
+                      type="datetime-local"
+                      value={values.attendedAt}
+                      onChange={(event) => setValue("attendedAt", event.target.value)}
+                      className={inputClass}
+                    />
+                  </div>
+                </details>
               </Field>
               <Field label="Categoría" error={errorFor("category")}>
                 <select
@@ -1131,7 +1141,14 @@ export function DispatchWizardForm({
               <ChevronRight className="h-4 w-4" />
             </Button>
           ) : (
-            <Button type="submit" disabled={!allValid} className="border-blue-600 bg-blue-600 hover:bg-blue-700">
+            <Button
+              type="submit"
+              disabled={!allValid}
+              onClick={() => {
+                createRequestedRef.current = true;
+              }}
+              className="border-blue-600 bg-blue-600 hover:bg-blue-700"
+            >
               {effectiveSubmitLabel}
             </Button>
           )}

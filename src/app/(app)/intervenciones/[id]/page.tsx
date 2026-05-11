@@ -9,7 +9,7 @@ import { DetailField, DetailSection, FieldGrid } from "@/components/ui/detail-se
 import { FormField, inputClass, textareaClass } from "@/components/ui/form-controls";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { ACTION_TYPES, JURIDICAL_STATUSES } from "@/lib/constants";
+import { ACTION_TYPES, JURIDICAL_CONTEXT_LABELS, JURIDICAL_STATUSES } from "@/lib/constants";
 import { requireUser } from "@/lib/auth";
 import { formatDateTime, formatDate, labelFromValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
@@ -22,14 +22,8 @@ import {
 } from "../actions";
 import { InterventionForm } from "../intervention-form";
 
-function complainantName(record: {
-  complainantIsAnonymous: boolean;
-  complainantFirstName: string | null;
-  complainantLastName: string | null;
-}) {
-  if (record.complainantIsAnonymous) return "Anonimo";
-  const name = [record.complainantFirstName, record.complainantLastName].filter(Boolean).join(" ");
-  return name || "Sin datos";
+function display(value: string | null | undefined) {
+  return value?.trim() || "-";
 }
 
 export default async function InterventionDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -41,6 +35,8 @@ export default async function InterventionDetailPage({ params }: { params: Promi
       where: { id },
       include: {
         person: true,
+        complainants: { orderBy: { sortOrder: "asc" } },
+        linkedPersons: { orderBy: { sortOrder: "asc" } },
         createdBy: true,
         actions: { include: { createdBy: true }, orderBy: { createdAt: "desc" } },
         destinationReferrals: {
@@ -69,6 +65,41 @@ export default async function InterventionDetailPage({ params }: { params: Promi
   ]);
   if (!intervention) notFound();
   const directivoCanSeeDispatch = canAccessDispatch(user);
+  const complainants = intervention.complainants.length
+    ? intervention.complainants
+    : intervention.complainantIsAnonymous ||
+        intervention.complainantDni ||
+        intervention.complainantFirstName ||
+        intervention.complainantLastName ||
+        intervention.complainantPhone1 ||
+        intervention.complainantPhone2 ||
+        intervention.complainantAddress
+      ? [
+          {
+            isAnonymous: intervention.complainantIsAnonymous,
+            dni: intervention.complainantDni,
+            firstName: intervention.complainantFirstName,
+            lastName: intervention.complainantLastName,
+            phone1: intervention.complainantPhone1,
+            phone2: intervention.complainantPhone2,
+            address: intervention.complainantAddress,
+          },
+        ]
+      : [];
+  const linkedPersons = intervention.linkedPersons.length
+    ? intervention.linkedPersons
+    : intervention.person || intervention.dniSnapshot || intervention.nameSnapshot
+      ? [
+          {
+            dni: intervention.person?.dni ?? intervention.dniSnapshot,
+            firstName: intervention.person?.firstName ?? null,
+            apellidoApodoManual: intervention.person?.lastName ?? intervention.nameSnapshot,
+            phone1: intervention.person?.phone1 ?? null,
+            phone2: intervention.person?.phone2 ?? null,
+            address: intervention.person?.address ?? null,
+          },
+        ]
+      : [];
 
   return (
     <>
@@ -100,9 +131,14 @@ export default async function InterventionDetailPage({ params }: { params: Promi
               <DetailField label="Estado" value={<StatusBadge value={intervention.status} />} />
               <DetailField label="Urgencia" value={<StatusBadge value={intervention.urgency} />} />
               <DetailField label="Tipo" value={labelFromValue(intervention.type)} />
-              <DetailField label="Subtipo" value={intervention.subType} />
-              <DetailField label="Contexto" value={labelFromValue(intervention.interventionContext)} />
-              <DetailField label="Parte vinculada" value={labelFromValue(intervention.counterpartType)} />
+              <DetailField
+                label="Contexto"
+                value={
+                  intervention.interventionContext
+                    ? JURIDICAL_CONTEXT_LABELS[intervention.interventionContext] ?? labelFromValue(intervention.interventionContext)
+                    : null
+                }
+              />
               <DetailField label="Oficio" value={intervention.oficioNumber} />
               <DetailField label="Expediente" value={intervention.expedienteNumber} />
               <DetailField label="Fecha de atencion" value={formatDateTime(intervention.attendedAt)} />
@@ -114,27 +150,47 @@ export default async function InterventionDetailPage({ params }: { params: Promi
           </DetailSection>
 
           <DetailSection title="Persona denunciante">
-            <FieldGrid>
-              <DetailField label="Nombre" value={complainantName(intervention)} />
-              <DetailField label="DNI" value={intervention.complainantIsAnonymous ? null : intervention.complainantDni} />
-              <DetailField label="Telefono 1" value={intervention.complainantIsAnonymous ? null : intervention.complainantPhone1} />
-              <DetailField label="Telefono 2" value={intervention.complainantIsAnonymous ? null : intervention.complainantPhone2} />
-              <DetailField label="Domicilio" value={intervention.complainantIsAnonymous ? null : intervention.complainantAddress} />
-            </FieldGrid>
+            <div className="space-y-3">
+              {complainants.map((complainant, index) => (
+                <div key={`complainant-${index}`} className="rounded-md border border-slate-200 p-3">
+                  {complainant.isAnonymous ? (
+                    <p className="text-sm font-medium text-slate-900">Denunciante anonimo</p>
+                  ) : (
+                    <FieldGrid>
+                      <DetailField label="Nombre" value={display([complainant.firstName, complainant.lastName].filter(Boolean).join(" "))} />
+                      <DetailField label="DNI" value={display(complainant.dni)} />
+                      <DetailField label="Telefono 1" value={display(complainant.phone1)} />
+                      <DetailField label="Telefono 2" value={display(complainant.phone2)} />
+                      <DetailField label="Domicilio" value={display(complainant.address)} />
+                    </FieldGrid>
+                  )}
+                </div>
+              ))}
+              {!complainants.length ? <p className="text-sm text-slate-500">Sin denunciantes cargados.</p> : null}
+            </div>
           </DetailSection>
 
           <DetailSection title="Persona vinculada / denunciada">
-            <FieldGrid>
-              <DetailField label="Nombre" value={intervention.nameSnapshot ?? "Sin identificar"} />
-              <DetailField label="DNI" value={intervention.dniSnapshot} />
-              <DetailField label="Telefono 1" value={intervention.person?.phone1} />
-              <DetailField label="Telefono 2" value={intervention.person?.phone2} />
-              <DetailField label="Domicilio" value={intervention.person?.address} />
-              <DetailField
-                label="Perfil"
-                value={intervention.personId ? <Link className="text-sky-800 hover:underline" href={`/personas/${intervention.personId}`}>Ver persona</Link> : "-"}
-              />
-            </FieldGrid>
+            <div className="space-y-3">
+              {linkedPersons.map((person, index) => (
+                <div key={`linked-person-${index}`} className="rounded-md border border-slate-200 p-3">
+                  <FieldGrid>
+                    <DetailField label="Nombre" value={display([person.firstName, person.apellidoApodoManual].filter(Boolean).join(" "))} />
+                    <DetailField label="DNI" value={display(person.dni)} />
+                    <DetailField label="Telefono 1" value={display(person.phone1)} />
+                    <DetailField label="Telefono 2" value={display(person.phone2)} />
+                    <DetailField label="Domicilio" value={display(person.address)} />
+                    {index === 0 && intervention.personId ? (
+                      <DetailField
+                        label="Perfil"
+                        value={<Link className="text-sky-800 hover:underline" href={`/personas/${intervention.personId}`}>Ver persona</Link>}
+                      />
+                    ) : null}
+                  </FieldGrid>
+                </div>
+              ))}
+              {!linkedPersons.length ? <p className="text-sm text-slate-500">Sin personas denunciadas o vinculadas cargadas.</p> : null}
+            </div>
           </DetailSection>
 
           <DetailSection title="Contenido interno">

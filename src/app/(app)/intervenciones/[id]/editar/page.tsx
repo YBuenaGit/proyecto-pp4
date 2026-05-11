@@ -14,7 +14,14 @@ export default async function EditInterventionPage({ params }: { params: Promise
   assertAccess(canAccessJuridical(user));
   const { id } = await params;
   const [intervention, types, contexts] = await Promise.all([
-    prisma.juridicalIntervention.findUnique({ where: { id }, include: { person: true } }),
+    prisma.juridicalIntervention.findUnique({
+      where: { id },
+      include: {
+        person: true,
+        complainants: { orderBy: { sortOrder: "asc" } },
+        linkedPersons: { orderBy: { sortOrder: "asc" } },
+      },
+    }),
     prisma.catalogItem.findMany({ where: { type: "juridical_type", active: true }, orderBy: { sortOrder: "asc" } }),
     prisma.catalogItem.findMany({ where: { type: "intervention_context", active: true }, orderBy: { sortOrder: "asc" } }),
   ]);
