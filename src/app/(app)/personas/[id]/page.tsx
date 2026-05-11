@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { UserPlus } from "lucide-react";
+import { LinkButton } from "@/components/ui/button";
 import { DetailField, DetailSection, FieldGrid } from "@/components/ui/detail-section";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -22,12 +24,27 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
   const dispatchCases = person.cases.filter((item) => item.module === "DESPACHO");
   const juridicalCases = person.cases.filter((item) => item.module === "JURIDICO");
   const roles = person.roles.filter((role) => role !== "REGISTRO").map(roleLabel).join(" / ") || "Registro";
+  const newInterventionHref = (role: "complainant" | "linked") => `/intervenciones/nueva?${new URLSearchParams({ personId: person.id, role })}`;
 
   return (
     <>
       <PageHeader
         title={person.displayName}
         description="Perfil unificado. Los listados de historial respetan permisos por modulo e indican el rol de la persona en cada caso."
+        actions={
+          canJuridical && person.dni ? (
+            <>
+              <LinkButton href={newInterventionHref("complainant")} variant="secondary">
+                <UserPlus className="h-4 w-4" />
+                Nueva como denunciante
+              </LinkButton>
+              <LinkButton href={newInterventionHref("linked")}>
+                <UserPlus className="h-4 w-4" />
+                Nueva como denunciada
+              </LinkButton>
+            </>
+          ) : null
+        }
       />
 
       <div className="space-y-5">

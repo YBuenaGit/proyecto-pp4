@@ -24,6 +24,7 @@ export function AppModal({
   triggerVariant = "primary",
   triggerClassName,
   size = "lg",
+  defaultOpen = false,
   children,
 }: {
   title: string;
@@ -32,9 +33,10 @@ export function AppModal({
   triggerVariant?: keyof typeof triggerVariants;
   triggerClassName?: string;
   size?: keyof typeof modalSizes;
+  defaultOpen?: boolean;
   children: ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const titleId = useId();
 
   useEffect(() => {

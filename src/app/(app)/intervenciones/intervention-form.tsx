@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { AlertCircle, Check, ChevronLeft, ChevronRight, Lock, Pencil, Plus, Trash2, UploadCloud } from "lucide-react";
 import { Button, LinkButton } from "@/components/ui/button";
 import { cn } from "@/components/ui/cn";
 import { JURIDICAL_DERIVED_AREAS, JURIDICAL_STATUSES, PRIORITIES } from "@/lib/constants";
-import { formatDateTime, labelFromValue, toDateInputValue } from "@/lib/format";
+import { formatDateTime, labelFromValue, normalizeName, toDateInputValue } from "@/lib/format";
 
 type ComplainantDraft = {
   id: string;
@@ -26,6 +26,38 @@ type LinkedPersonDraft = {
   phone1: string;
   phone2: string;
   address: string;
+};
+
+type DniLookupPerson = {
+  id: string;
+  href: string;
+  displayName: string;
+  dni: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  phone1: string | null;
+  phone2: string | null;
+  address: string | null;
+  roles: string[];
+  caseCount: number;
+  latestCase: {
+    href: string;
+    internalNumber: string;
+    attendedAt: string;
+  } | null;
+};
+
+type DniLookupResponse = {
+  exists: boolean;
+  person?: DniLookupPerson;
+  error?: string;
+};
+
+type DniLookupState = {
+  status: "idle" | "checking" | "found" | "not-found" | "error";
+  dni?: string;
+  person?: DniLookupPerson;
+  error?: string;
 };
 
 type InterventionRecord = {
@@ -405,6 +437,145 @@ function Field({
   );
 }
 
+function hasLookupNameConflict(person: DniLookupPerson, firstName: string, lastName: string) {
+  const enteredFirstName = firstName.trim();
+  const enteredLastName = lastName.trim();
+  const storedFirstName = person.firstName?.trim();
+  const storedLastName = person.lastName?.trim();
+
+  return Boolean(
+    (enteredFirstName && storedFirstName && normalizeName(enteredFirstName) !== normalizeName(storedFirstName)) ||
+      (enteredLastName && storedLastName && normalizeName(enteredLastName) !== normalizeName(storedLastName)),
+  );
+}
+
+function DniLookupNotice({
+  dni,
+  firstName,
+  lastName,
+  onUseExisting,
+  disabled = false,
+}: {
+  dni: string;
+  firstName: string;
+  lastName: string;
+  onUseExisting?: (person: DniLookupPerson) => void;
+  disabled?: boolean;
+}) {
+  const [lookup, setLookup] = useState<DniLookupState>({ status: "idle" });
+  const cleanedDni = onlyDigits(dni, 8);
+  const canLookupDni = !disabled && dniPattern.test(cleanedDni);
+
+  useEffect(() => {
+    if (!canLookupDni) return;
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(async () => {
+      setLookup({ status: "checking", dni: cleanedDni });
+
+      try {
+        const response = await fetch(`/api/personas/lookup?dni=${encodeURIComponent(cleanedDni)}`, {
+          headers: { Accept: "application/json" },
+          signal: controller.signal,
+        });
+        const payload = (await response.json()) as DniLookupResponse;
+
+        if (!response.ok) {
+          setLookup({ status: "error", dni: cleanedDni, error: payload.error ?? "No se pudo validar el DNI." });
+          return;
+        }
+
+        setLookup(
+          payload.exists && payload.person
+            ? { status: "found", dni: cleanedDni, person: payload.person }
+            : { status: "not-found", dni: cleanedDni },
+        );
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setLookup({ status: "error", dni: cleanedDni, error: "No se pudo validar el DNI." });
+      }
+    }, 400);
+
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [canLookupDni, cleanedDni]);
+
+  const visibleLookup: DniLookupState = canLookupDni && lookup.dni === cleanedDni ? lookup : { status: "idle" };
+
+  if (visibleLookup.status === "idle") return null;
+
+  if (visibleLookup.status === "checking") {
+    return (
+      <div className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600">
+        Validando DNI en Personas...
+      </div>
+    );
+  }
+
+  if (visibleLookup.status === "not-found") {
+    return (
+      <div className="rounded-md border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600">
+        No hay persona registrada con este DNI.
+      </div>
+    );
+  }
+
+  if (visibleLookup.status === "error") {
+    return (
+      <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+        {visibleLookup.error ?? "No se pudo validar el DNI ahora."}
+      </div>
+    );
+  }
+
+  const foundPerson = visibleLookup.person;
+  if (!foundPerson) return null;
+
+  const nameConflict = hasLookupNameConflict(foundPerson, firstName, lastName);
+  const roles = foundPerson.roles.length ? foundPerson.roles.join(" / ") : "Registro";
+  const cases = foundPerson.caseCount === 1 ? "1 caso" : `${foundPerson.caseCount} casos`;
+
+  return (
+    <div
+      className={cn(
+        "rounded-md border px-3 py-2 text-xs leading-5",
+        nameConflict ? "border-amber-200 bg-amber-50 text-amber-800" : "border-emerald-200 bg-emerald-50 text-emerald-800",
+      )}
+    >
+      <div className="flex items-start gap-2">
+        {nameConflict ? <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /> : <Check className="mt-0.5 h-4 w-4 shrink-0" />}
+        <div className="min-w-0 space-y-1">
+          <p>
+            El DNI ya existe en Personas:{" "}
+            <a href={foundPerson.href} className="font-semibold underline underline-offset-2">
+              {foundPerson.displayName}
+            </a>
+            .
+          </p>
+          <p>
+            {roles} - {cases}
+            {foundPerson.latestCase
+              ? ` - Ultimo caso ${foundPerson.latestCase.internalNumber} (${formatDateTime(foundPerson.latestCase.attendedAt)})`
+              : ""}
+          </p>
+          {nameConflict ? <p className="font-semibold">El DNI ya figura con otro nombre, revisa los datos.</p> : null}
+          {onUseExisting ? (
+            <button
+              type="button"
+              onClick={() => onUseExisting(foundPerson)}
+              className="mt-1 inline-flex h-8 items-center rounded-md border border-current bg-white/70 px-3 text-xs font-semibold transition hover:bg-white"
+            >
+              Usar datos existentes
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function StepCard({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
   return (
     <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
@@ -526,6 +697,28 @@ export function InterventionForm({
       ...current,
       linkedPersons: current.linkedPersons.map((person, personIndex) => (personIndex === index ? { ...person, ...patch } : person)),
     }));
+  }
+
+  function applyExistingComplainant(index: number, person: DniLookupPerson) {
+    updateComplainant(index, {
+      dni: onlyDigits(person.dni ?? "", 8),
+      firstName: onlyLettersAndSpaces(person.firstName ?? ""),
+      lastName: onlyLettersAndSpaces(person.lastName ?? ""),
+      phone1: onlyDigits(person.phone1 ?? "", 10),
+      phone2: onlyDigits(person.phone2 ?? "", 10),
+      address: onlyAddressChars(person.address ?? ""),
+    });
+  }
+
+  function applyExistingLinkedPerson(index: number, person: DniLookupPerson) {
+    updateLinkedPerson(index, {
+      dni: onlyDigits(person.dni ?? "", 8),
+      firstName: onlyLettersAndSpaces(person.firstName ?? ""),
+      apellidoApodoManual: onlyLettersAndSpaces(person.lastName ?? ""),
+      phone1: onlyDigits(person.phone1 ?? "", 10),
+      phone2: onlyDigits(person.phone2 ?? "", 10),
+      address: onlyAddressChars(person.address ?? ""),
+    });
   }
 
   function markAttempted(step: number) {
@@ -817,20 +1010,29 @@ export function InterventionForm({
                     <p className="rounded-md bg-white px-3 py-2 text-sm text-slate-600">Denunciante anonimo.</p>
                   ) : (
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                      <Field label="DNI" error={errorFor(`complainants.${personIndex}.dni`)}>
-                        <input
-                          name={`complainants.${personIndex}.dni`}
-                          value={person.dni}
-                          onChange={(event) => updateComplainant(personIndex, { dni: onlyDigits(event.target.value, 8) })}
-                          onKeyDown={(event) => preventInvalidKey(event, /^\d$/)}
-                          onPaste={(event) => {
-                            event.preventDefault();
-                            updateComplainant(personIndex, { dni: valueAfterPaste(event, (value) => onlyDigits(value, 8)) });
-                          }}
-                          inputMode="numeric"
-                          className={inputClass}
+                      <div className="space-y-2">
+                        <Field label="DNI" error={errorFor(`complainants.${personIndex}.dni`)}>
+                          <input
+                            name={`complainants.${personIndex}.dni`}
+                            value={person.dni}
+                            onChange={(event) => updateComplainant(personIndex, { dni: onlyDigits(event.target.value, 8) })}
+                            onKeyDown={(event) => preventInvalidKey(event, /^\d$/)}
+                            onPaste={(event) => {
+                              event.preventDefault();
+                              updateComplainant(personIndex, { dni: valueAfterPaste(event, (value) => onlyDigits(value, 8)) });
+                            }}
+                            inputMode="numeric"
+                            className={inputClass}
+                          />
+                        </Field>
+                        <DniLookupNotice
+                          dni={person.dni}
+                          firstName={person.firstName}
+                          lastName={person.lastName}
+                          disabled={person.isAnonymous}
+                          onUseExisting={(existingPerson) => applyExistingComplainant(personIndex, existingPerson)}
                         />
-                      </Field>
+                      </div>
                       <Field label="Nombre" error={errorFor(`complainants.${personIndex}.firstName`)}>
                         <input
                           name={`complainants.${personIndex}.firstName`}
@@ -935,20 +1137,28 @@ export function InterventionForm({
                     ) : null}
                   </div>
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    <Field label="DNI" error={errorFor(`linkedPersons.${personIndex}.dni`)}>
-                      <input
-                        name={`linkedPersons.${personIndex}.dni`}
-                        value={person.dni}
-                        onChange={(event) => updateLinkedPerson(personIndex, { dni: onlyDigits(event.target.value, 8) })}
-                        onKeyDown={(event) => preventInvalidKey(event, /^\d$/)}
-                        onPaste={(event) => {
-                          event.preventDefault();
-                          updateLinkedPerson(personIndex, { dni: valueAfterPaste(event, (value) => onlyDigits(value, 8)) });
-                        }}
-                        inputMode="numeric"
-                        className={inputClass}
+                    <div className="space-y-2">
+                      <Field label="DNI" error={errorFor(`linkedPersons.${personIndex}.dni`)}>
+                        <input
+                          name={`linkedPersons.${personIndex}.dni`}
+                          value={person.dni}
+                          onChange={(event) => updateLinkedPerson(personIndex, { dni: onlyDigits(event.target.value, 8) })}
+                          onKeyDown={(event) => preventInvalidKey(event, /^\d$/)}
+                          onPaste={(event) => {
+                            event.preventDefault();
+                            updateLinkedPerson(personIndex, { dni: valueAfterPaste(event, (value) => onlyDigits(value, 8)) });
+                          }}
+                          inputMode="numeric"
+                          className={inputClass}
+                        />
+                      </Field>
+                      <DniLookupNotice
+                        dni={person.dni}
+                        firstName={person.firstName}
+                        lastName={person.apellidoApodoManual}
+                        onUseExisting={(existingPerson) => applyExistingLinkedPerson(personIndex, existingPerson)}
                       />
-                    </Field>
+                    </div>
                     <Field label="Nombre" error={errorFor(`linkedPersons.${personIndex}.firstName`)}>
                       <input
                         name={`linkedPersons.${personIndex}.firstName`}
