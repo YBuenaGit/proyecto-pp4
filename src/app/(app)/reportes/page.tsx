@@ -1,6 +1,7 @@
 import { FilterBar, FilterInput } from "@/components/ui/filter-bar";
 import { DetailSection } from "@/components/ui/detail-section";
 import { PageHeader } from "@/components/ui/page-header";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Table, Td } from "@/components/ui/table";
 import { requireUser } from "@/lib/auth";
 import { labelFromValue } from "@/lib/format";
@@ -9,16 +10,19 @@ import { assertAccess, canAccessDispatch, canAccessExpedients, canAccessJuridica
 import { dateRangeWhere, param } from "@/lib/search";
 import type { SearchParams } from "@/lib/types";
 
-function CountTable({ title, rows }: { title: string; rows: Array<{ key: string | null; count: number }> }) {
+function CountTable({ title, rows, badgeValues }: { title: string; rows: Array<{ key: string | null; count: number }>; badgeValues?: boolean }) {
   return (
     <DetailSection title={title}>
       <Table headers={["Concepto", "Cantidad"]} empty={!rows.length}>
-        {rows.map((row) => (
-          <tr key={row.key ?? "sin-dato"}>
-            <Td>{labelFromValue(row.key ?? "Sin dato")}</Td>
-            <Td>{row.count}</Td>
-          </tr>
-        ))}
+        {rows.map((row) => {
+          const concept = row.key ?? "Sin dato";
+          return (
+            <tr key={row.key ?? "sin-dato"}>
+              <Td>{badgeValues && row.key ? <StatusBadge value={row.key} /> : labelFromValue(concept)}</Td>
+              <Td className="w-[20%] whitespace-nowrap">{row.count}</Td>
+            </tr>
+          );
+        })}
       </Table>
     </DetailSection>
   );
@@ -87,13 +91,13 @@ export default async function ReportsPage({ searchParams }: { searchParams?: Pro
         {canDispatch ? (
           <>
             <CountTable title="Despacho por categoria" rows={dispatchByCategory.map((item) => ({ key: item.category, count: item._count }))} />
-            <CountTable title="Despacho por estado" rows={dispatchByStatus.map((item) => ({ key: item.status, count: item._count }))} />
+            <CountTable title="Despacho por estado" rows={dispatchByStatus.map((item) => ({ key: item.status, count: item._count }))} badgeValues />
           </>
         ) : null}
         {canJuridical ? (
           <>
             <CountTable title="Intervenciones por tipo" rows={juridicalByType.map((item) => ({ key: item.type, count: item._count }))} />
-            <CountTable title="Intervenciones por estado" rows={juridicalByStatus.map((item) => ({ key: item.status, count: item._count }))} />
+            <CountTable title="Intervenciones por estado" rows={juridicalByStatus.map((item) => ({ key: item.status, count: item._count }))} badgeValues />
             <CountTable
               title="Intervenciones por usuario"
               rows={juridicalByUser.map((item) => ({
@@ -105,7 +109,7 @@ export default async function ReportsPage({ searchParams }: { searchParams?: Pro
         ) : null}
         {canExpedients ? (
           <>
-            <CountTable title="Expedientes por estado" rows={expedientByStatus.map((item) => ({ key: item.status, count: item._count }))} />
+            <CountTable title="Expedientes por estado" rows={expedientByStatus.map((item) => ({ key: item.status, count: item._count }))} badgeValues />
             <CountTable title="Expedientes por categoria" rows={expedientByCategory.map((item) => ({ key: item.category, count: item._count }))} />
           </>
         ) : null}

@@ -62,19 +62,21 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
 
         <DetailSection title="Historial de Despacho">
           {canDispatch ? (
-            <Table headers={["Numero", "Fecha", "Categoria", "Estado", "Rol", "Usuario"]} empty={!dispatchCases.length}>
+            <Table headers={["Numero", "Fecha / Usuario", "Categoria", "Estado", "Rol"]} empty={!dispatchCases.length}>
               {dispatchCases.map((record) => (
                 <tr key={`${record.module}-${record.id}-${record.role}`}>
-                  <Td>
-                    <Link href={record.href} className="font-medium text-sky-800 hover:underline">
+                  <Td className="w-[18%]">
+                    <Link href={record.href} className="whitespace-nowrap font-medium text-sky-800 hover:underline">
                       {record.internalNumber}
                     </Link>
                   </Td>
-                  <Td>{formatDateTime(record.attendedAt)}</Td>
-                  <Td>{labelFromValue(record.kind)}</Td>
-                  <Td><StatusBadge value={record.status} /></Td>
-                  <Td>{roleLabel(record.role)}</Td>
-                  <Td>{record.createdByName}</Td>
+                  <Td className="w-[26%]">
+                    <div className="font-medium text-slate-900">{formatDateTime(record.attendedAt)}</div>
+                    <div className="text-xs text-slate-500">Usuario: {record.createdByName}</div>
+                  </Td>
+                  <Td className="w-[22%]">{labelFromValue(record.kind)}</Td>
+                  <Td className="w-[17%]"><StatusBadge value={record.status} /></Td>
+                  <Td className="w-[17%]">{roleLabel(record.role)}</Td>
                 </tr>
               ))}
             </Table>
@@ -85,19 +87,21 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
 
         <DetailSection title="Historial de Intervenciones">
           {canJuridical ? (
-            <Table headers={["Numero", "Fecha", "Tipo", "Estado", "Rol", "Usuario"]} empty={!juridicalCases.length}>
+            <Table headers={["Numero", "Fecha / Usuario", "Tipo", "Estado", "Rol"]} empty={!juridicalCases.length}>
               {juridicalCases.map((intervention) => (
                 <tr key={`${intervention.module}-${intervention.id}-${intervention.role}`}>
-                  <Td>
-                    <Link href={intervention.href} className="font-medium text-sky-800 hover:underline">
+                  <Td className="w-[18%]">
+                    <Link href={intervention.href} className="whitespace-nowrap font-medium text-sky-800 hover:underline">
                       {intervention.internalNumber}
                     </Link>
                   </Td>
-                  <Td>{formatDateTime(intervention.attendedAt)}</Td>
-                  <Td>{labelFromValue(intervention.kind)}</Td>
-                  <Td><StatusBadge value={intervention.status} /></Td>
-                  <Td>{roleLabel(intervention.role)}</Td>
-                  <Td>{intervention.createdByName}</Td>
+                  <Td className="w-[26%]">
+                    <div className="font-medium text-slate-900">{formatDateTime(intervention.attendedAt)}</div>
+                    <div className="text-xs text-slate-500">Usuario: {intervention.createdByName}</div>
+                  </Td>
+                  <Td className="w-[22%]">{labelFromValue(intervention.kind)}</Td>
+                  <Td className="w-[17%]"><StatusBadge value={intervention.status} /></Td>
+                  <Td className="w-[17%]">{roleLabel(intervention.role)}</Td>
                 </tr>
               ))}
             </Table>

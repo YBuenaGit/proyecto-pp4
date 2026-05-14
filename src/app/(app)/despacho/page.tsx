@@ -127,22 +127,22 @@ export default async function DispatchListPage({
         <FilterSelect label="Prioridad" name="priority" defaultValue={priority} options={PRIORITIES.map((p) => [p, labelFromValue(p)])} />
       </FilterBar>
 
-      <Table headers={["Numero", "Fecha", "Persona", "Categoria", "Prioridad", "Estado", "Atendio"]} empty={!records.length}>
+      <Table headers={["Numero", "Fecha y hora / Reportado por", "Persona", "Categoria", "Prioridad / Estado"]} empty={!records.length}>
         {records.map((record) => (
           <tr key={record.id}>
-            <Td>
-              <Link href={`/despacho/${record.id}`} className="font-medium text-sky-800 hover:underline">
+            <Td className="w-[18.5%]">
+              <Link href={`/despacho/${record.id}`} className="whitespace-nowrap font-medium text-sky-800 hover:underline">
                 {record.internalNumber}
               </Link>
               {record.originReferrals.length ? (
                 <p className="mt-1 text-xs text-slate-500">{record.originReferrals[0].visibleStatusForOrigin}</p>
               ) : null}
             </Td>
-            <Td>
-              <div>{formatDateTime(record.attendedAt)}</div>
-              <div className="text-xs text-slate-500">Carga: {formatDateTime(record.createdAt)}</div>
+            <Td className="w-[18.5%]">
+              <div className="font-medium text-slate-900">{formatDateTime(record.attendedAt)}</div>
+              <div className="text-xs text-slate-500">Reportado por: {record.createdBy.name}</div>
             </Td>
-            <Td>
+            <Td className="w-[26%]">
               <div className="font-medium text-slate-900">
                 {record.nameSnapshot ??
                   ([record.linkedPersons[0]?.firstName, record.linkedPersons[0]?.apellidoApodoManual].filter(Boolean).join(" ") ||
@@ -150,10 +150,19 @@ export default async function DispatchListPage({
               </div>
               <div className="text-xs text-slate-500">{record.dniSnapshot ?? "Sin DNI"}</div>
             </Td>
-            <Td>{categories.find((item) => item.value === record.category)?.label ?? labelFromValue(record.category)}</Td>
-            <Td><StatusBadge value={record.priority} /></Td>
-            <Td><StatusBadge value={record.status} /></Td>
-            <Td>{record.createdBy.name}</Td>
+            <Td className="w-[18.5%]">{categories.find((item) => item.value === record.category)?.label ?? labelFromValue(record.category)}</Td>
+            <Td className="w-[18.5%]">
+              <div className="space-y-2">
+                <div className="grid grid-cols-[64px_110px] items-center gap-2">
+                  <span className="text-xs text-slate-500">Prioridad:</span>
+                  <StatusBadge value={record.priority} />
+                </div>
+                <div className="grid grid-cols-[64px_110px] items-center gap-2">
+                  <span className="text-xs text-slate-500">Estado:</span>
+                  <StatusBadge value={record.status} />
+                </div>
+              </div>
+            </Td>
           </tr>
         ))}
       </Table>

@@ -464,18 +464,18 @@ function DashboardTable({ panel, rows }: { panel: DashboardPanel; rows: Dashboar
             <table className="w-full table-fixed divide-y divide-slate-200 text-sm">
               <thead className="bg-slate-50">
                 <tr>
-                  <DashboardTh className="w-[15%]">Número</DashboardTh>
-                  <DashboardTh className="w-[25%]">Fecha y hora / Reportado por</DashboardTh>
-                  <DashboardTh className="w-[22%]">Solicitante</DashboardTh>
-                  <DashboardTh className="w-[18%]">Categoría</DashboardTh>
-                  <DashboardTh className="w-[20%]">Prioridad / Estado</DashboardTh>
+                  <DashboardTh className="w-[18.5%]">Número</DashboardTh>
+                  <DashboardTh className="w-[18.5%]">Fecha y hora / Reportado por</DashboardTh>
+                  <DashboardTh className="w-[26%]">Solicitante</DashboardTh>
+                  <DashboardTh className="w-[18.5%]">Categoría</DashboardTh>
+                  <DashboardTh className="w-[18.5%]">Prioridad / Estado</DashboardTh>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
                 {rows.map((row) => (
                   <tr key={row.id} className="transition hover:bg-slate-50">
                     <td className="px-4 py-3 align-top">
-                      <Link href={row.href} className="inline-flex items-center gap-2 font-semibold text-sky-800 hover:underline">
+                      <Link href={row.href} className="inline-flex whitespace-nowrap items-center gap-2 font-semibold text-sky-800 hover:underline">
                         {row.number}
                         <Eye className="h-3.5 w-3.5" />
                       </Link>
@@ -485,18 +485,18 @@ function DashboardTable({ panel, rows }: { panel: DashboardPanel; rows: Dashboar
                       <p className="mt-1 text-xs text-slate-500">Reportado por: {row.reportedBy}</p>
                     </td>
                     <td className="px-4 py-3 align-top text-slate-700">
-                      <p className="line-clamp-2 break-words">{row.requester}</p>
+                      <p className="whitespace-normal break-words [overflow-wrap:anywhere]">{row.requester}</p>
                     </td>
                     <td className="px-4 py-3 align-top text-slate-700">
-                      <p className="line-clamp-2 break-words">{row.category}</p>
+                      <p className="whitespace-normal break-words [overflow-wrap:anywhere]">{row.category}</p>
                     </td>
                     <td className="px-4 py-3 align-top">
                       <div className="space-y-2">
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="grid grid-cols-[64px_110px] items-center gap-2">
                           <span className="text-xs text-slate-500">Prioridad:</span>
                           <StatusBadge value={row.priority} />
                         </div>
-                        <div className="flex flex-wrap items-center gap-2">
+                        <div className="grid grid-cols-[64px_110px] items-center gap-2">
                           <span className="text-xs text-slate-500">Estado:</span>
                           <StatusBadge value={row.status} />
                         </div>
@@ -513,15 +513,15 @@ function DashboardTable({ panel, rows }: { panel: DashboardPanel; rows: Dashboar
               <Link key={row.id} href={row.href} className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm transition hover:border-sky-300 hover:bg-sky-50/40">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="font-semibold text-sky-900">{row.number}</p>
+                    <p className="whitespace-nowrap font-semibold text-sky-900">{row.number}</p>
                     <p className="mt-1 text-xs text-slate-500">{formatDateTime(row.dateTime)}</p>
                     <p className="mt-1 text-xs text-slate-500">Reportado por: {row.reportedBy}</p>
                   </div>
                   <Eye className="h-4 w-4 shrink-0 text-sky-700" />
                 </div>
                 <div className="mt-3 grid gap-2 text-sm text-slate-700">
-                  <p><span className="font-medium text-slate-900">Solicitante:</span> {row.requester}</p>
-                  <p><span className="font-medium text-slate-900">Categoría:</span> {row.category}</p>
+                  <p className="break-words [overflow-wrap:anywhere]"><span className="font-medium text-slate-900">Solicitante:</span> {row.requester}</p>
+                  <p className="break-words [overflow-wrap:anywhere]"><span className="font-medium text-slate-900">Categoría:</span> {row.category}</p>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <StatusBadge value={row.priority} />

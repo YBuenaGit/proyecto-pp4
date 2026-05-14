@@ -125,7 +125,7 @@ export default async function AdminPage() {
                 <Td>{item.module ?? "-"}</Td>
                 <Td>{item.value}</Td>
                 <Td>{item.label}</Td>
-                <Td>{item.active ? "Activo" : "Inactivo"}</Td>
+                <Td><StatusBadge value={item.active ? "ACTIVO" : "INACTIVO"} /></Td>
               </tr>
             ))}
           </Table>

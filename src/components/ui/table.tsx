@@ -13,7 +13,7 @@ export function Table({
   return (
     <div className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm">
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-slate-200 text-sm">
+        <table className="min-w-full table-fixed divide-y divide-slate-200 text-sm">
           <thead className="bg-slate-50">
             <tr>
               {headers.map((header) => (
@@ -32,5 +32,5 @@ export function Table({
 }
 
 export function Td({ children, className }: { children: ReactNode; className?: string }) {
-  return <td className={cn("whitespace-nowrap px-2.5 py-2 align-top text-slate-700 sm:px-3", className)}>{children}</td>;
+  return <td className={cn("whitespace-normal break-words px-2.5 py-2 align-top text-slate-700 [overflow-wrap:anywhere] sm:px-3", className)}>{children}</td>;
 }

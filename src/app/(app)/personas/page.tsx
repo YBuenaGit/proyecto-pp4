@@ -42,25 +42,25 @@ export default async function PeoplePage({ searchParams }: { searchParams?: Prom
         <FilterInput label="Caso" name="case" defaultValue={caseQuery} />
       </FilterBar>
 
-      <Table headers={["Persona", "DNI", "Telefono", "Domicilio", "Roles", "Casos", "Ultimo caso"]} empty={!people.length}>
+      <Table headers={["Persona / DNI", "Contacto", "Domicilio", "Roles", "Casos / Ultimo caso"]} empty={!people.length}>
         {people.map((person) => (
           <tr key={person.id}>
-            <Td>
+            <Td className="w-[24%]">
               <Link href={`/personas/${person.id}`} className="font-medium text-sky-800 hover:underline">
                 {person.displayName}
               </Link>
+              <div className="text-xs text-slate-500">{person.dni ?? "Sin DNI"}</div>
             </Td>
-            <Td>{person.dni ?? "-"}</Td>
-            <Td>{[person.phone1, person.phone2].filter(Boolean).join(" / ") || "-"}</Td>
-            <Td className="whitespace-normal">{person.address ?? "-"}</Td>
-            <Td className="whitespace-normal">
+            <Td className="w-[16%]">{[person.phone1, person.phone2].filter(Boolean).join(" / ") || "-"}</Td>
+            <Td className="w-[24%]">{person.address ?? "-"}</Td>
+            <Td className="w-[18%]">
               {person.roles.filter((role) => role !== "REGISTRO").map(roleLabel).join(" / ") || "Registro"}
             </Td>
-            <Td>{person.caseCount}</Td>
-            <Td>
+            <Td className="w-[18%]">
+              <div className="font-medium text-slate-900">{person.caseCount} casos</div>
               {person.latestCase ? (
-                <div>
-                  <Link href={person.latestCase.href} className="font-medium text-sky-800 hover:underline">
+                <div className="mt-1">
+                  <Link href={person.latestCase.href} className="whitespace-nowrap font-medium text-sky-800 hover:underline">
                     {person.latestCase.internalNumber}
                   </Link>
                   <div className="text-xs text-slate-500">{formatDateTime(person.latestCase.attendedAt)}</div>

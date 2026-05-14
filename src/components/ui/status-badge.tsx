@@ -24,19 +24,32 @@ const toneByStatus: Record<string, string> = {
   ALTA: "bg-orange-50 text-orange-800 ring-orange-200",
   MEDIA: "bg-sky-50 text-sky-800 ring-sky-200",
   BAJA: "bg-slate-100 text-slate-700 ring-slate-200",
+  ACTIVO: "bg-emerald-50 text-emerald-800 ring-emerald-200",
+  INACTIVO: "bg-slate-100 text-slate-700 ring-slate-200",
 };
 
 export function StatusBadge({ value, className }: { value: string | null | undefined; className?: string }) {
   if (!value) return <span className="text-slate-400">-</span>;
+  const isMultiline = value === "PENDIENTE_DOCUMENTACION";
+  const label = isMultiline ? (
+    <>
+      <span>Pendiente</span>
+      <span>Documentación</span>
+    </>
+  ) : (
+    labelFromValue(value)
+  );
+
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset",
+        "inline-flex w-[110px] items-center justify-center rounded-full px-3 py-1 text-center text-xs font-medium ring-1 ring-inset",
+        isMultiline ? "flex-col justify-center whitespace-normal py-1.5 text-center leading-tight" : "whitespace-nowrap",
         toneByStatus[value] ?? "bg-slate-100 text-slate-700 ring-slate-200",
         className,
       )}
     >
-      {labelFromValue(value)}
+      {label}
     </span>
   );
 }

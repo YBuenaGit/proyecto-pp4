@@ -110,27 +110,36 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
         <FilterSelect label="Usuario" name="createdById" defaultValue={createdById} options={users.map((item) => [item.id, item.name])} />
       </FilterBar>
 
-      <Table headers={["Numero", "Fecha", "Persona", "Tipo", "Urgencia", "Estado", "Atendio"]} empty={!interventions.length}>
+      <Table headers={["Numero", "Fecha y hora / Reportado por", "Persona", "Tipo", "Urgencia / Estado"]} empty={!interventions.length}>
         {interventions.map((intervention) => (
           <tr key={intervention.id}>
-            <Td>
-              <Link href={`/intervenciones/${intervention.id}`} className="font-medium text-sky-800 hover:underline">
+            <Td className="w-[18.5%]">
+              <Link href={`/intervenciones/${intervention.id}`} className="whitespace-nowrap font-medium text-sky-800 hover:underline">
                 {intervention.internalNumber}
               </Link>
               {intervention.origin === "FROM_DESPACHO" ? <p className="mt-1 text-xs text-slate-500">Derivada desde Despacho</p> : null}
             </Td>
-            <Td>
-              <div>{formatDateTime(intervention.attendedAt)}</div>
-              <div className="text-xs text-slate-500">Carga: {formatDateTime(intervention.createdAt)}</div>
+            <Td className="w-[18.5%]">
+              <div className="font-medium text-slate-900">{formatDateTime(intervention.attendedAt)}</div>
+              <div className="text-xs text-slate-500">Reportado por: {intervention.createdBy.name}</div>
             </Td>
-            <Td>
+            <Td className="w-[26%]">
               <div className="font-medium text-slate-900">{intervention.nameSnapshot ?? "Sin identificar"}</div>
               <div className="text-xs text-slate-500">{intervention.dniSnapshot ?? "Sin DNI"}</div>
             </Td>
-            <Td>{types.find((item) => item.value === intervention.type)?.label ?? labelFromValue(intervention.type)}</Td>
-            <Td><StatusBadge value={intervention.urgency} /></Td>
-            <Td><StatusBadge value={intervention.status} /></Td>
-            <Td>{intervention.createdBy.name}</Td>
+            <Td className="w-[18.5%]">{types.find((item) => item.value === intervention.type)?.label ?? labelFromValue(intervention.type)}</Td>
+            <Td className="w-[18.5%]">
+              <div className="space-y-2">
+                <div className="grid grid-cols-[64px_110px] items-center gap-2">
+                  <span className="text-xs text-slate-500">Urgencia:</span>
+                  <StatusBadge value={intervention.urgency} />
+                </div>
+                <div className="grid grid-cols-[64px_110px] items-center gap-2">
+                  <span className="text-xs text-slate-500">Estado:</span>
+                  <StatusBadge value={intervention.status} />
+                </div>
+              </div>
+            </Td>
           </tr>
         ))}
       </Table>
