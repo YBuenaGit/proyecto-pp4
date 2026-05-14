@@ -17,7 +17,7 @@ export function Table({
           <thead className="bg-slate-50">
             <tr>
               {headers.map((header) => (
-                <th key={header} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-slate-600">
+                <th key={header} className="px-2.5 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600 sm:px-3">
                   {header}
                 </th>
               ))}
@@ -26,11 +26,11 @@ export function Table({
           <tbody className="divide-y divide-slate-100 bg-white">{children}</tbody>
         </table>
       </div>
-      {empty ? <div className="px-4 py-10 text-center text-sm text-slate-500">No hay registros para mostrar.</div> : null}
+      {empty ? <div className="px-3 py-6 text-center text-sm text-slate-500">No hay registros para mostrar.</div> : null}
     </div>
   );
 }
 
 export function Td({ children, className }: { children: ReactNode; className?: string }) {
-  return <td className={cn("whitespace-nowrap px-4 py-3 align-top text-slate-700", className)}>{children}</td>;
+  return <td className={cn("whitespace-nowrap px-2.5 py-2 align-top text-slate-700 sm:px-3", className)}>{children}</td>;
 }

@@ -830,7 +830,14 @@ export function InterventionForm({
   }
 
   return (
-    <form ref={formRef} action={action} onSubmit={handleSubmit} noValidate className="rounded-lg bg-[#f0f2f5] p-3 sm:p-5">
+    <form
+      ref={formRef}
+      action={action}
+      onSubmit={handleSubmit}
+      encType="multipart/form-data"
+      noValidate
+      className="rounded-lg bg-[#f0f2f5] p-3 sm:p-5"
+    >
       <input type="hidden" name="complainantsPayload" value={JSON.stringify(submittedComplainants)} />
       <input type="hidden" name="linkedPersonsPayload" value={JSON.stringify(submittedLinkedPersons)} />
 

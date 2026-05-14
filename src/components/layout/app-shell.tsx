@@ -46,9 +46,9 @@ function buildNav(user: CurrentUser): NavItem[] {
 export function AppShell({ user, children }: { user: CurrentUser; children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-slate-100 text-slate-950">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-slate-200 bg-white lg:block">
-        <div className="flex h-20 items-center gap-3 border-b border-slate-200 px-5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-md bg-slate-200 text-slate-700">
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-slate-200 bg-white lg:block">
+        <div className="flex h-16 items-center gap-2.5 border-b border-slate-200 px-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-slate-200 text-slate-700">
             <ShieldCheck className="h-6 w-6" />
           </div>
           <div>
@@ -59,22 +59,22 @@ export function AppShell({ user, children }: { user: CurrentUser; children: Reac
         <SidebarNav items={buildNav(user)} />
       </aside>
 
-      <div className="lg:pl-72">
+      <div className="lg:pl-64">
         <header className="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur">
-          <div className="flex h-16 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+          <div className="flex min-h-14 items-center justify-between gap-2 px-3 py-1.5 sm:px-4 lg:px-5">
             <Link href="/" className="flex items-center gap-2 text-sm font-semibold text-slate-900 lg:hidden">
               <ShieldCheck className="h-5 w-5 text-sky-700" />
               Seguridad Municipal
             </Link>
             <div className="hidden text-sm text-slate-500 lg:block">Sistema interno de gestion</div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <div className="text-right">
                 <p className="text-sm font-medium text-slate-900">{user.name}</p>
                 <p className="text-xs text-slate-500">{ROLE_LABELS[user.role] ?? user.role}</p>
               </div>
               <Link
                 href="/logout"
-                className="rounded-md border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
+                className="rounded-md border border-slate-300 px-2.5 py-1.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50"
               >
                 Salir
               </Link>
@@ -84,7 +84,7 @@ export function AppShell({ user, children }: { user: CurrentUser; children: Reac
             <SidebarNav items={buildNav(user)} />
           </div>
         </header>
-        <main className="px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+        <main className="px-2.5 py-4 sm:px-4 lg:px-5">{children}</main>
       </div>
     </div>
   );

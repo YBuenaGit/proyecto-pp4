@@ -17,7 +17,7 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex h-10 items-center justify-center gap-2 rounded-md border px-4 text-sm font-medium shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60",
+        "inline-flex min-h-10 max-w-full items-center justify-center gap-1.5 rounded-md border px-3 py-1.5 text-center text-sm font-medium leading-tight shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60",
         variants[variant],
         className,
       )}
@@ -39,7 +39,7 @@ export function LinkButton({
   return (
     <Link
       className={cn(
-        "inline-flex h-10 items-center justify-center gap-2 rounded-md border px-4 text-sm font-medium shadow-sm transition",
+        "inline-flex min-h-10 max-w-full items-center justify-center gap-1.5 rounded-md border px-3 py-1.5 text-center text-sm font-medium leading-tight shadow-sm transition",
         variants[variant],
         className,
       )}

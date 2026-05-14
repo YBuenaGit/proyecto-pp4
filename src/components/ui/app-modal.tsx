@@ -61,7 +61,7 @@ export function AppModal({
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          "inline-flex h-10 items-center justify-center gap-2 rounded-md border px-4 text-sm font-medium shadow-sm transition",
+          "inline-flex min-h-10 max-w-full items-center justify-center gap-1.5 rounded-md border px-3 py-1.5 text-center text-sm font-medium leading-tight shadow-sm transition",
           triggerVariants[triggerVariant],
           triggerClassName,
         )}
@@ -71,7 +71,7 @@ export function AppModal({
 
       {open ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-3 backdrop-blur-sm sm:p-6"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 p-1.5 backdrop-blur-sm sm:p-3"
           role="presentation"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) setOpen(false);
@@ -86,27 +86,27 @@ export function AppModal({
             aria-modal="true"
             aria-labelledby={titleId}
             className={cn(
-              "flex max-h-[92vh] w-full flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl",
+              "flex max-h-[96dvh] w-full flex-col overflow-hidden rounded-lg border border-slate-200 bg-white shadow-xl",
               modalSizes[size],
             )}
           >
-            <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-4">
+            <div className="flex items-start justify-between gap-2 border-b border-slate-200 px-3 py-2.5 sm:px-4">
               <div>
                 <h2 id={titleId} className="text-base font-semibold text-slate-950">
                   {title}
                 </h2>
-                {description ? <p className="mt-1 text-sm leading-6 text-slate-600">{description}</p> : null}
+                {description ? <p className="mt-0.5 text-sm leading-6 text-slate-600">{description}</p> : null}
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-md p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                className="rounded-md p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
                 aria-label="Cerrar modal"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="overflow-y-auto p-5">{children}</div>
+            <div className="overflow-y-auto p-2.5 sm:p-3">{children}</div>
           </div>
         </div>
       ) : null}

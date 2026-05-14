@@ -5,7 +5,7 @@ import { Button, LinkButton } from "./button";
 
 export function FilterBar({ children, resetHref }: { children: ReactNode; resetHref: string }) {
   return (
-    <div className="mb-5 flex flex-wrap items-center gap-2">
+    <div className="mb-3 flex flex-wrap items-center gap-1.5">
       <AppModal
         title="Filtrar resultados"
         description="Ajusta los criterios de busqueda y listado."
@@ -17,9 +17,9 @@ export function FilterBar({ children, resetHref }: { children: ReactNode; resetH
         )}
         size="lg"
       >
-        <form className="space-y-4">
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{children}</div>
-          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 pt-4">
+        <form className="space-y-3">
+          <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">{children}</div>
+          <div className="flex flex-wrap items-center justify-end gap-1.5 border-t border-slate-200 pt-3">
             <Button type="button" variant="secondary" data-modal-close>
               Cancelar
             </Button>
@@ -57,7 +57,7 @@ export function FilterInput({
         type={type}
         name={name}
         defaultValue={defaultValue}
-        className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+        className="h-10 w-full rounded-md border border-slate-300 bg-white px-2.5 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
       />
     </label>
   );
@@ -80,7 +80,7 @@ export function FilterSelect({
       <select
         name={name}
         defaultValue={defaultValue ?? ""}
-        className="h-10 w-full rounded-md border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+        className="h-10 w-full rounded-md border border-slate-300 bg-white px-2.5 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
       >
         <option value="">Todos</option>
         {options.map((option) => {

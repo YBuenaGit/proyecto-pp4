@@ -55,13 +55,13 @@ const steps = [
 ];
 
 const inputClass =
-  "h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-500";
+  "h-10 w-full rounded-lg border border-slate-300 bg-white px-2.5 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-500";
 
 const textareaClass =
-  "min-h-32 w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm leading-6 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100";
+  "min-h-28 w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm leading-6 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100";
 
 const fileInputClass =
-  "block w-full rounded-lg border border-dashed border-slate-400 bg-slate-50 px-3 py-3 text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-blue-600 file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-blue-700";
+  "block w-full rounded-lg border border-dashed border-slate-400 bg-slate-50 px-2.5 py-2 text-sm text-slate-700 file:mr-2 file:rounded-md file:border-0 file:bg-blue-600 file:px-2.5 file:py-1.5 file:text-sm file:font-semibold file:text-white hover:file:bg-blue-700";
 
 const dniPattern = /^\d{7,8}$/;
 const phonePattern = /^\d{7,10}$/;
@@ -280,12 +280,12 @@ function StepCard({
   className?: string;
 }) {
   return (
-    <section className={cn("rounded-lg border border-slate-200 bg-white p-4 shadow-sm sm:p-5", className)}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <section className={cn("rounded-lg border border-slate-200 bg-white p-3 shadow-sm sm:p-3.5", className)}>
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-base font-semibold text-slate-950">{title}</h3>
         {action}
       </div>
-      <div className="mt-4">{children}</div>
+      <div className="mt-2.5">{children}</div>
     </section>
   );
 }
@@ -303,7 +303,7 @@ function Field({
 }) {
   return (
     <label className={cn("block", className)}>
-      <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</span>
+      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</span>
       {children}
       {error ? <span className="mt-1.5 block text-xs font-semibold text-rose-600">{error}</span> : null}
     </label>
@@ -322,13 +322,13 @@ function SummaryBlock({
   children: ReactNode;
 }) {
   return (
-    <section className="border-t border-slate-200 py-4 first:border-t-0 first:pt-0 last:pb-0">
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+    <section className="border-t border-slate-200 py-2.5 first:border-t-0 first:pt-0 last:pb-0">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <h4 className="text-sm font-semibold text-slate-950">{title}</h4>
         <button
           type="button"
           onClick={onEdit}
-          className="inline-flex h-8 items-center gap-1.5 rounded-md border border-blue-100 bg-blue-50 px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
+          className="inline-flex min-h-8 items-center gap-1 rounded-md border border-blue-100 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
         >
           <Pencil className="h-3.5 w-3.5" />
           {actionLabel}
@@ -340,12 +340,12 @@ function SummaryBlock({
 }
 
 function SummaryGrid({ children }: { children: ReactNode }) {
-  return <dl className="grid gap-3 text-sm sm:grid-cols-2 xl:grid-cols-3">{children}</dl>;
+  return <dl className="grid gap-2 text-sm sm:grid-cols-2 xl:grid-cols-3">{children}</dl>;
 }
 
 function SummaryItem({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="rounded-md bg-slate-50 px-3 py-2">
+    <div className="rounded-md bg-slate-50 px-2.5 py-1.5">
       <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</dt>
       <dd className="mt-1 text-slate-900">{value}</dd>
     </div>
@@ -355,7 +355,7 @@ function SummaryItem({ label, value }: { label: string; value: ReactNode }) {
 function SummaryItems({ items }: { items: Array<{ label: string; value: string }> }) {
   const visibleItems = items.filter((item) => item.value.trim());
   if (!visibleItems.length) {
-    return <p className="rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-700">Sin datos cargados.</p>;
+    return <p className="rounded-md bg-slate-50 px-2.5 py-1.5 text-sm text-slate-700">Sin datos cargados.</p>;
   }
 
   return (
@@ -518,14 +518,21 @@ export function DispatchWizardForm({
   }
 
   return (
-    <form ref={formRef} action={action} onSubmit={handleSubmit} noValidate className="rounded-lg bg-[#f0f2f5] p-3 sm:p-5">
+    <form
+      ref={formRef}
+      action={action}
+      onSubmit={handleSubmit}
+      encType="multipart/form-data"
+      noValidate
+      className="rounded-lg bg-[#f0f2f5] p-2 sm:p-3"
+    >
       <input type="hidden" name="complainantsPayload" value={JSON.stringify(submittedComplainants)} />
       <input type="hidden" name="linkedPersonsPayload" value={JSON.stringify(submittedLinkedPersons)} />
       <input type="hidden" name="usesHistoricalDate" value={values.usesHistoricalDate ? "true" : "false"} />
 
-      <div className="space-y-4">
-        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <ol className="grid grid-cols-4 gap-2">
+      <div className="space-y-3">
+        <div className="rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm">
+          <ol className="grid grid-cols-4 gap-1.5">
             {steps.map((step, index) => {
               const isCurrent = index === currentStep;
               const isLocked = !isCurrent && !canOpenStep(index);
@@ -539,12 +546,12 @@ export function DispatchWizardForm({
                     onClick={() => goToStep(index)}
                     disabled={isLocked}
                     aria-current={isCurrent ? "step" : undefined}
-                    className="group flex w-full flex-col items-center gap-2 text-center disabled:cursor-not-allowed"
+                    className="group flex w-full flex-col items-center gap-1.5 text-center disabled:cursor-not-allowed"
                     title={isLocked ? "Paso bloqueado" : step.label}
                   >
                     <span
                       className={cn(
-                        "flex h-10 w-10 items-center justify-center rounded-full border text-sm font-bold transition",
+                        "flex h-9 w-9 items-center justify-center rounded-full border text-sm font-bold transition",
                         isCurrent && !hasError && "border-blue-600 bg-blue-600 text-white shadow-sm shadow-blue-200",
                         isCurrent && hasError && "border-rose-500 bg-rose-500 text-white shadow-sm shadow-rose-200",
                         isComplete && "border-emerald-500 bg-emerald-500 text-white",
@@ -582,9 +589,9 @@ export function DispatchWizardForm({
           </ol>
         </div>
 
-        <div className={cn(currentStep === 0 ? "grid gap-4" : "hidden")} aria-hidden={currentStep !== 0}>
+        <div className={cn(currentStep === 0 ? "grid gap-3" : "hidden")} aria-hidden={currentStep !== 0}>
           <StepCard title="Situación">
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
               <Field label="Fecha y hora" error={errorFor("attendedAt")}>
                 <details
                   open={values.usesHistoricalDate}
@@ -598,10 +605,10 @@ export function DispatchWizardForm({
                   }}
                   className="rounded-lg border border-slate-300 bg-slate-50 text-sm text-slate-700 shadow-sm open:bg-white"
                 >
-                  <summary className="cursor-pointer select-none px-3 py-2.5 font-semibold outline-none transition hover:bg-slate-100 focus-visible:ring-4 focus-visible:ring-blue-100">
+                  <summary className="cursor-pointer select-none px-2.5 py-2 font-semibold outline-none transition hover:bg-slate-100 focus-visible:ring-4 focus-visible:ring-blue-100">
                     Usar fecha histórica
                   </summary>
-                  <div className="border-t border-slate-200 bg-white p-3">
+                  <div className="border-t border-slate-200 bg-white p-2.5">
                     <input
                       name="attendedAt"
                       type="datetime-local"
@@ -647,24 +654,24 @@ export function DispatchWizardForm({
           </StepCard>
         </div>
 
-        <div className={cn(currentStep === 1 ? "grid gap-4" : "hidden")} aria-hidden={currentStep !== 1}>
+        <div className={cn(currentStep === 1 ? "grid gap-3" : "hidden")} aria-hidden={currentStep !== 1}>
           <StepCard
             title="Personas denunciantes"
             action={
               <button
                 type="button"
                 onClick={() => setValue("complainants", [...values.complainants, emptyComplainant()])}
-                className="inline-flex h-9 items-center gap-2 rounded-md border border-blue-100 bg-blue-50 px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-blue-100 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
               >
                 <Plus className="h-4 w-4" />
                 Agregar otro denunciante
               </button>
             }
           >
-            <div className="space-y-4">
+            <div className="space-y-3">
               {values.complainants.map((person, personIndex) => (
-                <div key={person.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div key={person.id} className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                     <p className="text-sm font-semibold text-slate-900">Denunciante {personIndex + 1}</p>
                     {values.complainants.length > 1 ? (
                       <button
@@ -675,14 +682,14 @@ export function DispatchWizardForm({
                             values.complainants.filter((_, index) => index !== personIndex),
                           )
                         }
-                        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-rose-100 bg-white px-3 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                        className="inline-flex min-h-8 items-center gap-1 rounded-md border border-rose-100 bg-white px-2.5 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                         Eliminar
                       </button>
                     ) : null}
                   </div>
-                  <label className="mb-4 inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-slate-700">
+                  <label className="mb-2 inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-sm font-semibold text-slate-700">
                     <input
                       name={`complainants.${personIndex}.isAnonymous`}
                       type="checkbox"
@@ -700,9 +707,9 @@ export function DispatchWizardForm({
                     Denunciante anónimo
                   </label>
                   {person.isAnonymous ? (
-                    <p className="rounded-md bg-white px-3 py-2 text-sm text-slate-600">Los campos personales quedan ocultos para este denunciante.</p>
+                    <p className="rounded-md bg-white px-2.5 py-1.5 text-sm text-slate-600">Los campos personales quedan ocultos para este denunciante.</p>
                   ) : (
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
                       <Field label="DNI" error={errorFor(`complainants.${personIndex}.dni`)}>
                         <input
                           name={`complainants.${personIndex}.dni`}
@@ -797,17 +804,17 @@ export function DispatchWizardForm({
               <button
                 type="button"
                 onClick={() => setValue("linkedPersons", [...values.linkedPersons, emptyLinkedPerson()])}
-                className="inline-flex h-9 items-center gap-2 rounded-md border border-blue-100 bg-blue-50 px-3 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-blue-100 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
               >
                 <Plus className="h-4 w-4" />
                 Agregar otra persona denunciada
               </button>
             }
           >
-            <div className="space-y-4">
+            <div className="space-y-3">
               {values.linkedPersons.map((person, personIndex) => (
-                <div key={person.id} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                  <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div key={person.id} className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+                  <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
                     <p className="text-sm font-semibold text-slate-900">Persona denunciada / vinculada {personIndex + 1}</p>
                     {values.linkedPersons.length > 1 ? (
                       <button
@@ -818,14 +825,14 @@ export function DispatchWizardForm({
                             values.linkedPersons.filter((_, index) => index !== personIndex),
                           )
                         }
-                        className="inline-flex h-8 items-center gap-1.5 rounded-md border border-rose-100 bg-white px-3 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                        className="inline-flex min-h-8 items-center gap-1 rounded-md border border-rose-100 bg-white px-2.5 py-1 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                         Eliminar
                       </button>
                     ) : null}
                   </div>
-                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
                     <Field label="DNI" error={errorFor(`linkedPersons.${personIndex}.dni`)}>
                       <input
                         name={`linkedPersons.${personIndex}.dni`}
@@ -914,9 +921,9 @@ export function DispatchWizardForm({
           </StepCard>
         </div>
 
-        <div className={cn(currentStep === 2 ? "grid gap-4" : "hidden")} aria-hidden={currentStep !== 2}>
+        <div className={cn(currentStep === 2 ? "grid gap-3" : "hidden")} aria-hidden={currentStep !== 2}>
           <StepCard title="Relato">
-            <div className="space-y-4">
+            <div className="space-y-3">
               <Field label="Descripción redactada" error={errorFor("description")}>
                 <textarea
                   name="description"
@@ -946,9 +953,9 @@ export function DispatchWizardForm({
           </StepCard>
         </div>
 
-        <div className={cn(currentStep === 3 ? "grid gap-4" : "hidden")} aria-hidden={currentStep !== 3}>
+        <div className={cn(currentStep === 3 ? "grid gap-3" : "hidden")} aria-hidden={currentStep !== 3}>
           <StepCard title="Cierre">
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
               <Field label="Estado" error={errorFor("status")}>
                 <select
                   name="status"
@@ -981,9 +988,9 @@ export function DispatchWizardForm({
               </Field>
               {allowAttachments ? (
                 <Field label="Adjuntos" className="md:col-span-2 xl:col-span-3">
-                  <div className="flex items-start gap-3 rounded-lg bg-slate-50 p-3">
+                  <div className="flex items-start gap-2 rounded-lg bg-slate-50 p-2.5">
                     <UploadCloud className="mt-1 h-5 w-5 shrink-0 text-blue-600" />
-                    <div className="w-full space-y-2">
+                    <div className="w-full space-y-1.5">
                       <input
                         name="attachments"
                         type="file"
@@ -1013,10 +1020,10 @@ export function DispatchWizardForm({
 
               <SummaryBlock title="Personas denunciantes" actionLabel="Editar personas" onEdit={() => goToStep(1)}>
                 {submittedComplainants.length ? (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {submittedComplainants.map((person, index) => (
-                      <div key={`summary-complainant-${index}`} className="rounded-md border border-slate-100 bg-white p-3">
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Denunciante {index + 1}</p>
+                      <div key={`summary-complainant-${index}`} className="rounded-md border border-slate-100 bg-white p-2.5">
+                        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Denunciante {index + 1}</p>
                         {person.isAnonymous ? (
                           <p className="text-sm font-semibold text-slate-900">Denunciante anónimo</p>
                         ) : (
@@ -1034,16 +1041,16 @@ export function DispatchWizardForm({
                     ))}
                   </div>
                 ) : (
-                  <p className="rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-700">Sin denunciantes cargados.</p>
+                  <p className="rounded-md bg-slate-50 px-2.5 py-1.5 text-sm text-slate-700">Sin denunciantes cargados.</p>
                 )}
               </SummaryBlock>
 
               <SummaryBlock title="Personas denunciadas / vinculadas" actionLabel="Editar personas" onEdit={() => goToStep(1)}>
                 {submittedLinkedPersons.length ? (
-                  <div className="space-y-3">
+                  <div className="space-y-2">
                     {submittedLinkedPersons.map((person, index) => (
-                      <div key={`summary-linked-${index}`} className="rounded-md border border-slate-100 bg-white p-3">
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Persona denunciada / vinculada {index + 1}</p>
+                      <div key={`summary-linked-${index}`} className="rounded-md border border-slate-100 bg-white p-2.5">
+                        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Persona denunciada / vinculada {index + 1}</p>
                         <SummaryItems
                           items={[
                             { label: "DNI", value: person.dni },
@@ -1057,26 +1064,26 @@ export function DispatchWizardForm({
                     ))}
                   </div>
                 ) : (
-                  <p className="rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-700">Sin personas denunciadas o vinculadas cargadas.</p>
+                  <p className="rounded-md bg-slate-50 px-2.5 py-1.5 text-sm text-slate-700">Sin personas denunciadas o vinculadas cargadas.</p>
                 )}
               </SummaryBlock>
 
               <SummaryBlock title="Relato" actionLabel="Editar relato" onEdit={() => goToStep(2)}>
-                <div className="space-y-3 text-sm leading-6 text-slate-800">
+                <div className="space-y-2 text-sm leading-6 text-slate-800">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Descripción redactada</p>
-                    <p className="mt-1 whitespace-pre-wrap">{display(values.description)}</p>
+                    <p className="mt-0.5 whitespace-pre-wrap">{display(values.description)}</p>
                   </div>
                   {values.initialGuidance ? (
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Orientación brindada / intervención inicial</p>
-                      <p className="mt-1 whitespace-pre-wrap">{values.initialGuidance}</p>
+                      <p className="mt-0.5 whitespace-pre-wrap">{values.initialGuidance}</p>
                     </div>
                   ) : null}
                   {values.confidentialNotes ? (
                     <div>
                       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Notas internas confidenciales</p>
-                      <p className="mt-1 whitespace-pre-wrap">{values.confidentialNotes}</p>
+                      <p className="mt-0.5 whitespace-pre-wrap">{values.confidentialNotes}</p>
                     </div>
                   ) : null}
                 </div>
@@ -1089,7 +1096,7 @@ export function DispatchWizardForm({
                   <SummaryItem label="Cantidad de adjuntos" value={allowAttachments ? attachmentNames.length : "Sin cambios desde este formulario"} />
                 </SummaryGrid>
                 {attachmentNames.length ? (
-                  <ul className="mt-3 space-y-1 rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-700">
+                  <ul className="mt-2 space-y-0.5 rounded-md bg-slate-50 px-2.5 py-1.5 text-sm text-slate-700">
                     {attachmentNames.map((name) => (
                       <li key={name}>{name}</li>
                     ))}
@@ -1098,14 +1105,14 @@ export function DispatchWizardForm({
               </SummaryBlock>
             </div>
 
-            <div className="mt-5 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+            <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">
               Revisá la información cargada antes de crear la atención. Una vez creada, quedará registrada en el sistema.
             </div>
           </StepCard>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
+          <div className="flex flex-wrap items-center gap-1.5">
             {currentStep === 0 ? (
               modal ? (
                 <Button type="button" variant="secondary" data-modal-close>
