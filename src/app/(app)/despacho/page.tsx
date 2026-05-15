@@ -130,7 +130,7 @@ export default async function DispatchListPage({
       <Table headers={["Numero", "Fecha y hora / Reportado por", "Persona", "Categoria", "Prioridad / Estado"]} empty={!records.length}>
         {records.map((record) => (
           <tr key={record.id}>
-            <Td className="w-[18.5%]">
+            <Td>
               <Link href={`/despacho/${record.id}`} className="whitespace-nowrap font-medium text-sky-800 hover:underline">
                 {record.internalNumber}
               </Link>
@@ -138,11 +138,11 @@ export default async function DispatchListPage({
                 <p className="mt-1 text-xs text-slate-500">{record.originReferrals[0].visibleStatusForOrigin}</p>
               ) : null}
             </Td>
-            <Td className="w-[18.5%]">
+            <Td>
               <div className="font-medium text-slate-900">{formatDateTime(record.attendedAt)}</div>
               <div className="text-xs text-slate-500">Reportado por: {record.createdBy.name}</div>
             </Td>
-            <Td className="w-[26%]">
+            <Td>
               <div className="font-medium text-slate-900">
                 {record.nameSnapshot ??
                   ([record.linkedPersons[0]?.firstName, record.linkedPersons[0]?.apellidoApodoManual].filter(Boolean).join(" ") ||
@@ -150,14 +150,14 @@ export default async function DispatchListPage({
               </div>
               <div className="text-xs text-slate-500">{record.dniSnapshot ?? "Sin DNI"}</div>
             </Td>
-            <Td className="w-[18.5%]">{categories.find((item) => item.value === record.category)?.label ?? labelFromValue(record.category)}</Td>
-            <Td className="w-[18.5%]">
+            <Td>{categories.find((item) => item.value === record.category)?.label ?? labelFromValue(record.category)}</Td>
+            <Td>
               <div className="space-y-2">
-                <div className="grid grid-cols-[64px_110px] items-center gap-2">
+                <div className="grid grid-cols-[minmax(54px,64px)_minmax(0,110px)] items-center gap-2">
                   <span className="text-xs text-slate-500">Prioridad:</span>
                   <StatusBadge value={record.priority} />
                 </div>
-                <div className="grid grid-cols-[64px_110px] items-center gap-2">
+                <div className="grid grid-cols-[minmax(54px,64px)_minmax(0,110px)] items-center gap-2">
                   <span className="text-xs text-slate-500">Estado:</span>
                   <StatusBadge value={record.status} />
                 </div>

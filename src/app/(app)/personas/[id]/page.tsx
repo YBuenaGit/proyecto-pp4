@@ -65,18 +65,18 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
             <Table headers={["Numero", "Fecha / Usuario", "Categoria", "Estado", "Rol"]} empty={!dispatchCases.length}>
               {dispatchCases.map((record) => (
                 <tr key={`${record.module}-${record.id}-${record.role}`}>
-                  <Td className="w-[18%]">
+                  <Td>
                     <Link href={record.href} className="whitespace-nowrap font-medium text-sky-800 hover:underline">
                       {record.internalNumber}
                     </Link>
                   </Td>
-                  <Td className="w-[26%]">
+                  <Td>
                     <div className="font-medium text-slate-900">{formatDateTime(record.attendedAt)}</div>
                     <div className="text-xs text-slate-500">Usuario: {record.createdByName}</div>
                   </Td>
-                  <Td className="w-[22%]">{labelFromValue(record.kind)}</Td>
-                  <Td className="w-[17%]"><StatusBadge value={record.status} /></Td>
-                  <Td className="w-[17%]">{roleLabel(record.role)}</Td>
+                  <Td>{labelFromValue(record.kind)}</Td>
+                  <Td><StatusBadge value={record.status} /></Td>
+                  <Td>{roleLabel(record.role)}</Td>
                 </tr>
               ))}
             </Table>
@@ -90,18 +90,18 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
             <Table headers={["Numero", "Fecha / Usuario", "Tipo", "Estado", "Rol"]} empty={!juridicalCases.length}>
               {juridicalCases.map((intervention) => (
                 <tr key={`${intervention.module}-${intervention.id}-${intervention.role}`}>
-                  <Td className="w-[18%]">
+                  <Td>
                     <Link href={intervention.href} className="whitespace-nowrap font-medium text-sky-800 hover:underline">
                       {intervention.internalNumber}
                     </Link>
                   </Td>
-                  <Td className="w-[26%]">
+                  <Td>
                     <div className="font-medium text-slate-900">{formatDateTime(intervention.attendedAt)}</div>
                     <div className="text-xs text-slate-500">Usuario: {intervention.createdByName}</div>
                   </Td>
-                  <Td className="w-[22%]">{labelFromValue(intervention.kind)}</Td>
-                  <Td className="w-[17%]"><StatusBadge value={intervention.status} /></Td>
-                  <Td className="w-[17%]">{roleLabel(intervention.role)}</Td>
+                  <Td>{labelFromValue(intervention.kind)}</Td>
+                  <Td><StatusBadge value={intervention.status} /></Td>
+                  <Td>{roleLabel(intervention.role)}</Td>
                 </tr>
               ))}
             </Table>

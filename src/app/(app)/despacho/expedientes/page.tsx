@@ -67,18 +67,18 @@ export default async function ExpedientsListPage({ searchParams }: { searchParam
       <Table headers={["Numero interno", "Expediente", "Categoria", "Creado / Usuario", "Estado"]} empty={!expedients.length}>
         {expedients.map((expedient) => (
           <tr key={expedient.id}>
-            <Td className="w-[18%]">
+            <Td>
               <Link href={`/despacho/expedientes/${expedient.id}`} className="whitespace-nowrap font-medium text-sky-800 hover:underline">
                 {expedient.internalNumber}
               </Link>
             </Td>
-            <Td className="w-[20%]">{expedient.expedienteNumber ?? "-"}</Td>
-            <Td className="w-[22%]">{categories.find((item) => item.value === expedient.category)?.label ?? labelFromValue(expedient.category)}</Td>
-            <Td className="w-[24%]">
+            <Td>{expedient.expedienteNumber ?? "-"}</Td>
+            <Td>{categories.find((item) => item.value === expedient.category)?.label ?? labelFromValue(expedient.category)}</Td>
+            <Td>
               <div className="font-medium text-slate-900">{formatDateTime(expedient.createdAt)}</div>
               <div className="text-xs text-slate-500">Usuario: {expedient.createdBy.name}</div>
             </Td>
-            <Td className="w-[16%]"><StatusBadge value={expedient.status} /></Td>
+            <Td><StatusBadge value={expedient.status} /></Td>
           </tr>
         ))}
       </Table>

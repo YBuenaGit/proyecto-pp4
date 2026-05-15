@@ -19,7 +19,7 @@ function CountTable({ title, rows, badgeValues }: { title: string; rows: Array<{
           return (
             <tr key={row.key ?? "sin-dato"}>
               <Td>{badgeValues && row.key ? <StatusBadge value={row.key} /> : labelFromValue(concept)}</Td>
-              <Td className="w-[20%] whitespace-nowrap">{row.count}</Td>
+              <Td className="whitespace-nowrap">{row.count}</Td>
             </tr>
           );
         })}

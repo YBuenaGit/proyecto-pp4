@@ -113,28 +113,28 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
       <Table headers={["Numero", "Fecha y hora / Reportado por", "Persona", "Tipo", "Urgencia / Estado"]} empty={!interventions.length}>
         {interventions.map((intervention) => (
           <tr key={intervention.id}>
-            <Td className="w-[18.5%]">
+            <Td>
               <Link href={`/intervenciones/${intervention.id}`} className="whitespace-nowrap font-medium text-sky-800 hover:underline">
                 {intervention.internalNumber}
               </Link>
               {intervention.origin === "FROM_DESPACHO" ? <p className="mt-1 text-xs text-slate-500">Derivada desde Despacho</p> : null}
             </Td>
-            <Td className="w-[18.5%]">
+            <Td>
               <div className="font-medium text-slate-900">{formatDateTime(intervention.attendedAt)}</div>
               <div className="text-xs text-slate-500">Reportado por: {intervention.createdBy.name}</div>
             </Td>
-            <Td className="w-[26%]">
+            <Td>
               <div className="font-medium text-slate-900">{intervention.nameSnapshot ?? "Sin identificar"}</div>
               <div className="text-xs text-slate-500">{intervention.dniSnapshot ?? "Sin DNI"}</div>
             </Td>
-            <Td className="w-[18.5%]">{types.find((item) => item.value === intervention.type)?.label ?? labelFromValue(intervention.type)}</Td>
-            <Td className="w-[18.5%]">
+            <Td>{types.find((item) => item.value === intervention.type)?.label ?? labelFromValue(intervention.type)}</Td>
+            <Td>
               <div className="space-y-2">
-                <div className="grid grid-cols-[64px_110px] items-center gap-2">
+                <div className="grid grid-cols-[minmax(54px,64px)_minmax(0,110px)] items-center gap-2">
                   <span className="text-xs text-slate-500">Urgencia:</span>
                   <StatusBadge value={intervention.urgency} />
                 </div>
-                <div className="grid grid-cols-[64px_110px] items-center gap-2">
+                <div className="grid grid-cols-[minmax(54px,64px)_minmax(0,110px)] items-center gap-2">
                   <span className="text-xs text-slate-500">Estado:</span>
                   <StatusBadge value={intervention.status} />
                 </div>

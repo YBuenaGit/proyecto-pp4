@@ -45,18 +45,18 @@ export default async function PeoplePage({ searchParams }: { searchParams?: Prom
       <Table headers={["Persona / DNI", "Contacto", "Domicilio", "Roles", "Casos / Ultimo caso"]} empty={!people.length}>
         {people.map((person) => (
           <tr key={person.id}>
-            <Td className="w-[24%]">
+            <Td>
               <Link href={`/personas/${person.id}`} className="font-medium text-sky-800 hover:underline">
                 {person.displayName}
               </Link>
               <div className="text-xs text-slate-500">{person.dni ?? "Sin DNI"}</div>
             </Td>
-            <Td className="w-[16%]">{[person.phone1, person.phone2].filter(Boolean).join(" / ") || "-"}</Td>
-            <Td className="w-[24%]">{person.address ?? "-"}</Td>
-            <Td className="w-[18%]">
+            <Td>{[person.phone1, person.phone2].filter(Boolean).join(" / ") || "-"}</Td>
+            <Td>{person.address ?? "-"}</Td>
+            <Td>
               {person.roles.filter((role) => role !== "REGISTRO").map(roleLabel).join(" / ") || "Registro"}
             </Td>
-            <Td className="w-[18%]">
+            <Td>
               <div className="font-medium text-slate-900">{person.caseCount} casos</div>
               {person.latestCase ? (
                 <div className="mt-1">

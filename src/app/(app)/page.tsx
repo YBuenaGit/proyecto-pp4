@@ -445,8 +445,8 @@ function DashboardTable({ panel, rows }: { panel: DashboardPanel; rows: Dashboar
   const empty = rows.length === 0;
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-[#d7e4ee] bg-[#fbfdff]/[0.96] shadow-[0_18px_42px_rgba(26,68,104,0.08)]">
-      <div className="flex flex-col gap-3 border-b border-[#d7e4ee] bg-gradient-to-r from-[#f7fbfd] to-[#edf5f9] px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+    <section className="mt-6 overflow-hidden rounded-2xl border border-[#c8dce8] bg-[#fbfdff]/[0.96] shadow-[0_18px_42px_rgba(26,68,104,0.08)]">
+      <div className="flex flex-col gap-3 border-b border-[#c8dce8] bg-gradient-to-r from-[#dcecf4] via-[#eaf3f8] to-[#f4f9fc] px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h2 className="text-lg font-semibold tracking-[-0.01em] text-[#172033]">{copy.title}</h2>
           <p className="mt-1 text-sm leading-6 text-[#607589]">{copy.description}</p>
@@ -460,20 +460,20 @@ function DashboardTable({ panel, rows }: { panel: DashboardPanel; rows: Dashboar
         <div className="px-5 py-12 text-center text-sm font-medium text-[#607589]">{copy.empty}</div>
       ) : (
         <>
-          <div className="hidden md:block">
-            <table className="w-full table-fixed divide-y divide-[#d7e4ee] text-sm">
-              <thead className="bg-gradient-to-r from-[#f7fbfd] to-[#edf5f9]">
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[1000px] table-fixed divide-y divide-[#c8dce8] text-sm">
+              <thead className="bg-gradient-to-r from-[#dcecf4] via-[#eaf3f8] to-[#f4f9fc]">
                 <tr>
-                  <DashboardTh className="w-[18.5%]">Número</DashboardTh>
-                  <DashboardTh className="w-[18.5%]">Fecha y hora / Reportado por</DashboardTh>
-                  <DashboardTh className="w-[26%]">Solicitante</DashboardTh>
-                  <DashboardTh className="w-[18.5%]">Categoría</DashboardTh>
-                  <DashboardTh className="w-[18.5%]">Prioridad / Estado</DashboardTh>
+                  <DashboardTh>Número</DashboardTh>
+                  <DashboardTh>Fecha y hora / Reportado por</DashboardTh>
+                  <DashboardTh>Solicitante</DashboardTh>
+                  <DashboardTh>Categoría</DashboardTh>
+                  <DashboardTh>Prioridad / Estado</DashboardTh>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#e6eef4] bg-white/[0.85]">
+              <tbody className="divide-y divide-[#dbe8f0] bg-[#fbfdff]">
                 {rows.map((row) => (
-                  <tr key={row.id} className="transition-colors hover:bg-[#f4f9fc]">
+                  <tr key={row.id} className="transition-colors hover:bg-[#dcecf4] hover:shadow-[inset_4px_0_0_#255f85]">
                     <td className="px-4 py-3 align-top">
                       <Link href={row.href} className="inline-flex whitespace-nowrap items-center gap-2 font-semibold text-[#173f63] hover:text-[#255f85] hover:underline">
                         {row.number}
@@ -492,11 +492,11 @@ function DashboardTable({ panel, rows }: { panel: DashboardPanel; rows: Dashboar
                     </td>
                     <td className="px-4 py-3 align-top">
                       <div className="space-y-2">
-                        <div className="grid grid-cols-[64px_110px] items-center gap-2">
+                        <div className="grid grid-cols-[minmax(54px,64px)_minmax(0,110px)] items-center gap-2">
                           <span className="text-xs font-medium text-[#607589]">Prioridad:</span>
                           <StatusBadge value={row.priority} />
                         </div>
-                        <div className="grid grid-cols-[64px_110px] items-center gap-2">
+                        <div className="grid grid-cols-[minmax(54px,64px)_minmax(0,110px)] items-center gap-2">
                           <span className="text-xs font-medium text-[#607589]">Estado:</span>
                           <StatusBadge value={row.status} />
                         </div>
@@ -538,7 +538,7 @@ function DashboardTable({ panel, rows }: { panel: DashboardPanel; rows: Dashboar
 
 function DashboardTh({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className={`px-4 py-3 text-left text-xs font-semibold tracking-[0.12em] text-[#607589] ${className ?? ""}`}>
+    <th className={`px-4 py-3 text-left text-xs font-semibold tracking-[0.12em] text-[#365a73] ${className ?? ""}`}>
       {children}
     </th>
   );

@@ -43,7 +43,7 @@ export function StatusBadge({ value, className }: { value: string | null | undef
   return (
     <span
       className={cn(
-        "inline-flex w-[110px] items-center justify-center rounded-full px-3 py-1 text-center text-xs font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.70)] ring-1 ring-inset",
+        "inline-flex w-full min-w-[96px] max-w-[110px] items-center justify-center rounded-full px-2.5 py-1 text-center text-xs font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.70)] ring-1 ring-inset",
         isMultiline ? "flex-col justify-center whitespace-normal py-1.5 text-center leading-tight" : "whitespace-nowrap",
         toneByStatus[value] ?? "bg-[#eef3f6] text-[#3c5368] ring-[#d7e4ee]",
         className,

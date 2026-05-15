@@ -30,7 +30,6 @@ function buildNav(user: CurrentUser): NavItem[] {
       href: "/intervenciones",
       label: "Intervenciones",
       icon: "intervenciones",
-      children: [{ href: "/intervenciones", label: "Intervenciones" }],
     });
   }
 
