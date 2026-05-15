@@ -5,7 +5,7 @@ import { Button, LinkButton } from "./button";
 
 export function FilterBar({ children, resetHref }: { children: ReactNode; resetHref: string }) {
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-1.5">
+    <div className="mb-4 flex flex-wrap items-center gap-2">
       <AppModal
         title="Filtrar resultados"
         description="Ajusta los criterios de busqueda y listado."
@@ -17,9 +17,9 @@ export function FilterBar({ children, resetHref }: { children: ReactNode; resetH
         )}
         size="lg"
       >
-        <form className="space-y-3">
-          <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">{children}</div>
-          <div className="flex flex-wrap items-center justify-end gap-1.5 border-t border-slate-200 pt-3">
+        <form className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{children}</div>
+          <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[#d7e4ee] pt-4">
             <Button type="button" variant="secondary" data-modal-close>
               Cancelar
             </Button>
@@ -35,7 +35,7 @@ export function FilterBar({ children, resetHref }: { children: ReactNode; resetH
       <LinkButton href={resetHref} variant="secondary">
         Limpiar
       </LinkButton>
-      </div>
+    </div>
   );
 }
 
@@ -52,12 +52,12 @@ export function FilterInput({
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">{label}</span>
+      <span className="mb-1.5 block text-xs font-semibold tracking-wide text-[#607589]">{label}</span>
       <input
         type={type}
         name={name}
         defaultValue={defaultValue}
-        className="h-10 w-full rounded-md border border-slate-300 bg-white px-2.5 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+        className="h-11 w-full rounded-lg border border-[#c9d9e5] bg-white/95 px-3 text-sm text-[#172033] shadow-[inset_0_1px_0_rgba(255,255,255,0.70)] outline-none transition duration-200 hover:border-[#9bb8ca] focus:border-[#255f85] focus:ring-[3px] focus:ring-[#c7dcea]"
       />
     </label>
   );
@@ -76,11 +76,11 @@ export function FilterSelect({
 }) {
   return (
     <label className="block">
-      <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">{label}</span>
+      <span className="mb-1.5 block text-xs font-semibold tracking-wide text-[#607589]">{label}</span>
       <select
         name={name}
         defaultValue={defaultValue ?? ""}
-        className="h-10 w-full rounded-md border border-slate-300 bg-white px-2.5 text-sm text-slate-900 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+        className="h-11 w-full rounded-lg border border-[#c9d9e5] bg-white/95 px-3 text-sm text-[#172033] shadow-[inset_0_1px_0_rgba(255,255,255,0.70)] outline-none transition duration-200 hover:border-[#9bb8ca] focus:border-[#255f85] focus:ring-[3px] focus:ring-[#c7dcea]"
       >
         <option value="">Todos</option>
         {options.map((option) => {

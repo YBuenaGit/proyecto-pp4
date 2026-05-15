@@ -3,10 +3,10 @@ import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from "reac
 import { cn } from "./cn";
 
 const variants = {
-  primary: "bg-sky-700 text-white hover:bg-sky-800 border-sky-700",
-  secondary: "bg-white text-slate-700 hover:bg-slate-50 border-slate-300",
-  subtle: "bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200",
-  danger: "bg-rose-700 text-white hover:bg-rose-800 border-rose-700",
+  primary: "border-[#173f63] bg-[#173f63] text-white shadow-[0_12px_24px_rgba(23,63,99,0.20)] hover:bg-[#225b80]",
+  secondary: "border-[#c9d9e5] bg-white/90 text-[#2f4c63] hover:border-[#9bb8ca] hover:bg-[#f3f8fb]",
+  subtle: "border-[#d7e4ee] bg-[#eaf3f8] text-[#2f4c63] hover:bg-[#dcecf4]",
+  danger: "border-rose-700 bg-rose-700 text-white hover:bg-rose-800",
 };
 
 export function Button({
@@ -17,7 +17,7 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex min-h-10 max-w-full items-center justify-center gap-1.5 rounded-md border px-3 py-1.5 text-center text-sm font-medium leading-tight shadow-sm transition disabled:cursor-not-allowed disabled:opacity-60",
+        "inline-flex min-h-10 max-w-full items-center justify-center gap-1.5 rounded-lg border px-3.5 py-2 text-center text-sm font-semibold leading-tight shadow-sm transition duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7aa6c2] focus-visible:ring-offset-2 focus-visible:ring-offset-[#eef4f8]",
         variants[variant],
         className,
       )}
@@ -39,7 +39,7 @@ export function LinkButton({
   return (
     <Link
       className={cn(
-        "inline-flex min-h-10 max-w-full items-center justify-center gap-1.5 rounded-md border px-3 py-1.5 text-center text-sm font-medium leading-tight shadow-sm transition",
+        "inline-flex min-h-10 max-w-full items-center justify-center gap-1.5 rounded-lg border px-3.5 py-2 text-center text-sm font-semibold leading-tight shadow-sm transition duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7aa6c2] focus-visible:ring-offset-2 focus-visible:ring-offset-[#eef4f8]",
         variants[variant],
         className,
       )}

@@ -1,8 +1,14 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f1f5f9;
-  --foreground: #0f172a;
+  --background: #eef4f8;
+  --foreground: #172033;
+  --surface: #fbfdff;
+  --surface-soft: #f6f9fc;
+  --line: #d9e4ec;
+  --accent: #255f85;
+  --accent-strong: #173f63;
+  --accent-soft: #e4f0f7;
 }
 
 @theme inline {
@@ -28,14 +34,19 @@
 
 html {
   font-size: 15px;
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
+  background:
+    radial-gradient(circle at 8% -10%, rgba(37, 95, 133, 0.18), transparent 34rem),
+    radial-gradient(circle at 110% 0%, rgba(16, 86, 116, 0.12), transparent 30rem),
+    linear-gradient(180deg, #f7fbfd 0%, var(--background) 44%, #e8f1f6 100%);
   color: var(--foreground);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
   font-size: 1rem;
   line-height: 1.5;
+  font-variant-numeric: tabular-nums;
 }
 
 button,
@@ -46,6 +57,26 @@ select {
 }
 
 ::selection {
-  background: #bae6fd;
-  color: #0f172a;
+  background: #c7dcea;
+  color: #10283f;
+}
+
+* {
+  scrollbar-color: #9bb8ca transparent;
+}
+
+::-webkit-scrollbar {
+  height: 0.65rem;
+  width: 0.65rem;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #9bb8ca;
+  border: 0.18rem solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
 }

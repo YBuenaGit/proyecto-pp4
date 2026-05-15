@@ -10,25 +10,25 @@ export function DetailSection({
   action?: ReactNode;
 }) {
   return (
-    <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
-      <div className="flex min-h-10 items-center justify-between gap-2 border-b border-slate-200 px-3 py-2 sm:px-4">
-        <h2 className="text-sm font-semibold text-slate-900">{title}</h2>
+    <section className="overflow-hidden rounded-2xl border border-[#d7e4ee] bg-[#fbfdff]/[0.96] shadow-[0_18px_42px_rgba(26,68,104,0.08)]">
+      <div className="flex min-h-12 items-center justify-between gap-3 border-b border-[#d7e4ee] bg-gradient-to-r from-[#f7fbfd] to-[#edf5f9] px-4 py-3 sm:px-5">
+        <h2 className="text-base font-semibold tracking-[-0.01em] text-[#172033]">{title}</h2>
         {action}
       </div>
-      <div className="p-3 sm:p-4">{children}</div>
+      <div className="p-4 sm:p-5">{children}</div>
     </section>
   );
 }
 
 export function FieldGrid({ children }: { children: ReactNode }) {
-  return <dl className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">{children}</dl>;
+  return <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{children}</dl>;
 }
 
 export function DetailField({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div>
-      <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</dt>
-      <dd className="mt-0.5 text-sm leading-6 text-slate-900">{value || "-"}</dd>
+      <dt className="text-xs font-semibold tracking-wide text-[#607589]">{label}</dt>
+      <dd className="mt-1 text-sm leading-6 text-[#172033]">{value || "-"}</dd>
     </div>
   );
 }

@@ -21,19 +21,19 @@ export function KpiCard({
     <>
       <div className="flex items-start justify-between gap-2.5">
         <div>
-          <p className="text-sm font-medium text-slate-500">{label}</p>
-          <p className="mt-1 text-3xl font-semibold text-slate-950">{value}</p>
-          {hint ? <p className="mt-1 text-xs text-slate-500">{hint}</p> : null}
+          <p className="text-sm font-semibold text-[#607589]">{label}</p>
+          <p className="mt-1 text-4xl font-semibold tracking-[-0.04em] text-[#172033]">{value}</p>
+          {hint ? <p className="mt-1 text-xs font-medium text-[#6a7f91]">{hint}</p> : null}
         </div>
-        <div className="rounded-md bg-sky-50 p-1.5 text-sky-700">{icon}</div>
+        <div className="rounded-xl bg-[#e4f0f7] p-2 text-[#255f85]">{icon}</div>
       </div>
     </>
   );
 
   const className = cn(
-    "block rounded-lg border bg-white p-3.5 shadow-sm transition",
-    href && "cursor-pointer hover:-translate-y-0.5 hover:border-sky-300 hover:shadow-md",
-    active ? "border-sky-500 bg-sky-50/60 shadow-md ring-1 ring-sky-100" : "border-slate-200",
+    "block rounded-2xl border bg-[#fbfdff]/[0.96] p-4 shadow-[0_16px_38px_rgba(26,68,104,0.08)] transition duration-200",
+    href && "cursor-pointer hover:-translate-y-1 hover:border-[#9bb8ca] hover:shadow-[0_22px_46px_rgba(26,68,104,0.13)]",
+    active ? "border-[#255f85] bg-[#eaf3f8] ring-1 ring-[#c7dcea]" : "border-[#d7e4ee]",
   );
 
   if (href) {

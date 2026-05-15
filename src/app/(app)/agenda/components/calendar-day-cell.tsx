@@ -45,9 +45,9 @@ export function CalendarDayCell({
     <Link
       href={href}
       className={cn(
-        "flex min-h-16 min-w-0 flex-col items-center justify-start border-b border-r border-slate-100 bg-white p-1.5 text-center transition hover:bg-slate-50 sm:min-h-[4.6rem] sm:p-2",
-        !inCurrentMonth && "bg-slate-50/60 text-slate-400",
-        selected && "bg-sky-50",
+        "flex min-h-16 min-w-0 flex-col items-center justify-start border-b border-r border-[#e6eef4] bg-white/[0.86] p-1.5 text-center transition duration-200 hover:bg-[#f4f9fc] sm:min-h-[4.6rem] sm:p-2",
+        !inCurrentMonth && "bg-[#f3f8fb]/60 text-[#8da2b3]",
+        selected && "bg-[#e4f0f7]",
       )}
     >
       <div className="flex justify-center">
@@ -55,10 +55,10 @@ export function CalendarDayCell({
           className={cn(
             "flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold",
             selected || today
-              ? "bg-[#0b2a55] text-white"
+              ? "bg-[#173f63] text-white"
               : inCurrentMonth
-                ? "text-[#14213d]"
-                : "text-slate-400",
+                ? "text-[#172033]"
+                : "text-[#8da2b3]",
           )}
         >
           {dayNumber}
@@ -72,7 +72,7 @@ export function CalendarDayCell({
             title={`${appointment.startTime} ${appointment.title}`}
           />
         ))}
-        {hiddenCount > 0 ? <span className="text-[10px] font-semibold leading-none text-slate-500">+{hiddenCount}</span> : null}
+        {hiddenCount > 0 ? <span className="text-[10px] font-semibold leading-none text-[#607589]">+{hiddenCount}</span> : null}
       </div>
       <span className="sr-only">{dateKey}</span>
     </Link>

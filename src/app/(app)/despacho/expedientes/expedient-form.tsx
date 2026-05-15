@@ -57,7 +57,7 @@ export function ExpedientForm({
                 name="attachments"
                 type="file"
                 multiple
-                className="block w-full text-sm text-slate-700 file:mr-3 file:rounded-md file:border-0 file:bg-sky-700 file:px-3 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-sky-800"
+                className="block w-full text-sm text-[#334b5f] file:mr-3 file:rounded-lg file:border-0 file:bg-[#173f63] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[#225b80]"
               />
             </FormField>
           ) : null}

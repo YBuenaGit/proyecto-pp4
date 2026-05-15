@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { cn } from "./cn";
 
 export function FormGrid({ children }: { children: ReactNode }) {
-  return <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">{children}</div>;
+  return <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{children}</div>;
 }
 
 export function FormField({
@@ -16,14 +16,14 @@ export function FormField({
 }) {
   return (
     <label className={cn("block", className)}>
-      <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">{label}</span>
+      <span className="mb-1.5 block text-xs font-semibold tracking-wide text-[#607589]">{label}</span>
       {children}
     </label>
   );
 }
 
 export const inputClass =
-  "h-10 w-full rounded-md border border-slate-300 bg-white px-2.5 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-100";
+  "h-11 w-full rounded-lg border border-[#c9d9e5] bg-white/95 px-3 text-sm text-[#172033] shadow-[inset_0_1px_0_rgba(255,255,255,0.70)] outline-none transition duration-200 placeholder:text-[#8da2b3] hover:border-[#9bb8ca] focus:border-[#255f85] focus:ring-[3px] focus:ring-[#c7dcea]";
 
 export const textareaClass =
-  "min-h-24 w-full rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-sm leading-6 text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-100";
+  "min-h-28 w-full rounded-lg border border-[#c9d9e5] bg-white/95 px-3 py-2 text-sm leading-6 text-[#172033] shadow-[inset_0_1px_0_rgba(255,255,255,0.70)] outline-none transition duration-200 placeholder:text-[#8da2b3] hover:border-[#9bb8ca] focus:border-[#255f85] focus:ring-[3px] focus:ring-[#c7dcea]";

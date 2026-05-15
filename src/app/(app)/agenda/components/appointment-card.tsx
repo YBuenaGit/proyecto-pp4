@@ -34,7 +34,7 @@ import { cancelAppointment, deleteAppointment, updateAppointment } from "../acti
 import { AppointmentForm } from "./appointment-form";
 
 function badgeClass(value: string, tones: Record<string, string>) {
-  return cn("inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset", tones[value] ?? "bg-slate-100 text-slate-700 ring-slate-200");
+  return cn("inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ring-1 ring-inset", tones[value] ?? "bg-[#eef3f6] text-[#3c5368] ring-[#d7e4ee]");
 }
 
 const typeVisuals: Record<AppointmentType, { border: string; iconBox: string; Icon: LucideIcon }> = {
@@ -96,7 +96,7 @@ export function AppointmentCard({
   const Icon = visual.Icon;
 
   return (
-    <article className={cn("rounded-lg border border-l-4 border-slate-200 bg-white p-3 shadow-sm", visual.border)}>
+    <article className={cn("rounded-2xl border border-l-4 border-[#d7e4ee] bg-white/[0.92] p-3 shadow-[0_14px_30px_rgba(26,68,104,0.08)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_38px_rgba(26,68,104,0.12)]", visual.border)}>
       <div className="flex min-w-0 gap-3">
         <div className={cn("mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full", visual.iconBox)}>
           <Icon className="h-4 w-4" />
@@ -105,17 +105,17 @@ export function AppointmentCard({
           <div className="flex min-w-0 items-start justify-between gap-2">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-semibold text-[#14213d]">{timeLabel}</span>
-                <span className="text-[11px] font-semibold text-slate-600">{appointmentTypeLabel(appointment.type)}</span>
+                <span className="text-sm font-semibold text-[#172033]">{timeLabel}</span>
+                <span className="text-[11px] font-semibold text-[#607589]">{appointmentTypeLabel(appointment.type)}</span>
               </div>
-              <h3 className="mt-0.5 truncate text-sm font-semibold text-slate-950">{appointment.title}</h3>
+              <h3 className="mt-0.5 truncate text-sm font-semibold text-[#172033]">{appointment.title}</h3>
             </div>
             <span className={cn("shrink-0", badgeClass(appointment.status, APPOINTMENT_STATUS_TONES))}>
               {appointmentStatusLabel(appointment.status)}
             </span>
           </div>
 
-          <div className="mt-1 grid gap-x-2 gap-y-0.5 text-[11px] leading-5 text-slate-600">
+          <div className="mt-1 grid gap-x-2 gap-y-0.5 text-[11px] font-medium leading-5 text-[#607589]">
             <MetaItem>{appointment.clientName ? `Cliente: ${appointment.clientName}` : null}</MetaItem>
             <MetaItem>{lawyerName ? `Abogado: ${lawyerName}` : null}</MetaItem>
             <MetaItem>{assignedName ? `Usuario: ${assignedName}` : null}</MetaItem>
@@ -127,10 +127,10 @@ export function AppointmentCard({
       </div>
 
       {appointment.notes ? (
-        <p className="mt-2 truncate rounded-md bg-slate-50 px-2 py-1.5 text-xs leading-5 text-slate-600">{appointment.notes}</p>
+        <p className="mt-2 truncate rounded-lg bg-[#f3f8fb] px-2.5 py-1.5 text-xs leading-5 text-[#607589] ring-1 ring-[#e6eef4]">{appointment.notes}</p>
       ) : null}
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-2">
+      <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#e6eef4] pt-2.5">
         <span className={badgeClass(appointment.calendarScope, CALENDAR_SCOPE_BADGE_CLASS)}>{scopeLabel(appointment.calendarScope)}</span>
         <div className="flex flex-wrap gap-1.5">
           {canEdit ? (
@@ -138,7 +138,7 @@ export function AppointmentCard({
               title="Editar cita"
               trigger={<Edit3 className="h-3.5 w-3.5" />}
               triggerVariant="secondary"
-              triggerClassName="h-7 w-7 border-slate-200 px-0 text-slate-500 shadow-none hover:text-slate-900"
+              triggerClassName="h-8 w-8 border-[#d7e4ee] px-0 text-[#607589] shadow-none hover:text-[#173f63]"
               size="xl"
             >
               <AppointmentForm
@@ -155,14 +155,14 @@ export function AppointmentCard({
           ) : null}
           {canEdit && appointment.status !== "CANCELADA" ? (
             <form action={cancelAppointment.bind(null, appointment.id)}>
-              <Button type="submit" variant="secondary" className="h-7 w-7 px-0 text-slate-500 shadow-none hover:text-slate-900" title="Cancelar cita">
+              <Button type="submit" variant="secondary" className="h-8 w-8 px-0 text-[#607589] shadow-none hover:text-[#173f63]" title="Cancelar cita">
                 <Ban className="h-3.5 w-3.5" />
               </Button>
             </form>
           ) : null}
           {canDelete ? (
             <form action={deleteAppointment.bind(null, appointment.id)}>
-              <Button type="submit" variant="danger" className="h-7 w-7 px-0 shadow-none" title="Eliminar cita">
+              <Button type="submit" variant="danger" className="h-8 w-8 px-0 shadow-none" title="Eliminar cita">
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </form>

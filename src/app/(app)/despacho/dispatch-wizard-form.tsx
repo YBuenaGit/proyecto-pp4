@@ -55,13 +55,13 @@ const steps = [
 ];
 
 const inputClass =
-  "h-10 w-full rounded-lg border border-slate-300 bg-white px-2.5 text-sm text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 disabled:bg-slate-100 disabled:text-slate-500";
+  "h-11 w-full rounded-lg border border-[#c9d9e5] bg-white/95 px-3 text-sm text-[#172033] shadow-[inset_0_1px_0_rgba(255,255,255,0.70)] outline-none transition duration-200 placeholder:text-[#8da2b3] hover:border-[#9bb8ca] focus:border-[#255f85] focus:ring-[3px] focus:ring-[#c7dcea] disabled:bg-[#eef3f6] disabled:text-[#8da2b3]";
 
 const textareaClass =
-  "min-h-28 w-full rounded-lg border border-slate-300 bg-white px-2.5 py-2 text-sm leading-6 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100";
+  "min-h-28 w-full rounded-lg border border-[#c9d9e5] bg-white/95 px-3 py-2 text-sm leading-6 text-[#172033] shadow-[inset_0_1px_0_rgba(255,255,255,0.70)] outline-none transition duration-200 placeholder:text-[#8da2b3] hover:border-[#9bb8ca] focus:border-[#255f85] focus:ring-[3px] focus:ring-[#c7dcea]";
 
 const fileInputClass =
-  "block w-full rounded-lg border border-dashed border-slate-400 bg-slate-50 px-2.5 py-2 text-sm text-slate-700 file:mr-2 file:rounded-md file:border-0 file:bg-blue-600 file:px-2.5 file:py-1.5 file:text-sm file:font-semibold file:text-white hover:file:bg-blue-700";
+  "block w-full rounded-lg border border-dashed border-[#9bb8ca] bg-[#f3f8fb] px-3 py-2.5 text-sm text-[#334b5f] file:mr-2 file:rounded-lg file:border-0 file:bg-[#173f63] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[#225b80]";
 
 const dniPattern = /^\d{7,8}$/;
 const phonePattern = /^\d{7,10}$/;
