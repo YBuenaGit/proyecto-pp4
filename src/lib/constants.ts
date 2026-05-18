@@ -30,6 +30,7 @@ export const JURIDICAL_STATUSES = [
   "EN_SEGUIMIENTO",
   "CONCLUIDO",
   "ARCHIVADO",
+  "OTROS",
 ];
 
 export const EXPEDIENT_STATUSES = [
@@ -63,6 +64,11 @@ export const ACTION_TYPES = [
   "DERIVACION",
   "SEGUIMIENTO",
   "CIERRE",
+  "SALUD_MENTAL",
+  "INTERVENCION_ADMINISTRATIVA",
+  "NOTIFICACIONES",
+  "MEDIACION_VECINAL",
+  "AUDIENCIA",
 ];
 
 export const JURIDICAL_DERIVED_AREAS = [
@@ -73,6 +79,19 @@ export const JURIDICAL_DERIVED_AREAS = [
   "Desarrollo Social",
   "gum",
   "area directivos",
+  "Saneamiento",
+  "Regulacion dominial",
+  "Politica social",
+  "Catastro",
+  "Medio ambiente",
+  "Urgencias vecinales",
+  "Ojos en alerta",
+  "Ministerio Publico Fiscal",
+  "MPF",
+  "Articulacion y derivacion",
+  "Juzgado de familia",
+  "Juzgado Civil / Cial",
+  "Otros",
 ];
 
 export const DISPATCH_CATEGORY_LABELS: Record<string, string> = {
@@ -87,11 +106,8 @@ export const DISPATCH_CATEGORY_LABELS: Record<string, string> = {
 
 export const JURIDICAL_TYPE_LABELS: Record<string, string> = {
   DENUNCIA_VECINAL: "Denuncia vecinal",
-  CONFLICTO_VECINAL: "Conflicto vecinal",
   ORIENTACION: "Orientacion",
-  ABOGADOS_GRATUITOS: "Abogados gratuitos",
   PRIMERA_INTERVENCION: "Primera intervencion",
-  CONTENCION: "Contencion",
   INFORME_SITUACION: "Informe de situacion",
   MPF: "Actuacion vinculada a MPF",
   ASUNTOS_JURIDICOS: "Direccion de Asuntos Juridicos",
@@ -101,6 +117,11 @@ export const JURIDICAL_TYPE_LABELS: Record<string, string> = {
   MEDIANERAS: "Medianeras",
   HABILITACIONES: "Habilitaciones",
   OFICIO_URGENTE: "Oficio urgente",
+  SALUD_MENTAL: "Salud mental",
+  INTERVENCION_ADMINISTRATIVA: "Intervencion administrativa",
+  NOTIFICACIONES: "Notificaciones",
+  MEDIACION_VECINAL: "Mediacion vecinal",
+  AUDIENCIA: "Audiencia",
 };
 
 export const JURIDICAL_CONTEXT_LABELS: Record<string, string> = {
@@ -108,11 +129,15 @@ export const JURIDICAL_CONTEXT_LABELS: Record<string, string> = {
   GUM: "GUM",
   INFORMACION_SITUACIONES: "Informacion de situaciones",
   MESA_DENUNCIAS: "Mesa de denuncias",
-  MPF: "Ministerio Publico Fiscal",
+  MPF: "MPF",
   OJOS_ALERTA: "Ojos en alerta",
   ORIENTACION: "Orientacion",
-  INFORME: "Informe de situacion",
   CONTENCION: "Contencion",
+  JUZGADO_CIVIL_CIAL: "Juzgado Civil / Cial",
+  JUZGADO_FAMILIA: "Juzgado de familia",
+  JUZGADO_PAZ: "Juzgado de paz",
+  POLITICA_SOCIAL: "Politica social",
+  OTRO: "Otro",
 };
 
 export const EXPEDIENT_CATEGORY_LABELS: Record<string, string> = {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { AlertCircle, Check, ChevronLeft, ChevronRight, Lock, Pencil, Plus, Trash2, UploadCloud } from "lucide-react";
 import { Button, LinkButton } from "@/components/ui/button";
 import { cn } from "@/components/ui/cn";
@@ -139,6 +139,8 @@ const inputClass =
 
 const textareaClass =
   "min-h-32 w-full rounded-lg border border-[#c9d9e5] bg-white/95 px-3 py-2.5 text-sm leading-6 text-[#172033] shadow-[inset_0_1px_0_rgba(255,255,255,0.70)] outline-none transition duration-200 placeholder:text-[#8da2b3] hover:border-[#9bb8ca] focus:border-[#255f85] focus:ring-[3px] focus:ring-[#c7dcea]";
+
+const autosizeTextareaClass = cn(textareaClass, "resize-none overflow-hidden");
 
 const fileInputClass =
   "block w-full rounded-lg border border-dashed border-[#9bb8ca] bg-[#f3f8fb] px-3 py-3 text-sm text-[#334b5f] file:mr-3 file:rounded-lg file:border-0 file:bg-[#173f63] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[#225b80]";
@@ -417,6 +419,15 @@ function selectedLabel(options: Array<{ value: string; label: string }>, value: 
   return options.find((item) => item.value === value)?.label ?? display(value);
 }
 
+function resizeTextarea(textarea: HTMLTextAreaElement) {
+  textarea.style.height = "auto";
+  textarea.style.height = `${textarea.scrollHeight}px`;
+}
+
+function attachmentKey(file: File) {
+  return `${file.name}-${file.size}-${file.lastModified}`;
+}
+
 function Field({
   label,
   error,
@@ -658,13 +669,14 @@ export function InterventionForm({
   submitLabel?: string;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const confirmedSubmitRef = useRef(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [furthestStep, setFurthestStep] = useState(0);
   const [visitedSteps, setVisitedSteps] = useState([true, false, false, false]);
   const [attemptedSteps, setAttemptedSteps] = useState([false, false, false, false]);
   const [values, setValues] = useState<InterventionWizardValues>(() => valuesFromRecord(record));
-  const [attachmentNames, setAttachmentNames] = useState<string[]>([]);
+  const [selectedAttachments, setSelectedAttachments] = useState<File[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
 
   const submittedComplainants = useMemo(
@@ -684,6 +696,52 @@ export function InterventionForm({
   function setValue<Key extends keyof InterventionWizardValues>(key: Key, value: InterventionWizardValues[Key]) {
     setValues((current) => ({ ...current, [key]: value }));
   }
+
+  function syncAttachmentInput(files: File[]) {
+    if (!fileInputRef.current) return;
+    const dataTransfer = new DataTransfer();
+    files.forEach((file) => dataTransfer.items.add(file));
+    fileInputRef.current.files = dataTransfer.files;
+  }
+
+  function addAttachments(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.currentTarget.files ?? []);
+    if (!files.length) return;
+
+    setSelectedAttachments((current) => {
+      const existingKeys = new Set(current.map(attachmentKey));
+      const next = [...current];
+      files.forEach((file) => {
+        const key = attachmentKey(file);
+        if (!existingKeys.has(key)) {
+          existingKeys.add(key);
+          next.push(file);
+        }
+      });
+      syncAttachmentInput(next);
+      return next;
+    });
+  }
+
+  function removeAttachment(indexToRemove: number) {
+    setSelectedAttachments((current) => {
+      const next = current.filter((_, index) => index !== indexToRemove);
+      syncAttachmentInput(next);
+      return next;
+    });
+  }
+
+  function setAutosizedTextareaValue<Key extends "description" | "guidanceProvided" | "confidentialNotes">(
+    key: Key,
+    event: ChangeEvent<HTMLTextAreaElement>,
+  ) {
+    resizeTextarea(event.currentTarget);
+    setValue(key, event.currentTarget.value);
+  }
+
+  useEffect(() => {
+    formRef.current?.querySelectorAll<HTMLTextAreaElement>("textarea[data-autosize='true']").forEach(resizeTextarea);
+  }, [currentStep, values.description, values.guidanceProvided, values.confidentialNotes]);
 
   function updateComplainant(index: number, patch: Partial<ComplainantDraft>) {
     setValues((current) => ({
@@ -954,7 +1012,7 @@ export function InterventionForm({
                   className={inputClass}
                 />
               </Field>
-              <Field label="Numero de expediente">
+              <Field label="Numero de expediente / legajo">
                 <input
                   name="expedienteNumber"
                   value={values.expedienteNumber}
@@ -1247,24 +1305,27 @@ export function InterventionForm({
                 <textarea
                   name="description"
                   value={values.description}
-                  onChange={(event) => setValue("description", event.target.value)}
-                  className={textareaClass}
+                  onChange={(event) => setAutosizedTextareaValue("description", event)}
+                  data-autosize="true"
+                  className={autosizeTextareaClass}
                 />
               </Field>
               <Field label="Orientacion o intervencion realizada">
                 <textarea
                   name="guidanceProvided"
                   value={values.guidanceProvided}
-                  onChange={(event) => setValue("guidanceProvided", event.target.value)}
-                  className={textareaClass}
+                  onChange={(event) => setAutosizedTextareaValue("guidanceProvided", event)}
+                  data-autosize="true"
+                  className={autosizeTextareaClass}
                 />
               </Field>
               <Field label="Notas internas confidenciales">
                 <textarea
                   name="confidentialNotes"
                   value={values.confidentialNotes}
-                  onChange={(event) => setValue("confidentialNotes", event.target.value)}
-                  className={textareaClass}
+                  onChange={(event) => setAutosizedTextareaValue("confidentialNotes", event)}
+                  data-autosize="true"
+                  className={autosizeTextareaClass}
                 />
               </Field>
             </div>
@@ -1304,15 +1365,33 @@ export function InterventionForm({
                     <UploadCloud className="mt-1 h-5 w-5 shrink-0 text-blue-600" />
                     <div className="w-full space-y-2">
                       <input
+                        ref={fileInputRef}
                         name="attachments"
                         type="file"
                         multiple
-                        onChange={(event) => setAttachmentNames(Array.from(event.target.files ?? []).map((file) => file.name))}
+                        onChange={addAttachments}
                         className={fileInputClass}
                       />
                       <p className="text-xs text-slate-500">
-                        {attachmentNames.length ? `${attachmentNames.length} archivo(s) seleccionado(s).` : "Sin adjuntos seleccionados."}
+                        {selectedAttachments.length ? `${selectedAttachments.length} archivo(s) seleccionado(s).` : "Sin adjuntos seleccionados."}
                       </p>
+                      {selectedAttachments.length ? (
+                        <ul className="space-y-1 rounded-md bg-white px-3 py-2 text-sm text-slate-700">
+                          {selectedAttachments.map((file, index) => (
+                            <li key={`${attachmentKey(file)}-${index}`} className="flex items-center justify-between gap-3">
+                              <span className="min-w-0 truncate">{file.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => removeAttachment(index)}
+                                className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-rose-100 bg-white px-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Quitar
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
                     </div>
                   </div>
                 </Field>
@@ -1385,7 +1464,7 @@ export function InterventionForm({
                   <SummaryItem label="Urgencia" value={labelFromValue(values.urgency)} />
                   <SummaryItem label="Contexto" value={selectedLabel(contexts, values.interventionContext)} />
                   <SummaryItem label="Numero de oficio" value={values.oficioNumber} />
-                  <SummaryItem label="Numero de expediente" value={values.expedienteNumber} />
+                  <SummaryItem label="Numero de expediente / legajo" value={values.expedienteNumber} />
                 </SummaryGrid>
               </SummaryBlock>
 
@@ -1460,12 +1539,12 @@ export function InterventionForm({
                 <SummaryGrid>
                   <SummaryItem label="Estado" value={labelFromValue(values.status)} />
                   <SummaryItem label="Area derivada" value={values.derivedArea || "Sin derivacion"} />
-                  <SummaryItem label="Cantidad de adjuntos" value={!record ? attachmentNames.length : "Sin cambios desde este formulario"} />
+                  <SummaryItem label="Cantidad de adjuntos" value={!record ? selectedAttachments.length : "Sin cambios desde este formulario"} />
                 </SummaryGrid>
-                {attachmentNames.length ? (
+                {selectedAttachments.length ? (
                   <ul className="mt-3 space-y-1 rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-700">
-                    {attachmentNames.map((name) => (
-                      <li key={name}>{name}</li>
+                    {selectedAttachments.map((file, index) => (
+                      <li key={`${attachmentKey(file)}-${index}`}>{file.name}</li>
                     ))}
                   </ul>
                 ) : null}

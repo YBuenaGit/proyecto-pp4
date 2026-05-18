@@ -9,7 +9,7 @@ import { DetailField, DetailSection, FieldGrid } from "@/components/ui/detail-se
 import { FormField, inputClass, textareaClass } from "@/components/ui/form-controls";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
-import { ACTION_TYPES, JURIDICAL_CONTEXT_LABELS, JURIDICAL_STATUSES } from "@/lib/constants";
+import { JURIDICAL_CONTEXT_LABELS } from "@/lib/constants";
 import { requireUser } from "@/lib/auth";
 import { formatDateTime, formatDate, labelFromValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
@@ -21,6 +21,7 @@ import {
   uploadJuridicalAttachment,
 } from "../actions";
 import { InterventionForm } from "../intervention-form";
+import { AddJuridicalActionForm } from "./add-juridical-action-form";
 
 function display(value: string | null | undefined) {
   return value?.trim() || "-";
@@ -305,35 +306,7 @@ export default async function InterventionDetailPage({ params }: { params: Promi
             title={`Historial de seguimiento del caso ${intervention.internalNumber}`}
             action={
               <AppModal title="Agregar seguimiento" trigger={<><Plus className="h-4 w-4" />Agregar seguimiento</>} size="md">
-                <form action={addJuridicalAction.bind(null, intervention.id)} className="space-y-4">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <FormField label="Tipo de actuacion">
-                      <select name="actionType" className={inputClass} defaultValue="SEGUIMIENTO">
-                        {ACTION_TYPES.map((item) => (
-                          <option key={item} value={item}>{labelFromValue(item)}</option>
-                        ))}
-                      </select>
-                    </FormField>
-                    <FormField label="Proximo paso">
-                      <input name="nextStepDate" type="date" className={inputClass} />
-                    </FormField>
-                  </div>
-                  <FormField label="Contenido">
-                    <textarea name="content" className={textareaClass} required />
-                  </FormField>
-                  <FormField label="Estado posterior">
-                    <select name="statusAfter" className={inputClass} defaultValue="">
-                      <option value="">Sin cambio</option>
-                      {JURIDICAL_STATUSES.map((status) => (
-                        <option key={status} value={status}>{labelFromValue(status)}</option>
-                      ))}
-                    </select>
-                  </FormField>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button type="submit">Guardar</Button>
-                    <Button type="button" variant="secondary" data-modal-close>Cancelar</Button>
-                  </div>
-                </form>
+                <AddJuridicalActionForm action={addJuridicalAction.bind(null, intervention.id)} />
               </AppModal>
             }
           >

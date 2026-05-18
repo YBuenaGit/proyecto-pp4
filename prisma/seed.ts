@@ -226,11 +226,8 @@ async function main() {
     ["dispatch_area", "DESPACHO", "DEFENSA_CIVIL", "Defensa Civil"],
     ["dispatch_area", "DESPACHO", "DESARROLLO_SOCIAL", "Desarrollo Social"],
     ["juridical_type", "JURIDICO", "DENUNCIA_VECINAL", "Denuncia vecinal"],
-    ["juridical_type", "JURIDICO", "CONFLICTO_VECINAL", "Conflicto vecinal"],
     ["juridical_type", "JURIDICO", "ORIENTACION", "Orientacion"],
-    ["juridical_type", "JURIDICO", "ABOGADOS_GRATUITOS", "Abogados gratuitos"],
     ["juridical_type", "JURIDICO", "PRIMERA_INTERVENCION", "Primera intervencion"],
-    ["juridical_type", "JURIDICO", "CONTENCION", "Contencion"],
     ["juridical_type", "JURIDICO", "INFORME_SITUACION", "Informe de situacion"],
     ["juridical_type", "JURIDICO", "MPF", "Actuacion vinculada a MPF"],
     ["juridical_type", "JURIDICO", "ASUNTOS_JURIDICOS", "Direccion de Asuntos Juridicos"],
@@ -240,12 +237,22 @@ async function main() {
     ["juridical_type", "JURIDICO", "MEDIANERAS", "Medianeras"],
     ["juridical_type", "JURIDICO", "HABILITACIONES", "Habilitaciones"],
     ["juridical_type", "JURIDICO", "OFICIO_URGENTE", "Oficio urgente"],
+    ["juridical_type", "JURIDICO", "SALUD_MENTAL", "Salud mental"],
+    ["juridical_type", "JURIDICO", "INTERVENCION_ADMINISTRATIVA", "Intervencion administrativa"],
+    ["juridical_type", "JURIDICO", "NOTIFICACIONES", "Notificaciones"],
+    ["juridical_type", "JURIDICO", "MEDIACION_VECINAL", "Mediacion vecinal"],
+    ["juridical_type", "JURIDICO", "AUDIENCIA", "Audiencia"],
     ["intervention_context", "JURIDICO", "ASUNTOS_JURIDICOS", "Direccion de Asuntos Juridicos"],
     ["intervention_context", "JURIDICO", "GUM", "GUM"],
     ["intervention_context", "JURIDICO", "INFORMACION_SITUACIONES", "Informacion de situaciones"],
     ["intervention_context", "JURIDICO", "MESA_DENUNCIAS", "Mesa de denuncias"],
-    ["intervention_context", "JURIDICO", "MPF", "Ministerio Publico Fiscal"],
+    ["intervention_context", "JURIDICO", "MPF", "MPF"],
     ["intervention_context", "JURIDICO", "OJOS_ALERTA", "Ojos en alerta"],
+    ["intervention_context", "JURIDICO", "JUZGADO_CIVIL_CIAL", "Juzgado Civil / Cial"],
+    ["intervention_context", "JURIDICO", "JUZGADO_FAMILIA", "Juzgado de familia"],
+    ["intervention_context", "JURIDICO", "JUZGADO_PAZ", "Juzgado de paz"],
+    ["intervention_context", "JURIDICO", "POLITICA_SOCIAL", "Politica social"],
+    ["intervention_context", "JURIDICO", "OTRO", "Otro"],
     ["expedient_category", "DESPACHO", "COMPRAS", "Compras"],
     ["expedient_category", "DESPACHO", "REPUESTOS", "Repuestos"],
     ["expedient_category", "DESPACHO", "SUELDOS", "Sueldos"],
@@ -385,13 +392,13 @@ async function main() {
 
   const interventions = [];
   const interventionSeeds = [
-    [2, "CONFLICTO_VECINAL", "ALTA", "EN_SEGUIMIENTO", "Orientacion inicial por conflicto vecinal con antecedentes de hostigamiento verbal.", "ORIENTACION", byUser.juridico1.id, daysAgo(2, 14), "FROM_DESPACHO"],
+    [2, "MEDIACION_VECINAL", "ALTA", "EN_SEGUIMIENTO", "Orientacion inicial por conflicto vecinal con antecedentes de hostigamiento verbal.", "ORIENTACION", byUser.juridico1.id, daysAgo(2, 14), "FROM_DESPACHO"],
     [1, "RUIDOS_MOLESTOS", "MEDIA", "EN_ORIENTACION", "Se recibe denuncia vecinal por ruidos nocturnos persistentes. Se brindan pautas de registro.", "ORIENTACION", byUser.juridico2.id, daysAgo(1, 12)],
     [6, "OFICIO_URGENTE", "URGENTE", "PENDIENTE_DOCUMENTACION", "Oficio urgente vinculado a preservacion de registros municipales.", "MPF", byUser.juridico3.id, daysAgo(0, 9)],
-    [4, "VIOLENCIA_GENERO", "URGENTE", "EN_SEGUIMIENTO", "Primera intervencion y contencion. Se informa canal especializado y medidas disponibles.", "CONTENCION", byUser.juridico1.id, daysAgo(4, 11)],
+    [4, "SALUD_MENTAL", "URGENTE", "EN_SEGUIMIENTO", "Primera intervencion y contencion. Se informa canal especializado y medidas disponibles.", "OTRO", byUser.juridico1.id, daysAgo(4, 11)],
     [5, "MEDIANERAS", "MEDIA", "RECIBIDO", "Orientacion por disputa de medianera y filtraciones denunciadas por vecino.", "ORIENTACION", byUser.juridico2.id, daysAgo(5, 10)],
     [7, "HABILITACIONES", "BAJA", "CONCLUIDO", "Consulta por requisitos y area competente en habilitaciones comerciales.", "ASUNTOS_JURIDICOS", byUser.juridico3.id, daysAgo(9, 13)],
-    [8, "ABOGADOS_GRATUITOS", "MEDIA", "CONCLUIDO", "Se brinda informacion sobre patrocinio juridico gratuito y horarios de consulta.", "ORIENTACION", byUser.juridico1.id, daysAgo(10, 10)],
+    [8, "INTERVENCION_ADMINISTRATIVA", "MEDIA", "CONCLUIDO", "Se brinda informacion sobre patrocinio juridico gratuito y horarios de consulta.", "ORIENTACION", byUser.juridico1.id, daysAgo(10, 10)],
   ];
 
   for (const [index, seed] of interventionSeeds.entries()) {
@@ -422,7 +429,7 @@ async function main() {
         interventionContext,
         counterpartType: null,
         guidanceProvided:
-          type === "ABOGADOS_GRATUITOS"
+          type === "INTERVENCION_ADMINISTRATIVA"
             ? "Se informaron instituciones y dias de atencion gratuita."
             : "Se registro orientacion inicial y pasos recomendados.",
         oficioNumber: type === "OFICIO_URGENTE" ? "OF-2026-1187-MPF" : null,
