@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, type FormEvent } from "react";
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FormField, inputClass, textareaClass } from "@/components/ui/form-controls";
 import { ACTION_TYPES, JURIDICAL_STATUSES } from "@/lib/constants";
-import { labelFromValue } from "@/lib/format";
+import { labelFromValue, toDateInputValue } from "@/lib/format";
 
 function resizeTextarea(textarea: HTMLTextAreaElement) {
   textarea.style.height = "auto";
@@ -13,22 +14,86 @@ function resizeTextarea(textarea: HTMLTextAreaElement) {
 
 const autosizeTextareaClass = `${textareaClass} resize-none overflow-hidden`;
 
-export function AddJuridicalActionForm({ action }: { action: (formData: FormData) => void | Promise<void> }) {
-  const contentRef = useRef<HTMLTextAreaElement>(null);
+type ActionSheetFormValues = {
+  actionType: string;
+  createdAt: Date | string;
+  description: string;
+  guidanceProvided: string;
+  statusAfter: string;
+  nextStepDescription: string;
+  nextStepDate: Date | string | null;
+};
+
+function nowInputValue() {
+  const date = new Date();
+  const offset = date.getTimezoneOffset();
+  return new Date(date.getTime() - offset * 60 * 1000).toISOString().slice(0, 16);
+}
+
+function attachmentKey(file: File) {
+  return `${file.name}-${file.size}-${file.lastModified}`;
+}
+
+export function AddJuridicalActionForm({
+  action,
+  initialValues,
+  submitLabel = "Guardar",
+}: {
+  action: (formData: FormData) => void | Promise<void>;
+  initialValues?: Partial<ActionSheetFormValues>;
+  submitLabel?: string;
+}) {
+  const formRef = useRef<HTMLFormElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [selectedAttachments, setSelectedAttachments] = useState<File[]>([]);
 
   useEffect(() => {
-    if (contentRef.current) resizeTextarea(contentRef.current);
+    formRef.current?.querySelectorAll<HTMLTextAreaElement>("textarea[data-autosize='true']").forEach(resizeTextarea);
   }, []);
 
-  function handleContentInput(event: FormEvent<HTMLTextAreaElement>) {
+  function handleTextareaInput(event: FormEvent<HTMLTextAreaElement>) {
     resizeTextarea(event.currentTarget);
   }
 
+  function syncAttachmentInput(files: File[]) {
+    if (!fileInputRef.current) return;
+    const dataTransfer = new DataTransfer();
+    files.forEach((file) => dataTransfer.items.add(file));
+    fileInputRef.current.files = dataTransfer.files;
+  }
+
+  function addAttachments(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.currentTarget.files ?? []);
+    if (!files.length) return;
+
+    setSelectedAttachments((current) => {
+      const existingKeys = new Set(current.map(attachmentKey));
+      const next = [...current];
+      files.forEach((file) => {
+        const key = attachmentKey(file);
+        if (!existingKeys.has(key)) {
+          existingKeys.add(key);
+          next.push(file);
+        }
+      });
+      syncAttachmentInput(next);
+      return next;
+    });
+  }
+
+  function removeAttachment(indexToRemove: number) {
+    setSelectedAttachments((current) => {
+      const next = current.filter((_, index) => index !== indexToRemove);
+      syncAttachmentInput(next);
+      return next;
+    });
+  }
+
   return (
-    <form action={action} className="space-y-4">
+    <form ref={formRef} action={action} encType="multipart/form-data" className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2">
-        <FormField label="Tipo de actuacion">
-          <select name="actionType" className={inputClass} defaultValue="SEGUIMIENTO">
+        <FormField label="Tipo de registro">
+          <select name="actionType" className={inputClass} defaultValue={initialValues?.actionType ?? "SEGUIMIENTO"}>
             {ACTION_TYPES.map((item) => (
               <option key={item} value={item}>
                 {labelFromValue(item)}
@@ -36,8 +101,16 @@ export function AddJuridicalActionForm({ action }: { action: (formData: FormData
             ))}
           </select>
         </FormField>
+        <FormField label="Fecha y hora">
+          <input
+            name="createdAt"
+            type="datetime-local"
+            className={inputClass}
+            defaultValue={initialValues?.createdAt ? toDateInputValue(initialValues.createdAt) : nowInputValue()}
+          />
+        </FormField>
         <FormField label="Estado">
-          <select name="statusAfter" className={inputClass} defaultValue="">
+          <select name="statusAfter" className={inputClass} defaultValue={initialValues?.statusAfter ?? ""}>
             <option value="">Sin cambio</option>
             {JURIDICAL_STATUSES.map((status) => (
               <option key={status} value={status}>
@@ -46,12 +119,72 @@ export function AddJuridicalActionForm({ action }: { action: (formData: FormData
             ))}
           </select>
         </FormField>
+        <FormField label="Fecha de seguimiento">
+          <input name="nextStepDate" type="date" className={inputClass} defaultValue={initialValues?.nextStepDate ? toDateInputValue(initialValues.nextStepDate).slice(0, 10) : ""} />
+        </FormField>
       </div>
-      <FormField label="Contenido">
-        <textarea ref={contentRef} name="content" className={autosizeTextareaClass} onInput={handleContentInput} required />
+      <FormField label="Descripcion / relato">
+        <textarea
+          name="description"
+          className={autosizeTextareaClass}
+          defaultValue={initialValues?.description ?? ""}
+          data-autosize="true"
+          onInput={handleTextareaInput}
+          required
+        />
+      </FormField>
+      <FormField label="Intervencion realizada / orientacion brindada">
+        <textarea
+          name="guidanceProvided"
+          className={autosizeTextareaClass}
+          defaultValue={initialValues?.guidanceProvided ?? ""}
+          data-autosize="true"
+          onInput={handleTextareaInput}
+        />
+      </FormField>
+      <FormField label="Proxima accion">
+        <textarea
+          name="nextStepDescription"
+          className={autosizeTextareaClass}
+          defaultValue={initialValues?.nextStepDescription ?? ""}
+          data-autosize="true"
+          onInput={handleTextareaInput}
+        />
+      </FormField>
+      <FormField label="Adjuntos de esta hoja">
+        <div className="space-y-2 rounded-lg border border-dashed border-[#9bb8ca] bg-[#f3f8fb] p-3">
+          <input
+            ref={fileInputRef}
+            name="attachments"
+            type="file"
+            multiple
+            onChange={addAttachments}
+            className="block w-full text-sm text-[#334b5f] file:mr-2 file:rounded-lg file:border-0 file:bg-[#173f63] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[#225b80]"
+          />
+          <p className="text-xs text-[#607589]">
+            {selectedAttachments.length ? `${selectedAttachments.length} archivo(s) seleccionado(s).` : "Sin adjuntos seleccionados."}
+          </p>
+          {selectedAttachments.length ? (
+            <ul className="space-y-1 rounded-md bg-white px-3 py-2 text-sm text-slate-700">
+              {selectedAttachments.map((file, index) => (
+                <li key={`${attachmentKey(file)}-${index}`} className="flex items-center justify-between gap-3">
+                  <span className="min-w-0 truncate">{file.name}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeAttachment(index)}
+                    className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-rose-100 bg-white px-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Quitar
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
       </FormField>
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="submit">Guardar</Button>
+        <Button type="submit">{submitLabel}</Button>
         <Button type="button" variant="secondary" data-modal-close>
           Cancelar
         </Button>

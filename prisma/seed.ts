@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, type JuridicalAction } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -26,6 +26,22 @@ function daysAgo(days: number, hour = 10) {
 function internalNumber(prefix: string, index: number) {
   return `${prefix}-2026-${String(index).padStart(4, "0")}`;
 }
+
+function actionContent(description: string, guidanceProvided = "", nextStepDescription = "") {
+  return [
+    ["Descripcion / relato", description],
+    ["Intervencion realizada / orientacion brindada", guidanceProvided],
+    ["Proxima accion", nextStepDescription],
+  ]
+    .filter(([, value]) => value)
+    .map(([label, value]) => `${label}:\n${value}`)
+    .join("\n\n");
+}
+
+const juridicalAuditInclude = {
+  complainants: { orderBy: { sortOrder: "asc" as const } },
+  linkedPersons: { orderBy: { sortOrder: "asc" as const } },
+};
 
 async function audit(
   module: string,
@@ -392,7 +408,7 @@ async function main() {
 
   const interventions = [];
   const interventionSeeds = [
-    [2, "MEDIACION_VECINAL", "ALTA", "EN_SEGUIMIENTO", "Orientacion inicial por conflicto vecinal con antecedentes de hostigamiento verbal.", "ORIENTACION", byUser.juridico1.id, daysAgo(2, 14), "FROM_DESPACHO"],
+    [2, "MEDIACION_VECINAL", "ALTA", "RECIBIDO", "Orientacion inicial por conflicto vecinal con antecedentes de hostigamiento verbal.", "ORIENTACION", byUser.juridico1.id, daysAgo(2, 14), "FROM_DESPACHO"],
     [1, "RUIDOS_MOLESTOS", "MEDIA", "EN_ORIENTACION", "Se recibe denuncia vecinal por ruidos nocturnos persistentes. Se brindan pautas de registro.", "ORIENTACION", byUser.juridico2.id, daysAgo(1, 12)],
     [6, "OFICIO_URGENTE", "URGENTE", "PENDIENTE_DOCUMENTACION", "Oficio urgente vinculado a preservacion de registros municipales.", "MPF", byUser.juridico3.id, daysAgo(0, 9)],
     [4, "SALUD_MENTAL", "URGENTE", "EN_SEGUIMIENTO", "Primera intervencion y contencion. Se informa canal especializado y medidas disponibles.", "OTRO", byUser.juridico1.id, daysAgo(4, 11)],
@@ -459,41 +475,109 @@ async function main() {
     });
   }
 
-  await prisma.juridicalAction.createMany({
-    data: [
-      {
-        juridicalInterventionId: interventions[0].id,
-        actionType: "PRIMERA_INTERVENCION",
-        content: "Se realiza entrevista inicial y se delimita informacion derivada desde Despacho.",
-        nextStepDate: daysAgo(-3, 10),
-        createdById: byUser.juridico1.id,
-        createdAt: daysAgo(2, 15),
-      },
-      {
-        juridicalInterventionId: interventions[2].id,
-        actionType: "OFICIO",
-        content: "Se verifica documentacion recibida y se solicita preservacion de camaras a Despacho.",
-        nextStepDate: daysAgo(-1, 9),
-        createdById: byUser.juridico3.id,
-        createdAt: daysAgo(0, 10),
-      },
-      {
-        juridicalInterventionId: interventions[3].id,
-        actionType: "CONTENCION",
-        content: "Se brinda contencion, se registran organismos de contacto y se agenda seguimiento.",
-        nextStepDate: daysAgo(-2, 11),
-        createdById: byUser.juridico1.id,
-        createdAt: daysAgo(4, 12),
-      },
-      {
-        juridicalInterventionId: interventions[5].id,
-        actionType: "ORIENTACION",
-        content: "Consulta finalizada con indicacion del area competente.",
-        createdById: byUser.juridico3.id,
-        createdAt: daysAgo(9, 14),
-      },
-    ],
-  });
+  const juridicalActions: JuridicalAction[] = [];
+  const juridicalActionSeeds = [
+    {
+      juridicalInterventionId: interventions[0].id,
+      actionType: "SEGUIMIENTO",
+      content: actionContent(
+        "La persona vuelve a consultar por nuevas comunicaciones con el inmueble lindero y aporta mayor detalle de horarios.",
+        "Se ordena el relato, se indican pautas de registro y se deja constancia de la continuidad del conflicto.",
+        "Contactar a las partes para evaluar instancia de mediacion vecinal.",
+      ),
+      nextStepDate: daysAgo(-3, 10),
+      statusAfter: "EN_ORIENTACION",
+      createdById: byUser.juridico2.id,
+      createdAt: daysAgo(2, 15),
+    },
+    {
+      juridicalInterventionId: interventions[0].id,
+      actionType: "NUEVA_PRESENTACION",
+      content: actionContent(
+        "Se recibe nueva presentacion con ampliacion de datos y referencia a intervenciones previas del barrio.",
+        "Se incorpora la informacion al legajo y se define seguimiento institucional.",
+        "Revisar antecedentes y preparar contacto con area de mediacion.",
+      ),
+      nextStepDate: daysAgo(-1, 12),
+      statusAfter: "EN_SEGUIMIENTO",
+      createdById: byUser.juridico1.id,
+      createdAt: daysAgo(1, 9),
+    },
+    {
+      juridicalInterventionId: interventions[0].id,
+      actionType: "CONTENCION",
+      content: actionContent(
+        "Se atiende consulta telefonica de la solicitante, quien manifiesta preocupacion por escalada del conflicto.",
+        "Se brinda contencion, se reiteran canales institucionales y se solicita evitar confrontaciones directas.",
+        "Mantener seguimiento y registrar cualquier nueva presentacion.",
+      ),
+      nextStepDate: daysAgo(-2, 11),
+      createdById: byUser.juridico3.id,
+      createdAt: daysAgo(0, 13),
+    },
+    {
+      juridicalInterventionId: interventions[2].id,
+      actionType: "OFICIO",
+      content: actionContent(
+        "Se verifica documentacion recibida y se solicita preservacion de camaras a Despacho.",
+        "Se emite pedido operativo con datos minimos necesarios para resguardar registros.",
+        "Controlar respuesta de Despacho.",
+      ),
+      nextStepDate: daysAgo(-1, 9),
+      createdById: byUser.juridico3.id,
+      createdAt: daysAgo(0, 10),
+    },
+    {
+      juridicalInterventionId: interventions[3].id,
+      actionType: "CONTENCION",
+      content: actionContent(
+        "Se brinda contencion, se registran organismos de contacto y se agenda seguimiento.",
+        "Se informa canal especializado y se deja constancia de los recursos disponibles.",
+        "Retomar contacto para evaluar continuidad de la intervencion.",
+      ),
+      nextStepDate: daysAgo(-2, 11),
+      createdById: byUser.juridico1.id,
+      createdAt: daysAgo(4, 12),
+    },
+    {
+      juridicalInterventionId: interventions[5].id,
+      actionType: "ORIENTACION",
+      content: actionContent(
+        "Consulta finalizada con indicacion del area competente.",
+        "Se informa procedimiento y documentacion requerida para continuar por la via administrativa.",
+      ),
+      createdById: byUser.juridico3.id,
+      createdAt: daysAgo(9, 14),
+    },
+  ];
+
+  for (const seed of juridicalActionSeeds) {
+    const { statusAfter, ...actionData } = seed;
+    const before = await prisma.juridicalIntervention.findUniqueOrThrow({
+      where: { id: seed.juridicalInterventionId },
+      include: juridicalAuditInclude,
+    });
+    const action = await prisma.juridicalAction.create({ data: actionData });
+    juridicalActions.push(action);
+    const after =
+      statusAfter && statusAfter !== before.status
+        ? await prisma.juridicalIntervention.update({
+            where: { id: seed.juridicalInterventionId },
+            data: { status: statusAfter, lastStatusAt: action.createdAt },
+            include: juridicalAuditInclude,
+          })
+        : before;
+
+    await audit(
+      "JURIDICO",
+      "JuridicalIntervention",
+      seed.juridicalInterventionId,
+      after.status !== before.status ? "STATUS_CHANGE" : "ACTION",
+      seed.createdById,
+      { intervention: after, action },
+      before,
+    );
+  }
 
   const referralOne = await prisma.referral.create({
     data: {
@@ -574,6 +658,15 @@ async function main() {
       entityType: "JuridicalIntervention",
       entityId: interventions[2].id,
       uploadedById: byUser.juridico3.id,
+      isPrivate: true,
+    },
+    {
+      name: "seed-juridico-hoja-presentacion.txt",
+      content: "Adjunto semilla privado: documentacion aportada en nueva presentacion.",
+      module: "JURIDICO",
+      entityType: "JuridicalAction",
+      entityId: juridicalActions[1].id,
+      uploadedById: byUser.juridico1.id,
       isPrivate: true,
     },
     {

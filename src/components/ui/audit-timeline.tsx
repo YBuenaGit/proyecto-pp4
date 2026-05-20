@@ -208,9 +208,10 @@ function auditTitle(log: AuditTimelineLog, actor: string, afterJson: unknown) {
   const action = afterActionRecord(afterJson);
   if (log.action === "CREATE") return `${actor} creo la intervencion`;
   if (log.action === "UPDATE") return `${actor} edito la intervencion`;
-  if (log.action === "STATUS_CHANGE" && action) return `${actor} agrego seguimiento y cambio el estado`;
+  if (log.action === "STATUS_CHANGE" && action) return `${actor} registro una hoja y cambio el estado`;
   if (log.action === "STATUS_CHANGE") return `${actor} cambio el estado`;
-  if (log.action === "ACTION") return `${actor} agrego seguimiento`;
+  if (log.action === "ACTION") return `${actor} agrego una hoja al legajo`;
+  if (log.action === "ACTION_UPDATE") return `${actor} edito una hoja del legajo`;
   if (log.action === "ATTACHMENT") return `${actor} adjunto archivos`;
   if (log.action === "REFERRAL") return `${actor} registro una derivacion`;
   return `${actor} registro ${labelFromValue(log.action)}`;

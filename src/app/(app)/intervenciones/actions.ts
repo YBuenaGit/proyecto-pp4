@@ -8,6 +8,7 @@ import { requireUser } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { saveAttachments } from "@/lib/files";
 import { nextInternalNumber, optionalDate, optionalText, text } from "@/lib/form";
+import { buildJuridicalActionContent } from "@/lib/juridical-action-content";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessJuridical } from "@/lib/rbac";
 
@@ -303,9 +304,14 @@ export async function addJuridicalAction(interventionId: string, formData: FormD
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
   const actionType = text(formData, "actionType") || "SEGUIMIENTO";
-  const content = text(formData, "content");
+  const description = text(formData, "description") || text(formData, "content");
+  const content = buildJuridicalActionContent({
+    description,
+    guidanceProvided: optionalText(formData, "guidanceProvided") ?? "",
+    nextStepDescription: optionalText(formData, "nextStepDescription") ?? "",
+  });
   const statusAfter = optionalText(formData, "statusAfter");
-  if (!ACTION_TYPES.includes(actionType) || content.length < 3) return;
+  if (!ACTION_TYPES.includes(actionType) || description.length < 3) return;
 
   const before = await juridicalAuditSnapshot(interventionId);
   const action = await prisma.juridicalAction.create({
@@ -314,12 +320,13 @@ export async function addJuridicalAction(interventionId: string, formData: FormD
       actionType,
       content,
       nextStepDate: optionalDate(formData, "nextStepDate"),
+      createdAt: optionalDate(formData, "createdAt") ?? new Date(),
       createdById: user.id,
     },
   });
 
   let after = before;
-  if (statusAfter && JURIDICAL_STATUSES.includes(statusAfter)) {
+  if (statusAfter && JURIDICAL_STATUSES.includes(statusAfter) && statusAfter !== before.status) {
     after = await prisma.juridicalIntervention.update({
       where: { id: interventionId },
       data: { status: statusAfter, lastStatusAt: new Date() },
@@ -328,17 +335,83 @@ export async function addJuridicalAction(interventionId: string, formData: FormD
     await syncJuridicalReferralSummary(interventionId, statusAfter);
   }
 
+  const savedAttachments = await saveAttachments({
+    files: formData.getAll("attachments"),
+    module: "JURIDICO",
+    entityType: "JuridicalAction",
+    entityId: action.id,
+    uploadedById: user.id,
+    isPrivate: true,
+  });
+
   await writeAuditLog({
     module: "JURIDICO",
     entityType: "JuridicalIntervention",
     entityId: interventionId,
-    action: statusAfter ? "STATUS_CHANGE" : "ACTION",
+    action: after.status !== before.status ? "STATUS_CHANGE" : "ACTION",
     createdById: user.id,
     before,
-    after: { intervention: after, action },
+    after: { intervention: after, action, attachments: savedAttachments },
   });
   revalidatePath(`/intervenciones/${interventionId}`);
   redirect(`/intervenciones/${interventionId}`);
+}
+
+export async function updateJuridicalAction(actionId: string, formData: FormData) {
+  const user = await requireUser();
+  assertAccess(canAccessJuridical(user));
+  const existingAction = await prisma.juridicalAction.findUniqueOrThrow({ where: { id: actionId } });
+  const actionType = text(formData, "actionType") || existingAction.actionType;
+  const description = text(formData, "description") || text(formData, "content");
+  const content = buildJuridicalActionContent({
+    description,
+    guidanceProvided: optionalText(formData, "guidanceProvided") ?? "",
+    nextStepDescription: optionalText(formData, "nextStepDescription") ?? "",
+  });
+  const statusAfter = optionalText(formData, "statusAfter");
+  if (!ACTION_TYPES.includes(actionType) || description.length < 3) return;
+
+  const before = await juridicalAuditSnapshot(existingAction.juridicalInterventionId);
+  const action = await prisma.juridicalAction.update({
+    where: { id: actionId },
+    data: {
+      actionType,
+      content,
+      nextStepDate: optionalDate(formData, "nextStepDate"),
+      createdAt: optionalDate(formData, "createdAt") ?? existingAction.createdAt,
+    },
+  });
+
+  let after = before;
+  if (statusAfter && JURIDICAL_STATUSES.includes(statusAfter) && statusAfter !== before.status) {
+    after = await prisma.juridicalIntervention.update({
+      where: { id: existingAction.juridicalInterventionId },
+      data: { status: statusAfter, lastStatusAt: new Date() },
+      include: juridicalAuditInclude,
+    });
+    await syncJuridicalReferralSummary(existingAction.juridicalInterventionId, statusAfter);
+  }
+
+  const savedAttachments = await saveAttachments({
+    files: formData.getAll("attachments"),
+    module: "JURIDICO",
+    entityType: "JuridicalAction",
+    entityId: action.id,
+    uploadedById: user.id,
+    isPrivate: true,
+  });
+
+  await writeAuditLog({
+    module: "JURIDICO",
+    entityType: "JuridicalIntervention",
+    entityId: existingAction.juridicalInterventionId,
+    action: after.status !== before.status ? "STATUS_CHANGE" : "ACTION_UPDATE",
+    createdById: user.id,
+    before: { intervention: before, action: existingAction },
+    after: { intervention: after, action, attachments: savedAttachments },
+  });
+  revalidatePath(`/intervenciones/${existingAction.juridicalInterventionId}`);
+  redirect(`/intervenciones/${existingAction.juridicalInterventionId}`);
 }
 
 export async function deriveJuridicalToDispatch(interventionId: string, formData: FormData) {
