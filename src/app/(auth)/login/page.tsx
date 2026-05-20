@@ -1,4 +1,4 @@
-import { ShieldCheck } from "lucide-react";
+import Image from "next/image";
 import { loginAction } from "./actions";
 
 export default async function LoginPage({
@@ -13,9 +13,13 @@ export default async function LoginPage({
     <main className="flex min-h-screen items-center justify-center px-4 py-10">
       <div className="w-full max-w-md overflow-hidden rounded-2xl border border-[#d7e4ee] bg-[#fbfdff]/[0.96] p-8 shadow-[0_24px_70px_rgba(26,68,104,0.14)]">
         <div className="mb-8 flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#173f63] text-white shadow-[0_12px_28px_rgba(23,63,99,0.22)]">
-            <ShieldCheck className="h-7 w-7" />
-          </div>
+          <Image
+            src="/logo-gum1.webp"
+            alt="Logo Secretaria de Seguridad Ciudadana Yerba Buena"
+            width={48}
+            height={48}
+            className="h-12 w-12 shrink-0 rounded-full object-contain shadow-[0_12px_28px_rgba(23,63,99,0.18)]"
+          />
           <div>
             <h1 className="text-2xl font-semibold tracking-[-0.025em] text-[#172033]">Secretaria de Seguridad</h1>
             <p className="text-sm font-medium text-[#607589]">Acceso interno municipal</p>
@@ -55,10 +59,10 @@ export default async function LoginPage({
           </button>
         </form>
 
-        <div className="mt-6 rounded-xl bg-[#f3f8fb] p-3 text-xs leading-5 text-[#607589] ring-1 ring-[#d7e4ee]">
+        {/* <div className="mt-6 rounded-xl bg-[#f3f8fb] p-3 text-xs leading-5 text-[#607589] ring-1 ring-[#d7e4ee]">
           Usuarios seed: <strong>despacho1</strong>, <strong>juridico1</strong>, <strong>directivo</strong>,{" "}
           <strong>secretario</strong>, <strong>admin</strong>. Contrasena: <strong>seguridad123</strong>.
-        </div>
+        </div> */}
       </div>
     </main>
   );

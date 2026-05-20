@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ShieldCheck } from "lucide-react";
+import Image from "next/image";
 import { ROLE_LABELS } from "@/lib/constants";
 import { visibleModules } from "@/lib/rbac";
 import type { CurrentUser } from "@/lib/types";
@@ -47,9 +47,13 @@ export function AppShell({ user, children }: { user: CurrentUser; children: Reac
     <div className="min-h-screen text-[#172033]">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-72 border-r border-[#d7e4ee] bg-[#fbfdff]/[0.96] shadow-[18px_0_44px_rgba(26,68,104,0.08)] backdrop-blur lg:block">
         <div className="flex h-[4.75rem] items-center gap-3 border-b border-[#d7e4ee] px-4">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#173f63] text-white shadow-[0_12px_28px_rgba(23,63,99,0.22)]">
-            <ShieldCheck className="h-6 w-6" />
-          </div>
+          <Image
+            src="/logo-gum1.webp"
+            alt="Logo Secretaria de Seguridad Ciudadana Yerba Buena"
+            width={44}
+            height={44}
+            className="h-11 w-11 shrink-0 rounded-full object-contain shadow-[0_12px_28px_rgba(23,63,99,0.18)]"
+          />
           <div>
             <p className="text-sm font-semibold tracking-[-0.01em] text-[#132f49]">Seguridad Municipal</p>
             <p className="text-xs font-medium text-[#6a7f91]">Gestion interna</p>
@@ -62,9 +66,13 @@ export function AppShell({ user, children }: { user: CurrentUser; children: Reac
         <header className="sticky top-0 z-20 border-b border-[#d7e4ee] bg-[#fbfdff]/[0.88] shadow-[0_12px_34px_rgba(26,68,104,0.07)] backdrop-blur-xl">
           <div className="mx-auto flex min-h-16 max-w-[1540px] items-center justify-between gap-3 px-3 py-2 sm:px-5 lg:px-7">
             <Link href="/" className="flex items-center gap-2 text-sm font-semibold text-[#132f49] lg:hidden">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#173f63] text-white">
-                <ShieldCheck className="h-5 w-5" />
-              </span>
+              <Image
+                src="/logo-gum1.webp"
+                alt="Logo Secretaria de Seguridad Ciudadana Yerba Buena"
+                width={36}
+                height={36}
+                className="h-9 w-9 shrink-0 rounded-full object-contain"
+              />
               Seguridad Municipal
             </Link>
             <div className="hidden text-sm font-medium text-[#65798c] lg:block">Sistema interno de gestion juridica y operativa</div>
