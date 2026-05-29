@@ -2,34 +2,34 @@ import { cn } from "./cn";
 import { labelFromValue } from "@/lib/format";
 
 const toneByStatus: Record<string, string> = {
-  RECIBIDO: "bg-[#eef3f6] text-[#3c5368] ring-[#d7e4ee]",
-  EN_ANALISIS: "bg-[#e4f0f7] text-[#173f63] ring-[#b9d2e2]",
-  DERIVADO: "bg-[#e7ecf8] text-[#334c7d] ring-[#c7d3ef]",
-  EN_GESTION: "bg-[#e4f3f4] text-[#1c5961] ring-[#bddfe3]",
-  RESUELTO: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-  CERRADO: "bg-[#dfe8ee] text-[#2f4c63] ring-[#c9d9e5]",
-  ARCHIVADO: "bg-zinc-100 text-zinc-700 ring-zinc-200",
-  EN_ORIENTACION: "bg-[#e4f0f7] text-[#173f63] ring-[#b9d2e2]",
-  PENDIENTE_DOCUMENTACION: "bg-amber-50 text-amber-800 ring-amber-200",
-  DERIVADO_EXTERNAMENTE: "bg-[#e7ecf8] text-[#334c7d] ring-[#c7d3ef]",
-  EN_SEGUIMIENTO: "bg-[#e4f3f4] text-[#1c5961] ring-[#bddfe3]",
-  CONCLUIDO: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-  INICIADO: "bg-[#eef3f6] text-[#3c5368] ring-[#d7e4ee]",
-  EN_TRAMITE: "bg-[#e4f3f4] text-[#1c5961] ring-[#bddfe3]",
-  OBSERVADO: "bg-amber-50 text-amber-800 ring-amber-200",
-  EN_APROBACION: "bg-[#e4f0f7] text-[#173f63] ring-[#b9d2e2]",
-  APROBADO: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-  FINALIZADO: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-  URGENTE: "bg-rose-50 text-rose-800 ring-rose-200",
-  ALTA: "bg-orange-50 text-orange-800 ring-orange-200",
-  MEDIA: "bg-sky-50 text-sky-800 ring-sky-200",
-  BAJA: "bg-[#eef3f6] text-[#3c5368] ring-[#d7e4ee]",
-  ACTIVO: "bg-emerald-50 text-emerald-800 ring-emerald-200",
-  INACTIVO: "bg-[#eef3f6] text-[#3c5368] ring-[#d7e4ee]",
+  RECIBIDO: "border-[#dee2e6] bg-[#f8f9fa] text-[#495057]",
+  EN_ANALISIS: "border-[#bee5eb] bg-[#d1ecf1] text-[#0c5460]",
+  DERIVADO: "border-[#b8daff] bg-[#cce5ff] text-[#004085]",
+  EN_GESTION: "border-[#bee5eb] bg-[#d1ecf1] text-[#0c5460]",
+  RESUELTO: "border-[#c3e6cb] bg-[#d4edda] text-[#155724]",
+  CERRADO: "border-[#d6d8db] bg-[#e2e3e5] text-[#383d41]",
+  ARCHIVADO: "border-[#d6d8db] bg-[#e2e3e5] text-[#383d41]",
+  EN_ORIENTACION: "border-[#bee5eb] bg-[#d1ecf1] text-[#0c5460]",
+  PENDIENTE_DOCUMENTACION: "border-[#ffeeba] bg-[#fff3cd] text-[#856404]",
+  DERIVADO_EXTERNAMENTE: "border-[#b8daff] bg-[#cce5ff] text-[#004085]",
+  EN_SEGUIMIENTO: "border-[#bee5eb] bg-[#d1ecf1] text-[#0c5460]",
+  CONCLUIDO: "border-[#c3e6cb] bg-[#d4edda] text-[#155724]",
+  INICIADO: "border-[#dee2e6] bg-[#f8f9fa] text-[#495057]",
+  EN_TRAMITE: "border-[#bee5eb] bg-[#d1ecf1] text-[#0c5460]",
+  OBSERVADO: "border-[#ffeeba] bg-[#fff3cd] text-[#856404]",
+  EN_APROBACION: "border-[#b8daff] bg-[#cce5ff] text-[#004085]",
+  APROBADO: "border-[#c3e6cb] bg-[#d4edda] text-[#155724]",
+  FINALIZADO: "border-[#c3e6cb] bg-[#d4edda] text-[#155724]",
+  URGENTE: "border-[#f5c6cb] bg-[#f8d7da] text-[#721c24]",
+  ALTA: "border-[#ffeeba] bg-[#fff3cd] text-[#856404]",
+  MEDIA: "border-[#bee5eb] bg-[#d1ecf1] text-[#0c5460]",
+  BAJA: "border-[#dee2e6] bg-[#f8f9fa] text-[#495057]",
+  ACTIVO: "border-[#c3e6cb] bg-[#d4edda] text-[#155724]",
+  INACTIVO: "border-[#d6d8db] bg-[#e2e3e5] text-[#383d41]",
 };
 
 export function StatusBadge({ value, className }: { value: string | null | undefined; className?: string }) {
-  if (!value) return <span className="text-slate-400">-</span>;
+  if (!value) return <span className="text-[#adb5bd]">-</span>;
   const isMultiline = value === "PENDIENTE_DOCUMENTACION";
   const label = isMultiline ? (
     <>
@@ -43,9 +43,9 @@ export function StatusBadge({ value, className }: { value: string | null | undef
   return (
     <span
       className={cn(
-        "inline-flex w-full min-w-[96px] max-w-[110px] items-center justify-center rounded-full px-2.5 py-1 text-center text-xs font-semibold shadow-[inset_0_1px_0_rgba(255,255,255,0.70)] ring-1 ring-inset",
-        isMultiline ? "flex-col justify-center whitespace-normal py-1.5 text-center leading-tight" : "whitespace-nowrap",
-        toneByStatus[value] ?? "bg-[#eef3f6] text-[#3c5368] ring-[#d7e4ee]",
+        "inline-flex min-w-[86px] max-w-[138px] items-center justify-center rounded-sm border px-2 py-0.5 text-center text-xs font-semibold shadow-none",
+        isMultiline ? "flex-col justify-center whitespace-normal py-1 text-center leading-tight" : "whitespace-nowrap",
+        toneByStatus[value] ?? "border-[#dee2e6] bg-[#f8f9fa] text-[#495057]",
         className,
       )}
     >

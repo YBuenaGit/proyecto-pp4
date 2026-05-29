@@ -5,10 +5,12 @@ import { X } from "lucide-react";
 import { cn } from "./cn";
 
 const triggerVariants = {
-  primary: "border-[#173f63] bg-[#173f63] text-white shadow-[0_12px_24px_rgba(23,63,99,0.20)] hover:bg-[#225b80]",
-  secondary: "border-[#c9d9e5] bg-white/90 text-[#2f4c63] hover:border-[#9bb8ca] hover:bg-[#f3f8fb]",
-  subtle: "border-[#d7e4ee] bg-[#eaf3f8] text-[#2f4c63] hover:bg-[#dcecf4]",
-  danger: "border-rose-700 bg-rose-700 text-white hover:bg-rose-800",
+  primary: "border-[#0667b0] bg-[#0667b0] text-white hover:border-[#0a61b9] hover:bg-[#0a61b9]",
+  secondary: "border-[#6c757d] bg-white text-[#495057] hover:bg-[#e9ecef]",
+  subtle: "border-[#bee5eb] bg-[#d1ecf1] text-[#0c5460] hover:bg-[#bee5eb]",
+  info: "border-[#17a2b8] bg-[#17a2b8] text-white hover:border-[#138496] hover:bg-[#138496]",
+  success: "border-[#28a745] bg-[#28a745] text-white hover:border-[#218838] hover:bg-[#218838]",
+  danger: "border-[#dc3545] bg-[#dc3545] text-white hover:border-[#c82333] hover:bg-[#c82333]",
 };
 
 const modalSizes = {
@@ -61,7 +63,7 @@ export function AppModal({
         type="button"
         onClick={() => setOpen(true)}
         className={cn(
-          "inline-flex min-h-10 max-w-full items-center justify-center gap-1.5 rounded-lg border px-3.5 py-2 text-center text-sm font-semibold leading-tight shadow-sm transition duration-200 hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7aa6c2] focus-visible:ring-offset-2 focus-visible:ring-offset-[#eef4f8]",
+          "inline-flex min-h-9 max-w-full items-center justify-center gap-1.5 rounded-sm border px-3 py-1.5 text-center text-sm font-semibold leading-tight shadow-sm transition duration-150 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff] focus-visible:ring-offset-2 focus-visible:ring-offset-white",
           triggerVariants[triggerVariant],
           triggerClassName,
         )}
@@ -71,7 +73,7 @@ export function AppModal({
 
       {open ? (
         <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-[#10283f]/50 p-0 backdrop-blur-md sm:items-center sm:p-4"
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
           role="presentation"
           onMouseDown={(event) => {
             if (event.target === event.currentTarget) setOpen(false);
@@ -86,27 +88,27 @@ export function AppModal({
             aria-modal="true"
             aria-labelledby={titleId}
             className={cn(
-              "flex max-h-[96dvh] w-full flex-col overflow-hidden rounded-t-2xl border border-[#d7e4ee] bg-[#fbfdff] shadow-[0_28px_80px_rgba(16,40,63,0.26)] sm:rounded-2xl",
+              "flex max-h-[96dvh] w-full flex-col overflow-hidden rounded-t-sm border border-[#dee2e6] bg-white shadow-xl sm:rounded-sm",
               modalSizes[size],
             )}
           >
-            <div className="flex items-start justify-between gap-3 border-b border-[#d7e4ee] bg-gradient-to-r from-[#f7fbfd] to-[#edf5f9] px-4 py-3.5 sm:px-5">
+            <div className="flex items-start justify-between gap-3 border-b border-[#dee2e6] bg-[#e9ecef] px-3 py-2.5 sm:px-4">
               <div>
-                <h2 id={titleId} className="text-lg font-semibold tracking-[-0.01em] text-[#172033]">
+                <h2 id={titleId} className="text-lg font-semibold tracking-normal text-[#212529]">
                   {title}
                 </h2>
-                {description ? <p className="mt-1 max-w-2xl text-sm leading-6 text-[#607589]">{description}</p> : null}
+                {description ? <p className="mt-1 max-w-2xl text-sm leading-6 text-[#6c757d]">{description}</p> : null}
               </div>
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-lg p-2 text-[#607589] transition duration-200 hover:bg-white hover:text-[#173f63] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7aa6c2]"
+                className="rounded-sm p-2 text-[#6c757d] transition duration-150 hover:bg-white hover:text-[#212529] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff]"
                 aria-label="Cerrar modal"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="overflow-y-auto p-4 sm:p-5">{children}</div>
+            <div className="overflow-y-auto p-3 sm:p-4">{children}</div>
           </div>
         </div>
       ) : null}

@@ -80,6 +80,7 @@ export default async function ReportsPage({ searchParams }: { searchParams?: Pro
       <PageHeader
         title="Reportes"
         description="Contadores simples por periodo. Para el MVP se priorizan vistas filtrables y exportables manualmente desde tablas."
+        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Reportes" }]}
       />
 
       <FilterBar resetHref="/reportes">

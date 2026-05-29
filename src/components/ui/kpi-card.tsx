@@ -21,19 +21,19 @@ export function KpiCard({
     <>
       <div className="flex items-start justify-between gap-2.5">
         <div>
-          <p className="text-sm font-semibold text-[#607589]">{label}</p>
-          <p className="mt-1 text-4xl font-semibold tracking-[-0.04em] text-[#172033]">{value}</p>
-          {hint ? <p className="mt-1 text-xs font-medium text-[#6a7f91]">{hint}</p> : null}
+          <p className="text-sm font-semibold text-[#6c757d]">{label}</p>
+          <p className="mt-1 text-3xl font-semibold tracking-normal text-[#212529]">{value}</p>
+          {hint ? <p className="mt-1 text-xs font-medium text-[#6c757d]">{hint}</p> : null}
         </div>
-        <div className="rounded-xl bg-[#e4f0f7] p-2 text-[#255f85]">{icon}</div>
+        <div className="rounded-sm border border-[#bee5eb] bg-[#d1ecf1] p-2 text-[#0c5460]">{icon}</div>
       </div>
     </>
   );
 
   const className = cn(
-    "block rounded-2xl border bg-[#fbfdff]/[0.96] p-4 shadow-[0_16px_38px_rgba(26,68,104,0.08)] transition duration-200",
-    href && "cursor-pointer hover:-translate-y-1 hover:border-[#9bb8ca] hover:shadow-[0_22px_46px_rgba(26,68,104,0.13)]",
-    active ? "border-[#255f85] bg-[#eaf3f8] ring-1 ring-[#c7dcea]" : "border-[#d7e4ee]",
+    "block rounded-sm border bg-white p-3 shadow-sm transition duration-150",
+    href && "cursor-pointer hover:border-[#17a2b8] hover:bg-[#f8f9fa]",
+    active ? "border-[#0667b0] bg-[#d1ecf1]" : "border-[#dee2e6]",
   );
 
   if (href) {

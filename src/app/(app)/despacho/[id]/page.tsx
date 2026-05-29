@@ -100,6 +100,7 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
       <PageHeader
         title={record.internalNumber}
         description="Detalle de atencion de Despacho con seguimientos, adjuntos, derivaciones y auditoria."
+        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Despacho", href: "/despacho" }, { label: record.internalNumber }]}
         actions={
           <>
             <AppModal title={`Editar ${record.internalNumber}`} trigger={<><Edit className="h-4 w-4" />Editar</>} triggerVariant="secondary" size="xl">
@@ -137,10 +138,10 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
           <DetailSection title="Personas denunciantes">
             <div className="space-y-4">
               {complainants.map((complainant, index) => (
-                <div key={`complainant-${index}`} className="rounded-md border border-slate-200 p-3">
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Denunciante {index + 1}</p>
+                <div key={`complainant-${index}`} className="rounded-md border border-[#dee2e6] p-3">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Denunciante {index + 1}</p>
                   {complainant.isAnonymous ? (
-                    <p className="text-sm font-medium text-slate-900">Denunciante anónimo</p>
+                    <p className="text-sm font-medium text-[#212529]">Denunciante anónimo</p>
                   ) : (
                     <FieldGrid>
                       <DetailField label="Nombre" value={display([complainant.firstName, complainant.lastName].filter(Boolean).join(" "))} />
@@ -152,15 +153,15 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
                   )}
                 </div>
               ))}
-              {!complainants.length ? <p className="text-sm text-slate-500">Sin denunciantes cargados.</p> : null}
+              {!complainants.length ? <p className="text-sm text-[#6c757d]">Sin denunciantes cargados.</p> : null}
             </div>
           </DetailSection>
 
           <DetailSection title="Personas denunciadas / vinculadas">
             <div className="space-y-4">
               {linkedPersons.map((person, index) => (
-                <div key={`linked-person-${index}`} className="rounded-md border border-slate-200 p-3">
-                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-slate-500">Persona {index + 1}</p>
+                <div key={`linked-person-${index}`} className="rounded-md border border-[#dee2e6] p-3">
+                  <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Persona {index + 1}</p>
                   <FieldGrid>
                     <DetailField label="Nombre" value={display(person.firstName)} />
                     <DetailField label="Apellido / Apodo manual" value={display(person.apellidoApodoManual)} />
@@ -171,31 +172,31 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
                     {index === 0 ? (
                       <DetailField
                         label="Perfil"
-                        value={record.personId ? <Link className="text-sky-800 hover:underline" href={`/personas/${record.personId}`}>Ver persona</Link> : "-"}
+                        value={record.personId ? <Link className="text-[#0667b0] hover:underline" href={`/personas/${record.personId}`}>Ver persona</Link> : "-"}
                       />
                     ) : null}
                   </FieldGrid>
                 </div>
               ))}
-              {!linkedPersons.length ? <p className="text-sm text-slate-500">Sin personas denunciadas o vinculadas cargadas.</p> : null}
+              {!linkedPersons.length ? <p className="text-sm text-[#6c757d]">Sin personas denunciadas o vinculadas cargadas.</p> : null}
             </div>
           </DetailSection>
 
           <DetailSection title="Descripcion y notas">
-            <div className="space-y-4 text-sm leading-6 text-slate-800">
+            <div className="space-y-4 text-sm leading-6 text-[#212529]">
               <div>
-                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Descripcion</p>
+                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-[#6c757d]">Descripcion</p>
                 <p className="whitespace-pre-wrap">{record.description}</p>
               </div>
               {record.initialGuidance ? (
                 <div>
-                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Orientacion brindada / intervencion inicial</p>
+                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-[#6c757d]">Orientacion brindada / intervencion inicial</p>
                   <p className="whitespace-pre-wrap">{record.initialGuidance}</p>
                 </div>
               ) : null}
               {record.confidentialNotes ? (
                 <div>
-                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-slate-500">Notas internas confidenciales</p>
+                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-[#6c757d]">Notas internas confidenciales</p>
                   <p className="whitespace-pre-wrap">{record.confidentialNotes}</p>
                 </div>
               ) : null}
@@ -228,16 +229,16 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
           >
             <div className="space-y-3">
               {record.followUps.map((followUp) => (
-                <div key={followUp.id} className="rounded-md border border-slate-200 p-3">
+                <div key={followUp.id} className="rounded-md border border-[#dee2e6] p-3">
                   <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-slate-900">{followUp.createdBy.name}</p>
-                    <span className="text-xs text-slate-500">{formatDateTime(followUp.createdAt)}</span>
+                    <p className="text-sm font-medium text-[#212529]">{followUp.createdBy.name}</p>
+                    <span className="text-xs text-[#6c757d]">{formatDateTime(followUp.createdAt)}</span>
                   </div>
-                  <p className="whitespace-pre-wrap text-sm leading-6 text-slate-700">{followUp.content}</p>
+                  <p className="whitespace-pre-wrap text-sm leading-6 text-[#495057]">{followUp.content}</p>
                   {followUp.statusAfter ? <div className="mt-2"><StatusBadge value={followUp.statusAfter} /></div> : null}
                 </div>
               ))}
-              {!record.followUps.length ? <p className="text-sm text-slate-500">Sin seguimientos.</p> : null}
+              {!record.followUps.length ? <p className="text-sm text-[#6c757d]">Sin seguimientos.</p> : null}
             </div>
           </DetailSection>
         </div>
@@ -285,23 +286,23 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
                 </AppModal>
               </div>
 
-              <div className="border-t border-slate-200 pt-4">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Historial de derivaciones</p>
+              <div className="border-t border-[#dee2e6] pt-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Historial de derivaciones</p>
                 <div className="space-y-2">
                   {[...record.originReferrals, ...record.destinationReferrals].map((referral) => (
-                    <div key={referral.id} className="rounded-md bg-slate-50 p-3 text-sm">
-                      <p className="font-medium text-slate-900">{referral.originModule} → {referral.destinationModule}</p>
-                      <p className="mt-1 text-slate-600">{referral.visibleStatusForOrigin}</p>
-                      <p className="mt-1 text-xs text-slate-500">{formatDateTime(referral.referredAt)}</p>
+                    <div key={referral.id} className="rounded-md bg-[#f8f9fa] p-3 text-sm">
+                      <p className="font-medium text-[#212529]">{referral.originModule} → {referral.destinationModule}</p>
+                      <p className="mt-1 text-[#6c757d]">{referral.visibleStatusForOrigin}</p>
+                      <p className="mt-1 text-xs text-[#6c757d]">{formatDateTime(referral.referredAt)}</p>
                       {directivoCanSeeJuridical && referral.destinationJuridicalInterventionId ? (
-                        <Link className="mt-2 inline-block text-xs font-medium text-sky-800 hover:underline" href={`/intervenciones/${referral.destinationJuridicalInterventionId}`}>
+                        <Link className="mt-2 inline-block text-xs font-medium text-[#0667b0] hover:underline" href={`/intervenciones/${referral.destinationJuridicalInterventionId}`}>
                           Ver intervencion vinculada
                         </Link>
                       ) : null}
                     </div>
                   ))}
                   {!record.originReferrals.length && !record.destinationReferrals.length ? (
-                    <p className="text-sm text-slate-500">Sin derivaciones.</p>
+                    <p className="text-sm text-[#6c757d]">Sin derivaciones.</p>
                   ) : null}
                 </div>
               </div>

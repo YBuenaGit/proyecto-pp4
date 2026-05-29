@@ -32,6 +32,7 @@ export default async function EditDispatchPage({ params }: { params: Promise<{ i
       <PageHeader
         title={`Editar ${record.internalNumber}`}
         description="Los cambios quedan registrados en auditoria."
+        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Despacho", href: "/despacho" }, { label: record.internalNumber, href: `/despacho/${record.id}` }, { label: "Editar" }]}
         actions={
           <>
             <AppModal title={`Editar ${record.internalNumber}`} trigger={<><Edit className="h-4 w-4" />Editar</>} size="xl">
@@ -49,7 +50,7 @@ export default async function EditDispatchPage({ params }: { params: Promise<{ i
           </>
         }
       />
-      <p className="text-sm text-slate-600">La informacion se edita desde el modal para mantener separada la lectura de la modificacion.</p>
+      <p className="text-sm text-[#6c757d]">La informacion se edita desde el modal para mantener separada la lectura de la modificacion.</p>
     </>
   );
 }

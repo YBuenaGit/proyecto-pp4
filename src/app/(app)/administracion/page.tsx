@@ -28,6 +28,7 @@ export default async function AdminPage() {
       <PageHeader
         title="Administracion"
         description="Gestion tecnica de usuarios, roles, catalogos iniciales y auditoria del sistema."
+        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Administracion" }]}
       />
 
       <div className="space-y-5">
@@ -69,8 +70,8 @@ export default async function AdminPage() {
             {users.map((item) => (
               <tr key={item.id}>
                 <Td>
-                  <div className="font-medium text-slate-900">{item.name}</div>
-                  <div className="text-xs text-slate-500">{item.email ?? "-"}</div>
+                  <div className="font-medium text-[#212529]">{item.name}</div>
+                  <div className="text-xs text-[#6c757d]">{item.email ?? "-"}</div>
                 </Td>
                 <Td>{item.username}</Td>
                 <Td>{ROLE_LABELS[item.role] ?? item.role}</Td>

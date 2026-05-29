@@ -92,6 +92,7 @@ export default async function DispatchListPage({
       <PageHeader
         title="Despacho · Atenciones / Reclamos"
         description="Registro operativo de reclamos, consultas, sugerencias, pedidos, derivaciones y seguimiento simple."
+        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Despacho" }]}
         actions={
           <AppModal title="Nueva atencion de Despacho" trigger={<><Plus className="h-4 w-4" />Nueva atencion</>} size="xl">
             <DispatchForm
@@ -131,34 +132,34 @@ export default async function DispatchListPage({
         {records.map((record) => (
           <tr key={record.id}>
             <Td>
-              <Link href={`/despacho/${record.id}`} className="whitespace-nowrap font-medium text-sky-800 hover:underline">
+              <Link href={`/despacho/${record.id}`} className="whitespace-nowrap font-medium text-[#0667b0] hover:underline">
                 {record.internalNumber}
               </Link>
               {record.originReferrals.length ? (
-                <p className="mt-1 text-xs text-slate-500">{record.originReferrals[0].visibleStatusForOrigin}</p>
+                <p className="mt-1 text-xs text-[#6c757d]">{record.originReferrals[0].visibleStatusForOrigin}</p>
               ) : null}
             </Td>
             <Td>
-              <div className="font-medium text-slate-900">{formatDateTime(record.attendedAt)}</div>
-              <div className="text-xs text-slate-500">Reportado por: {record.createdBy.name}</div>
+              <div className="font-medium text-[#212529]">{formatDateTime(record.attendedAt)}</div>
+              <div className="text-xs text-[#6c757d]">Reportado por: {record.createdBy.name}</div>
             </Td>
             <Td>
-              <div className="font-medium text-slate-900">
+              <div className="font-medium text-[#212529]">
                 {record.nameSnapshot ??
                   ([record.linkedPersons[0]?.firstName, record.linkedPersons[0]?.apellidoApodoManual].filter(Boolean).join(" ") ||
                     "Sin identificar")}
               </div>
-              <div className="text-xs text-slate-500">{record.dniSnapshot ?? "Sin DNI"}</div>
+              <div className="text-xs text-[#6c757d]">{record.dniSnapshot ?? "Sin DNI"}</div>
             </Td>
             <Td>{categories.find((item) => item.value === record.category)?.label ?? labelFromValue(record.category)}</Td>
             <Td>
               <div className="space-y-2">
                 <div className="grid grid-cols-[minmax(54px,64px)_minmax(0,110px)] items-center gap-2">
-                  <span className="text-xs text-slate-500">Prioridad:</span>
+                  <span className="text-xs text-[#6c757d]">Prioridad:</span>
                   <StatusBadge value={record.priority} />
                 </div>
                 <div className="grid grid-cols-[minmax(54px,64px)_minmax(0,110px)] items-center gap-2">
-                  <span className="text-xs text-slate-500">Estado:</span>
+                  <span className="text-xs text-[#6c757d]">Estado:</span>
                   <StatusBadge value={record.status} />
                 </div>
               </div>

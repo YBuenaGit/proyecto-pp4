@@ -61,7 +61,7 @@ export function AppointmentFilters({
           </>
         )}
         triggerVariant="secondary"
-        triggerClassName="border-sky-300 bg-white text-sky-700 shadow-none hover:bg-sky-50"
+        triggerClassName="border-[#17a2b8] bg-white text-[#0667b0] shadow-none hover:bg-[#d1ecf1]"
         size="xl"
       >
         <form className="space-y-4">
@@ -69,9 +69,9 @@ export function AppointmentFilters({
             <input type="hidden" name="day" value={selectedDay} />
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               <label className="block md:col-span-2 xl:col-span-3">
-                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Buscar</span>
+                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[#6c757d]">Buscar</span>
                 <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                  <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-[#adb5bd]" />
                   <input
                     name="q"
                     className={`${inputClass} pl-9`}
@@ -81,7 +81,7 @@ export function AppointmentFilters({
                 </div>
               </label>
               <label className="block">
-                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Agenda</span>
+                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[#6c757d]">Agenda</span>
                 <select name="scope" className={inputClass} defaultValue={activeScope}>
                   {scopes.map((scope) => (
                     <option key={scope} value={scope}>
@@ -91,7 +91,7 @@ export function AppointmentFilters({
                 </select>
               </label>
               <label className="block">
-                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Tipo</span>
+                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[#6c757d]">Tipo</span>
                 <select name="type" className={inputClass} defaultValue={filters.type ?? ""}>
                   <option value="">Todos</option>
                   {APPOINTMENT_TYPES.map((type) => (
@@ -102,7 +102,7 @@ export function AppointmentFilters({
                 </select>
               </label>
               <label className="block">
-                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Estado</span>
+                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[#6c757d]">Estado</span>
                 <select name="status" className={inputClass} defaultValue={filters.status ?? ""}>
                   <option value="">Todos</option>
                   {APPOINTMENT_STATUSES.map((status) => (
@@ -113,7 +113,7 @@ export function AppointmentFilters({
                 </select>
               </label>
               <label className="block">
-                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Abogado</span>
+                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[#6c757d]">Abogado</span>
                 <select name="assignedLawyerId" className={inputClass} defaultValue={filters.assignedLawyerId ?? ""}>
                   <option value="">Todos</option>
                   {lawyers.map((user) => (
@@ -124,7 +124,7 @@ export function AppointmentFilters({
                 </select>
               </label>
               <label className="block">
-                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Usuario</span>
+                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[#6c757d]">Usuario</span>
                 <select name="assignedUserId" className={inputClass} defaultValue={filters.assignedUserId ?? ""}>
                   <option value="">Todos</option>
                   {users.map((user) => (
@@ -135,7 +135,7 @@ export function AppointmentFilters({
                 </select>
               </label>
               <label className="block">
-                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Area</span>
+                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[#6c757d]">Area</span>
                 <select name="assignedArea" className={inputClass} defaultValue={filters.assignedArea ?? ""}>
                   <option value="">Todas</option>
                   {ASSIGNED_AREAS.map((area) => (
@@ -146,11 +146,11 @@ export function AppointmentFilters({
                 </select>
               </label>
               <label className="block">
-                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-slate-500">Fecha</span>
+                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[#6c757d]">Fecha</span>
                 <input name="date" type="date" className={inputClass} defaultValue={filters.date ?? ""} />
               </label>
             </div>
-            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-slate-200 pt-4">
+            <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[#dee2e6] pt-4">
               <Button type="button" variant="secondary" data-modal-close>
                 Cancelar
               </Button>

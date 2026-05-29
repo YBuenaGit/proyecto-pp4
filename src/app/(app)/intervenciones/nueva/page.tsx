@@ -73,6 +73,7 @@ export default async function NewInterventionPage({ searchParams }: { searchPara
       <PageHeader
         title="Nueva intervencion"
         description="Carga directa del modulo Juridico-Institucional."
+        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Intervenciones", href: "/intervenciones" }, { label: "Nueva" }]}
         actions={
           <AppModal
             title="Nueva intervencion"
@@ -92,7 +93,7 @@ export default async function NewInterventionPage({ searchParams }: { searchPara
           </AppModal>
         }
       />
-      <p className="text-sm text-slate-600">Usa el boton Nueva intervencion para abrir el formulario de carga.</p>
+      <p className="text-sm text-[#6c757d]">Usa el boton Nueva intervencion para abrir el formulario de carga.</p>
     </>
   );
 }

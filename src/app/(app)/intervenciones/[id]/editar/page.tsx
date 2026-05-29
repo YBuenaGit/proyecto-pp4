@@ -32,6 +32,7 @@ export default async function EditInterventionPage({ params }: { params: Promise
       <PageHeader
         title={`Editar ${intervention.internalNumber}`}
         description="La edicion queda auditada con usuario, fecha y estado."
+        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Intervenciones", href: "/intervenciones" }, { label: intervention.internalNumber, href: `/intervenciones/${intervention.id}` }, { label: "Editar" }]}
         actions={
           <>
             <AppModal title={`Editar ${intervention.internalNumber}`} trigger={<><Edit className="h-4 w-4" />Editar</>} size="xl">
@@ -49,7 +50,7 @@ export default async function EditInterventionPage({ params }: { params: Promise
           </>
         }
       />
-      <p className="text-sm text-slate-600">La informacion se edita desde el modal para mantener separada la lectura de la modificacion.</p>
+      <p className="text-sm text-[#6c757d]">La informacion se edita desde el modal para mantener separada la lectura de la modificacion.</p>
     </>
   );
 }

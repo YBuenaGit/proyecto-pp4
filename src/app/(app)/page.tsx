@@ -419,6 +419,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
       <PageHeader
         title="Inicio"
         description="Panel operativo con indicadores del día y tablas dinámicas según el rol."
+        breadcrumbs={[{ label: "Inicio" }]}
       />
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -445,24 +446,24 @@ function DashboardTable({ panel, rows }: { panel: DashboardPanel; rows: Dashboar
   const empty = rows.length === 0;
 
   return (
-    <section className="mt-6 overflow-hidden rounded-2xl border border-[#c8dce8] bg-[#fbfdff]/[0.96] shadow-[0_18px_42px_rgba(26,68,104,0.08)]">
-      <div className="flex flex-col gap-3 border-b border-[#c8dce8] bg-gradient-to-r from-[#dcecf4] via-[#eaf3f8] to-[#f4f9fc] px-5 py-4 sm:flex-row sm:items-start sm:justify-between">
+    <section className="mt-4 overflow-hidden rounded-sm border border-[#dee2e6] bg-white shadow-sm">
+      <div className="flex flex-col gap-3 border-b border-[#dee2e6] bg-[#e9ecef] px-3 py-2.5 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-lg font-semibold tracking-[-0.01em] text-[#172033]">{copy.title}</h2>
-          <p className="mt-1 text-sm leading-6 text-[#607589]">{copy.description}</p>
+          <h2 className="text-lg font-semibold tracking-normal text-[#212529]">{copy.title}</h2>
+          <p className="mt-1 text-sm leading-6 text-[#6c757d]">{copy.description}</p>
         </div>
-        <span className="inline-flex w-fit items-center rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-[#2f4c63] ring-1 ring-[#d7e4ee]">
+        <span className="inline-flex w-fit items-center rounded-sm border border-[#dee2e6] bg-white px-2.5 py-1 text-xs font-semibold text-[#495057]">
           {rows.length} registros
         </span>
       </div>
 
       {empty ? (
-        <div className="px-5 py-12 text-center text-sm font-medium text-[#607589]">{copy.empty}</div>
+        <div className="px-5 py-10 text-center text-sm font-medium text-[#6c757d]">{copy.empty}</div>
       ) : (
         <>
           <div className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[1000px] table-fixed divide-y divide-[#c8dce8] text-sm">
-              <thead className="bg-gradient-to-r from-[#dcecf4] via-[#eaf3f8] to-[#f4f9fc]">
+            <table className="w-full min-w-[1000px] table-auto border-collapse text-sm">
+              <thead className="bg-[#e9ecef]">
                 <tr>
                   <DashboardTh>Número</DashboardTh>
                   <DashboardTh>Fecha y hora / Reportado por</DashboardTh>
@@ -471,33 +472,33 @@ function DashboardTable({ panel, rows }: { panel: DashboardPanel; rows: Dashboar
                   <DashboardTh>Prioridad / Estado</DashboardTh>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#dbe8f0] bg-[#fbfdff]">
+              <tbody className="bg-white [&_tr:hover]:bg-[#d1ecf1]/60">
                 {rows.map((row) => (
-                  <tr key={row.id} className="transition-colors hover:bg-[#dcecf4] hover:shadow-[inset_4px_0_0_#255f85]">
-                    <td className="px-4 py-3 align-top">
-                      <Link href={row.href} className="inline-flex whitespace-nowrap items-center gap-2 font-semibold text-[#173f63] hover:text-[#255f85] hover:underline">
+                  <tr key={row.id}>
+                    <td className="border border-[#dee2e6] px-2.5 py-2 align-top">
+                      <Link href={row.href} className="inline-flex whitespace-nowrap items-center gap-2 font-semibold text-[#0667b0] hover:text-[#0a61b9] hover:underline">
                         {row.number}
                         <Eye className="h-3.5 w-3.5" />
                       </Link>
                     </td>
-                    <td className="px-4 py-3 align-top text-[#334b5f]">
-                      <p className="font-semibold text-[#172033]">{formatDateTime(row.dateTime)}</p>
-                      <p className="mt-1 text-xs font-medium text-[#607589]">Reportado por: {row.reportedBy}</p>
+                    <td className="border border-[#dee2e6] px-2.5 py-2 align-top text-[#212529]">
+                      <p className="font-semibold text-[#212529]">{formatDateTime(row.dateTime)}</p>
+                      <p className="mt-1 text-xs font-medium text-[#6c757d]">Reportado por: {row.reportedBy}</p>
                     </td>
-                    <td className="px-4 py-3 align-top text-[#334b5f]">
+                    <td className="border border-[#dee2e6] px-2.5 py-2 align-top text-[#212529]">
                       <p className="whitespace-normal break-words [overflow-wrap:anywhere]">{row.requester}</p>
                     </td>
-                    <td className="px-4 py-3 align-top text-[#334b5f]">
+                    <td className="border border-[#dee2e6] px-2.5 py-2 align-top text-[#212529]">
                       <p className="whitespace-normal break-words [overflow-wrap:anywhere]">{row.category}</p>
                     </td>
-                    <td className="px-4 py-3 align-top">
+                    <td className="border border-[#dee2e6] px-2.5 py-2 align-top">
                       <div className="space-y-2">
                         <div className="grid grid-cols-[minmax(54px,64px)_minmax(0,110px)] items-center gap-2">
-                          <span className="text-xs font-medium text-[#607589]">Prioridad:</span>
+                          <span className="text-xs font-medium text-[#6c757d]">Prioridad:</span>
                           <StatusBadge value={row.priority} />
                         </div>
                         <div className="grid grid-cols-[minmax(54px,64px)_minmax(0,110px)] items-center gap-2">
-                          <span className="text-xs font-medium text-[#607589]">Estado:</span>
+                          <span className="text-xs font-medium text-[#6c757d]">Estado:</span>
                           <StatusBadge value={row.status} />
                         </div>
                       </div>
@@ -510,18 +511,18 @@ function DashboardTable({ panel, rows }: { panel: DashboardPanel; rows: Dashboar
 
           <div className="grid gap-3 p-4 md:hidden">
             {rows.map((row) => (
-              <Link key={row.id} href={row.href} className="rounded-2xl border border-[#d7e4ee] bg-white/[0.92] p-4 shadow-[0_14px_30px_rgba(26,68,104,0.08)] transition duration-200 active:scale-[0.99]">
+              <Link key={row.id} href={row.href} className="rounded-sm border border-[#dee2e6] bg-white p-3 shadow-sm transition duration-150 active:translate-y-px">
                 <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="whitespace-nowrap font-semibold text-[#173f63]">{row.number}</p>
-                    <p className="mt-1 text-xs font-medium text-[#607589]">{formatDateTime(row.dateTime)}</p>
-                    <p className="mt-1 text-xs font-medium text-[#607589]">Reportado por: {row.reportedBy}</p>
+                    <p className="whitespace-nowrap font-semibold text-[#0667b0]">{row.number}</p>
+                    <p className="mt-1 text-xs font-medium text-[#6c757d]">{formatDateTime(row.dateTime)}</p>
+                    <p className="mt-1 text-xs font-medium text-[#6c757d]">Reportado por: {row.reportedBy}</p>
                   </div>
-                  <Eye className="h-4 w-4 shrink-0 text-[#255f85]" />
+                  <Eye className="h-4 w-4 shrink-0 text-[#0667b0]" />
                 </div>
-                <div className="mt-3 grid gap-2 text-sm text-[#334b5f]">
-                  <p className="break-words [overflow-wrap:anywhere]"><span className="font-semibold text-[#172033]">Solicitante:</span> {row.requester}</p>
-                  <p className="break-words [overflow-wrap:anywhere]"><span className="font-semibold text-[#172033]">Categoría:</span> {row.category}</p>
+                <div className="mt-3 grid gap-2 text-sm text-[#212529]">
+                  <p className="break-words [overflow-wrap:anywhere]"><span className="font-semibold text-[#212529]">Solicitante:</span> {row.requester}</p>
+                  <p className="break-words [overflow-wrap:anywhere]"><span className="font-semibold text-[#212529]">Categoría:</span> {row.category}</p>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <StatusBadge value={row.priority} />
@@ -538,7 +539,7 @@ function DashboardTable({ panel, rows }: { panel: DashboardPanel; rows: Dashboar
 
 function DashboardTh({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <th className={`px-4 py-3 text-left text-xs font-semibold tracking-[0.12em] text-[#365a73] ${className ?? ""}`}>
+    <th className={`border border-[#dee2e6] px-2.5 py-2 text-left text-xs font-semibold uppercase tracking-normal text-[#495057] ${className ?? ""}`}>
       {children}
     </th>
   );

@@ -38,7 +38,7 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
 
   return (
-    <nav className="flex gap-1 overflow-x-auto px-2 py-2 lg:mt-4 lg:block lg:space-y-1 lg:overflow-visible lg:px-3 lg:py-0">
+    <nav className="flex gap-1 overflow-x-auto px-2 py-2 lg:block lg:space-y-1 lg:overflow-visible lg:px-2 lg:py-3">
       {items.map((item) => {
         const Icon = iconMap[item.icon];
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -47,26 +47,26 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
             <Link
               href={item.href}
               className={cn(
-                "flex items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7aa6c2] lg:w-full",
+                "flex items-center gap-2 rounded-sm px-3 py-2 text-sm font-semibold transition duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff] lg:w-full",
                 active
-                  ? "bg-[#173f63] text-white shadow-[0_12px_24px_rgba(23,63,99,0.18)]"
-                  : "text-[#607589] hover:bg-[#eaf3f8] hover:text-[#173f63]",
+                  ? "bg-[#0667b0] text-white shadow-sm"
+                  : "text-[#495057] hover:bg-[#e9ecef] hover:text-[#0667b0]",
               )}
             >
               <Icon className="h-4 w-4 shrink-0" />
               {item.label}
             </Link>
             {item.children && active ? (
-              <div className="mt-1 flex gap-1 lg:block lg:space-y-1 lg:pl-7">
+              <div className="mt-1 flex gap-1 lg:block lg:space-y-1 lg:pl-6">
                 {item.children.map((child) => (
                   <Link
                     key={child.href}
                     href={child.href}
                     className={cn(
-                      "block whitespace-nowrap rounded-lg px-3 py-2 text-sm font-medium transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7aa6c2]",
+                      "block whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff]",
                       pathname === child.href || pathname.startsWith(`${child.href}/`)
-                        ? "bg-white text-[#173f63] shadow-sm ring-1 ring-[#d7e4ee]"
-                        : "text-[#6a7f91] hover:bg-[#edf5f9] hover:text-[#173f63]",
+                        ? "bg-[#e9ecef] text-[#0667b0] ring-1 ring-[#dee2e6]"
+                        : "text-[#6c757d] hover:bg-[#f8f9fa] hover:text-[#0667b0]",
                     )}
                   >
                     {child.label}

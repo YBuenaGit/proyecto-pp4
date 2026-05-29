@@ -43,6 +43,7 @@ export default async function ExpedientsListPage({ searchParams }: { searchParam
       <PageHeader
         title="Despacho · Expedientes internos"
         description="Submodulo administrativo para compras, repuestos, sueldos, alimentos, insumos, mantenimiento y otros expedientes."
+        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Despacho", href: "/despacho" }, { label: "Expedientes internos" }]}
         actions={
           <AppModal title="Nuevo expediente interno" trigger={<><Plus className="h-4 w-4" />Nuevo expediente</>} size="lg">
             <ExpedientForm
@@ -68,15 +69,15 @@ export default async function ExpedientsListPage({ searchParams }: { searchParam
         {expedients.map((expedient) => (
           <tr key={expedient.id}>
             <Td>
-              <Link href={`/despacho/expedientes/${expedient.id}`} className="whitespace-nowrap font-medium text-sky-800 hover:underline">
+              <Link href={`/despacho/expedientes/${expedient.id}`} className="whitespace-nowrap font-medium text-[#0667b0] hover:underline">
                 {expedient.internalNumber}
               </Link>
             </Td>
             <Td>{expedient.expedienteNumber ?? "-"}</Td>
             <Td>{categories.find((item) => item.value === expedient.category)?.label ?? labelFromValue(expedient.category)}</Td>
             <Td>
-              <div className="font-medium text-slate-900">{formatDateTime(expedient.createdAt)}</div>
-              <div className="text-xs text-slate-500">Usuario: {expedient.createdBy.name}</div>
+              <div className="font-medium text-[#212529]">{formatDateTime(expedient.createdAt)}</div>
+              <div className="text-xs text-[#6c757d]">Usuario: {expedient.createdBy.name}</div>
             </Td>
             <Td><StatusBadge value={expedient.status} /></Td>
           </tr>

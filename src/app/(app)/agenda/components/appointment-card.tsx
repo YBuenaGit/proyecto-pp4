@@ -41,12 +41,12 @@ const typeVisuals: Record<AppointmentType, { border: string; iconBox: string; Ic
   CONSULTA: { border: "border-l-emerald-400", iconBox: "bg-emerald-50 text-emerald-700", Icon: UsersRound },
   AUDIENCIA: { border: "border-l-indigo-400", iconBox: "bg-indigo-50 text-indigo-700", Icon: Scale },
   VENCIMIENTO: { border: "border-l-orange-400", iconBox: "bg-orange-50 text-orange-700", Icon: CalendarClock },
-  REUNION: { border: "border-l-sky-400", iconBox: "bg-sky-50 text-sky-700", Icon: BriefcaseBusiness },
+  REUNION: { border: "border-l-sky-400", iconBox: "bg-[#d1ecf1] text-[#0667b0]", Icon: BriefcaseBusiness },
   MEDIACION: { border: "border-l-violet-400", iconBox: "bg-violet-50 text-violet-700", Icon: Scale },
   FIRMA_DOCUMENTACION: { border: "border-l-teal-400", iconBox: "bg-teal-50 text-teal-700", Icon: FileSignature },
   LLAMADA: { border: "border-l-blue-400", iconBox: "bg-blue-50 text-blue-700", Icon: PhoneCall },
   TAREA_ADMINISTRATIVA: { border: "border-l-cyan-400", iconBox: "bg-cyan-50 text-cyan-700", Icon: ClipboardList },
-  GESTION_DOCUMENTAL: { border: "border-l-slate-400", iconBox: "bg-slate-100 text-slate-700", Icon: FileText },
+  GESTION_DOCUMENTAL: { border: "border-l-[#adb5bd]", iconBox: "bg-[#e9ecef] text-[#495057]", Icon: FileText },
   RECORDATORIO: { border: "border-l-amber-400", iconBox: "bg-amber-50 text-amber-700", Icon: CalendarClock },
   OTRO: { border: "border-l-zinc-400", iconBox: "bg-zinc-100 text-zinc-700", Icon: Circle },
 };
@@ -96,7 +96,7 @@ export function AppointmentCard({
   const Icon = visual.Icon;
 
   return (
-    <article className={cn("rounded-2xl border border-l-4 border-[#d7e4ee] bg-white/[0.92] p-3 shadow-[0_14px_30px_rgba(26,68,104,0.08)] transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_18px_38px_rgba(26,68,104,0.12)]", visual.border)}>
+    <article className={cn("rounded-sm border border-l-4 border-[#dee2e6] bg-white p-3 shadow-sm transition duration-150 hover:bg-[#f8f9fa]", visual.border)}>
       <div className="flex min-w-0 gap-3">
         <div className={cn("mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full", visual.iconBox)}>
           <Icon className="h-4 w-4" />
@@ -105,10 +105,10 @@ export function AppointmentCard({
           <div className="flex min-w-0 items-start justify-between gap-2">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-semibold text-[#172033]">{timeLabel}</span>
+                <span className="text-sm font-semibold text-[#212529]">{timeLabel}</span>
                 <span className="text-[11px] font-semibold text-[#607589]">{appointmentTypeLabel(appointment.type)}</span>
               </div>
-              <h3 className="mt-0.5 truncate text-sm font-semibold text-[#172033]">{appointment.title}</h3>
+              <h3 className="mt-0.5 truncate text-sm font-semibold text-[#212529]">{appointment.title}</h3>
             </div>
             <span className={cn("shrink-0", badgeClass(appointment.status, APPOINTMENT_STATUS_TONES))}>
               {appointmentStatusLabel(appointment.status)}
@@ -138,7 +138,7 @@ export function AppointmentCard({
               title="Editar cita"
               trigger={<Edit3 className="h-3.5 w-3.5" />}
               triggerVariant="secondary"
-              triggerClassName="h-8 w-8 border-[#d7e4ee] px-0 text-[#607589] shadow-none hover:text-[#173f63]"
+              triggerClassName="h-8 w-8 border-[#dee2e6] px-0 text-[#6c757d] shadow-none hover:text-[#0667b0]"
               size="xl"
             >
               <AppointmentForm
@@ -155,7 +155,7 @@ export function AppointmentCard({
           ) : null}
           {canEdit && appointment.status !== "CANCELADA" ? (
             <form action={cancelAppointment.bind(null, appointment.id)}>
-              <Button type="submit" variant="secondary" className="h-8 w-8 px-0 text-[#607589] shadow-none hover:text-[#173f63]" title="Cancelar cita">
+              <Button type="submit" variant="secondary" className="h-8 w-8 px-0 text-[#6c757d] shadow-none hover:text-[#0667b0]" title="Cancelar cita">
                 <Ban className="h-3.5 w-3.5" />
               </Button>
             </form>

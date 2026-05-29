@@ -5,6 +5,7 @@ import { Clock, Download, Edit, FileText, Plus, Send, Upload } from "lucide-reac
 import { AppModal } from "@/components/ui/app-modal";
 import { AttachmentList, UploadForm } from "@/components/ui/attachments";
 import { AuditTimeline } from "@/components/ui/audit-timeline";
+import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Button, LinkButton } from "@/components/ui/button";
 import { DetailField, DetailSection, FieldGrid } from "@/components/ui/detail-section";
 import { FormField, inputClass, textareaClass } from "@/components/ui/form-controls";
@@ -24,6 +25,7 @@ import {
 } from "../actions";
 import { InterventionForm } from "../intervention-form";
 import { AddJuridicalActionForm } from "./add-juridical-action-form";
+import { LegajoBookViewer, type LegajoBookItem } from "./legajo-book-viewer";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -125,21 +127,21 @@ function PersonBlock({
 }) {
   return (
     <div className="rounded-xl bg-[#f6fafc] p-3 ring-1 ring-[#d7e4ee]">
-      <h3 className="text-sm font-semibold text-[#172033]">{title}</h3>
+      <h3 className="text-sm font-semibold text-[#212529]">{title}</h3>
       <div className="mt-3 space-y-3">
         {people.length ? (
           people.map((person, index) => (
             <div key={`${title}-${index}`} className="rounded-lg bg-white px-3 py-2.5 text-sm leading-6 shadow-sm ring-1 ring-[#e4edf4]">
               {person.isAnonymous ? (
-                <p className="font-semibold text-[#172033]">Denunciante anonimo</p>
+                <p className="font-semibold text-[#212529]">Denunciante anonimo</p>
               ) : (
                 <>
-                  <p className="font-semibold text-[#172033]">{display(fullName(person))}</p>
+                  <p className="font-semibold text-[#212529]">{display(fullName(person))}</p>
                   <p className="text-[#607589]">DNI: {display(person.dni)}</p>
                   <p className="text-[#607589]">Telefono: {display(phoneLine(person))}</p>
                   <p className="text-[#607589]">Domicilio: {display(person.address)}</p>
                   {index === 0 && profileHref ? (
-                    <Link className="mt-1 inline-block font-semibold text-[#255f85] hover:underline" href={profileHref}>
+                    <Link className="mt-1 inline-block font-semibold text-[#0667b0] hover:underline" href={profileHref}>
                       Ver persona
                     </Link>
                   ) : null}
@@ -159,8 +161,8 @@ function SheetText({ label, children }: { label: string; children: string | null
   if (!children?.trim()) return null;
   return (
     <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-[#607589]">{label}</p>
-      <p className="mt-1 whitespace-pre-wrap text-[15px] leading-7 text-[#172033]">{children}</p>
+      <p className="text-xs font-semibold uppercase tracking-wide text-[#6c757d]">{label}</p>
+      <p className="mt-1 whitespace-pre-wrap text-[15px] leading-7 text-[#212529]">{children}</p>
     </div>
   );
 }
@@ -168,19 +170,19 @@ function SheetText({ label, children }: { label: string; children: string | null
 function SheetAttachments({ attachments }: { attachments: LegajoAttachment[] }) {
   if (!attachments.length) return null;
   return (
-    <div className="rounded-lg bg-[#f6fafc] p-3 ring-1 ring-[#d7e4ee]">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#607589]">Adjuntos de esta hoja</p>
+    <div className="rounded-sm border border-[#dee2e6] bg-[#f8f9fa] p-3">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Adjuntos de esta hoja</p>
       <div className="grid gap-2 sm:grid-cols-2">
         {attachments.map((attachment) => (
           <Link
             key={attachment.id}
             href={`/adjuntos/${attachment.id}`}
-            className="flex min-w-0 items-start gap-2 rounded-lg bg-white px-3 py-2 text-sm text-[#172033] ring-1 ring-[#e4edf4] transition hover:ring-[#9bb8ca]"
+            className="flex min-w-0 items-start gap-2 rounded-sm border border-[#dee2e6] bg-white px-3 py-2 text-sm text-[#212529] transition hover:bg-[#e9ecef]"
           >
-            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[#255f85]" />
+            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[#0667b0]" />
             <span className="min-w-0">
               <span className="block truncate font-semibold">{attachment.originalName}</span>
-              <span className="text-xs text-[#607589]">{Math.ceil(attachment.size / 1024)} KB · {attachment.uploadedBy.name}</span>
+              <span className="text-xs text-[#6c757d]">{Math.ceil(attachment.size / 1024)} KB · {attachment.uploadedBy.name}</span>
             </span>
           </Link>
         ))}
@@ -223,13 +225,13 @@ function LegajoSheet({
   editAction?: ReactNode;
 }) {
   return (
-    <article className="rounded-2xl border border-[#d7e4ee] bg-white shadow-[0_16px_34px_rgba(26,68,104,0.08)]">
-      <div className="border-b border-[#d7e4ee] bg-gradient-to-r from-[#f7fbfd] to-white px-4 py-4 sm:px-5">
+    <article className="min-h-[680px] rounded-sm border border-[#e3d6bd] bg-[#fffdf7] shadow-[0_12px_34px_rgba(0,0,0,0.22)]">
+      <div className="border-b border-[#e3d6bd] bg-[#fff8e6] px-4 py-4 sm:px-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#607589]">Hoja {sheetNumber}</p>
-            <h3 className="mt-1 text-lg font-semibold text-[#172033]">{title}</h3>
-            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-[#607589]">
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Hoja {sheetNumber}</p>
+            <h3 className="mt-1 text-lg font-semibold text-[#212529]">{title}</h3>
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-[#6c757d]">
               <span>{formatDateTime(date)}</span>
               <span>Registrado por: {actor} ({labelFromValue(role)})</span>
             </div>
@@ -245,10 +247,10 @@ function LegajoSheet({
       </div>
       <div className="space-y-4 px-4 py-4 sm:px-5">
         <div className="flex flex-wrap gap-2">
-          {actionType ? <span className="rounded-md bg-[#eaf3f8] px-2.5 py-1 text-xs font-semibold text-[#2f4c63]">{labelFromValue(actionType)}</span> : null}
-          {statusText ? <span className="rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-800">{statusText}</span> : null}
+          {actionType ? <span className="rounded-sm border border-[#bee5eb] bg-[#d1ecf1] px-2.5 py-1 text-xs font-semibold text-[#0c5460]">{labelFromValue(actionType)}</span> : null}
+          {statusText ? <span className="rounded-sm border border-[#c3e6cb] bg-[#d4edda] px-2.5 py-1 text-xs font-semibold text-[#155724]">{statusText}</span> : null}
           {nextStepDate ? (
-            <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-800">
+            <span className="inline-flex items-center gap-1 rounded-sm border border-[#ffeeba] bg-[#fff3cd] px-2.5 py-1 text-xs font-semibold text-[#856404]">
               <Clock className="h-3.5 w-3.5" />
               Seguimiento: {formatDate(nextStepDate)}
             </span>
@@ -378,19 +380,49 @@ export default async function InterventionDetailPage({ params }: { params: Promi
   const nextAction = visibleActions
     .filter((action) => action.nextStepDate && action.nextStepDate >= new Date())
     .sort((a, b) => (a.nextStepDate?.getTime() ?? 0) - (b.nextStepDate?.getTime() ?? 0))[0];
+  const initialStatusText = `Estado inicial: ${labelFromValue(initialStatusFromAudit(auditLogs, intervention.status))}`;
+  const bookItems: LegajoBookItem[] = [
+    ...displayActionSheets.map(({ action, sheetNumber, parsed, statusText }) => ({
+      sheetNumber,
+      title: labelFromValue(action.actionType),
+      dateText: formatDateTime(action.createdAt),
+      statusText,
+      searchText: [
+        parsed.description,
+        parsed.guidanceProvided,
+        parsed.nextStepDescription,
+        action.createdBy.name,
+        labelFromValue(action.actionType),
+      ].filter(Boolean).join(" "),
+    })),
+    {
+      sheetNumber: 1,
+      title: "Primera atencion",
+      dateText: formatDateTime(intervention.attendedAt),
+      statusText: initialStatusText,
+      searchText: [
+        intervention.description,
+        intervention.guidanceProvided,
+        intervention.confidentialNotes,
+        intervention.createdBy.name,
+        labelFromValue(intervention.type),
+      ].filter(Boolean).join(" "),
+    },
+  ];
 
   return (
     <main className="space-y-5">
-      <section className="rounded-2xl border border-[#d7e4ee] bg-gradient-to-br from-[#fbfdff] to-[#edf5f9] p-4 shadow-[0_18px_42px_rgba(26,68,104,0.08)] sm:p-5">
+      <Breadcrumbs items={[{ label: "Inicio", href: "/" }, { label: "Intervenciones", href: "/intervenciones" }, { label: intervention.internalNumber }]} />
+      <section className="rounded-sm border border-[#dee2e6] bg-white p-3 shadow-sm sm:p-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-[#607589]">Secretaria de Seguridad</p>
-            <h1 className="mt-1 text-2xl font-semibold text-[#172033] sm:text-3xl">Legajo de la intervencion {intervention.internalNumber}</h1>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Sistema interno</p>
+            <h1 className="mt-1 text-2xl font-semibold text-[#212529] sm:text-3xl">Legajo de la intervencion {intervention.internalNumber}</h1>
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="rounded-md bg-white/80 px-2.5 py-1 text-sm font-semibold text-[#2f4c63] ring-1 ring-[#d7e4ee]">{labelFromValue(intervention.type)}</span>
+              <span className="rounded-sm border border-[#dee2e6] bg-[#f8f9fa] px-2.5 py-1 text-sm font-semibold text-[#495057]">{labelFromValue(intervention.type)}</span>
               <StatusBadge value={intervention.status} className="w-auto max-w-none" />
               <StatusBadge value={intervention.urgency} className="w-auto max-w-none" />
-              <span className="rounded-md bg-white/80 px-2.5 py-1 text-sm font-semibold text-[#607589] ring-1 ring-[#d7e4ee]">
+              <span className="rounded-sm border border-[#dee2e6] bg-[#f8f9fa] px-2.5 py-1 text-sm font-semibold text-[#6c757d]">
                 Apertura: {formatDateTime(intervention.attendedAt)}
               </span>
             </div>
@@ -447,21 +479,15 @@ export default async function InterventionDetailPage({ params }: { params: Promi
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         <section className="space-y-4">
-          <div className="rounded-2xl border border-[#d7e4ee] bg-[#fbfdff] p-4 shadow-[0_18px_42px_rgba(26,68,104,0.08)] sm:p-5">
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <h2 className="text-xl font-semibold text-[#172033]">Legajo de la intervencion</h2>
-                <p className="mt-1 max-w-3xl text-sm leading-6 text-[#607589]">
-                  Registros documentales de todas las actuaciones y presentaciones vinculadas a esta intervencion.
-                </p>
-              </div>
+          <LegajoBookViewer
+            items={bookItems}
+            downloadHref={`/intervenciones/${intervention.id}/legajo.pdf`}
+            headerAction={
               <AppModal title="Nuevo registro de intervencion" description="Crea una nueva hoja documental dentro de este legajo." trigger={<><Plus className="h-4 w-4" />Nueva hoja</>} size="md">
                 <AddJuridicalActionForm action={addJuridicalAction.bind(null, intervention.id)} submitLabel="Crear hoja" />
               </AppModal>
-            </div>
-          </div>
-
-          <div className="space-y-4">
+            }
+          >
             {displayActionSheets.map(({ action, sheetNumber, parsed, statusText }) => (
               <LegajoSheet
                 key={action.id}
@@ -506,14 +532,14 @@ export default async function InterventionDetailPage({ params }: { params: Promi
               description={intervention.description}
               guidance={intervention.guidanceProvided}
               actionType={intervention.type}
-              statusText={`Estado inicial: ${labelFromValue(initialStatusFromAudit(auditLogs, intervention.status))}`}
+              statusText={initialStatusText}
               nextStepDescription={null}
               nextStepDate={null}
               confidentialNotes={intervention.confidentialNotes}
               attachments={[]}
               pdfHref={`/intervenciones/${intervention.id}/legajo.pdf?hoja=1`}
             />
-          </div>
+          </LegajoBookViewer>
         </section>
 
         <aside className="space-y-5">
@@ -564,13 +590,13 @@ export default async function InterventionDetailPage({ params }: { params: Promi
             <div className="space-y-2">
               {referrals.map((referral) => (
                 <div key={referral.id} className="rounded-lg bg-[#f6fafc] p-3 text-sm ring-1 ring-[#d7e4ee]">
-                  <p className="font-semibold text-[#172033]">
+                  <p className="font-semibold text-[#212529]">
                     {referral.originModule} {"->"} {referral.destinationModule}
                   </p>
                   <p className="mt-1 leading-6 text-[#334b5f]">{referral.summary}</p>
                   <p className="mt-1 text-xs text-[#607589]">{formatDateTime(referral.referredAt)}</p>
                   {directivoCanSeeDispatch && referral.destinationDispatchRecordId ? (
-                    <Link className="mt-2 inline-block text-xs font-semibold text-[#255f85] hover:underline" href={`/despacho/${referral.destinationDispatchRecordId}`}>
+                    <Link className="mt-2 inline-block text-xs font-semibold text-[#0667b0] hover:underline" href={`/despacho/${referral.destinationDispatchRecordId}`}>
                       Ver atencion vinculada
                     </Link>
                   ) : null}
@@ -589,7 +615,7 @@ export default async function InterventionDetailPage({ params }: { params: Promi
               <div className="rounded-lg bg-[#f6fafc] p-3 text-sm leading-6 ring-1 ring-[#d7e4ee]">
                 {lastAudit ? (
                   <>
-                    <p className="font-semibold text-[#172033]">Ultima modificacion</p>
+                    <p className="font-semibold text-[#212529]">Ultima modificacion</p>
                     <p className="text-[#607589]">{lastAudit.createdBy?.name ?? "Sistema"}</p>
                     <p className="text-[#607589]">{formatDateTime(lastAudit.createdAt)}</p>
                   </>

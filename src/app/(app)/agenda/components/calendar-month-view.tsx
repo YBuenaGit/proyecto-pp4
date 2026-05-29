@@ -31,36 +31,36 @@ export function CalendarMonthView({
   const nextMonth = addMonths(monthKey, 1);
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#d7e4ee] bg-[#fbfdff]/[0.96] shadow-[0_18px_42px_rgba(26,68,104,0.08)]">
-      <div className="grid min-h-14 grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-[#d7e4ee] bg-gradient-to-r from-[#f7fbfd] to-[#edf5f9] px-4 py-3">
+    <section className="overflow-hidden rounded-sm border border-[#dee2e6] bg-white shadow-sm">
+      <div className="grid min-h-12 grid-cols-[1fr_auto_1fr] items-center gap-2 border-b border-[#dee2e6] bg-[#e9ecef] px-3 py-2">
         <Link
           href={agendaHref(query, { month: previousMonth, day: firstDayOfMonth(previousMonth) })}
           aria-label="Mes anterior"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[#607589] transition hover:bg-white hover:text-[#173f63]"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-sm text-[#6c757d] transition hover:bg-white hover:text-[#0667b0]"
         >
           <ChevronLeft className="h-4 w-4" />
         </Link>
-        <h2 className="text-center text-lg font-semibold capitalize tracking-[-0.01em] text-[#172033]">{title}</h2>
+        <h2 className="text-center text-lg font-semibold capitalize tracking-normal text-[#212529]">{title}</h2>
         <div className="flex items-center justify-end gap-2">
           <Link
             href={agendaHref(query, { month: todayKey.slice(0, 7), day: todayKey })}
-            className="inline-flex h-9 items-center justify-center rounded-lg border border-[#c9d9e5] bg-white px-3 text-xs font-semibold text-[#2f4c63] transition hover:bg-[#f3f8fb]"
+            className="inline-flex h-9 items-center justify-center rounded-sm border border-[#6c757d] bg-white px-3 text-xs font-semibold text-[#495057] transition hover:bg-[#e9ecef]"
           >
             Hoy
           </Link>
           <Link
             href={agendaHref(query, { month: nextMonth, day: firstDayOfMonth(nextMonth) })}
             aria-label="Mes siguiente"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-[#607589] transition hover:bg-white hover:text-[#173f63]"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-sm text-[#6c757d] transition hover:bg-white hover:text-[#0667b0]"
           >
             <ChevronRight className="h-4 w-4" />
           </Link>
         </div>
       </div>
       <div className="w-full">
-        <div className="grid grid-cols-7 border-b border-[#d7e4ee] bg-[#f3f8fb]">
+        <div className="grid grid-cols-7 border-b border-[#dee2e6] bg-[#f8f9fa]">
           {weekDays.map((day) => (
-            <div key={day} className="border-r border-[#d7e4ee] px-1.5 py-2 text-center text-[11px] font-semibold text-[#607589] last:border-r-0 sm:px-3 sm:text-xs">
+            <div key={day} className="border-r border-[#dee2e6] px-1.5 py-2 text-center text-[11px] font-semibold text-[#6c757d] last:border-r-0 sm:px-3 sm:text-xs">
               {day}
             </div>
           ))}

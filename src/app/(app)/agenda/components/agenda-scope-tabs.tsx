@@ -22,7 +22,7 @@ export function AgendaScopeTabs({
             "inline-flex h-9 items-center rounded-md border px-4 text-xs font-semibold transition",
             activeScope === scope
               ? "border-[#0b2a55] bg-[#0b2a55] text-white shadow-sm"
-              : "border-slate-200 bg-white text-[#14213d] hover:bg-slate-50",
+              : "border-[#dee2e6] bg-white text-[#14213d] hover:bg-[#f8f9fa]",
           )}
         >
           {CALENDAR_SCOPE_LABELS[scope]}

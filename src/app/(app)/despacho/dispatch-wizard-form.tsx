@@ -55,13 +55,13 @@ const steps = [
 ];
 
 const inputClass =
-  "h-11 w-full rounded-lg border border-[#c9d9e5] bg-white/95 px-3 text-sm text-[#172033] shadow-[inset_0_1px_0_rgba(255,255,255,0.70)] outline-none transition duration-200 placeholder:text-[#8da2b3] hover:border-[#9bb8ca] focus:border-[#255f85] focus:ring-[3px] focus:ring-[#c7dcea] disabled:bg-[#eef3f6] disabled:text-[#8da2b3]";
+  "h-9 w-full rounded-sm border border-[#ced4da] bg-white px-2.5 text-sm text-[#212529] outline-none transition duration-150 placeholder:text-[#6c757d] focus:border-[#80bdff] focus:ring-2 focus:ring-[rgba(0,123,255,.25)] disabled:bg-[#e9ecef] disabled:text-[#6c757d]";
 
 const textareaClass =
-  "min-h-28 w-full rounded-lg border border-[#c9d9e5] bg-white/95 px-3 py-2 text-sm leading-6 text-[#172033] shadow-[inset_0_1px_0_rgba(255,255,255,0.70)] outline-none transition duration-200 placeholder:text-[#8da2b3] hover:border-[#9bb8ca] focus:border-[#255f85] focus:ring-[3px] focus:ring-[#c7dcea]";
+  "min-h-28 w-full rounded-sm border border-[#ced4da] bg-white px-2.5 py-2 text-sm leading-6 text-[#212529] outline-none transition duration-150 placeholder:text-[#6c757d] focus:border-[#80bdff] focus:ring-2 focus:ring-[rgba(0,123,255,.25)]";
 
 const fileInputClass =
-  "block w-full rounded-lg border border-dashed border-[#9bb8ca] bg-[#f3f8fb] px-3 py-2.5 text-sm text-[#334b5f] file:mr-2 file:rounded-lg file:border-0 file:bg-[#173f63] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[#225b80]";
+  "block w-full rounded-sm border border-dashed border-[#17a2b8] bg-[#d1ecf1]/40 px-3 py-2.5 text-sm text-[#212529] file:mr-2 file:rounded-sm file:border-0 file:bg-[#0667b0] file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white hover:file:bg-[#0a61b9]";
 
 const dniPattern = /^\d{7,8}$/;
 const phonePattern = /^\d{7,10}$/;
@@ -280,9 +280,9 @@ function StepCard({
   className?: string;
 }) {
   return (
-    <section className={cn("rounded-lg border border-slate-200 bg-white p-3 shadow-sm sm:p-3.5", className)}>
+    <section className={cn("rounded-lg border border-[#dee2e6] bg-white p-3 shadow-sm sm:p-3.5", className)}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-base font-semibold text-slate-950">{title}</h3>
+        <h3 className="text-base font-semibold text-[#212529]">{title}</h3>
         {action}
       </div>
       <div className="mt-2.5">{children}</div>
@@ -303,7 +303,7 @@ function Field({
 }) {
   return (
     <label className={cn("block", className)}>
-      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</span>
+      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-[#6c757d]">{label}</span>
       {children}
       {error ? <span className="mt-1.5 block text-xs font-semibold text-rose-600">{error}</span> : null}
     </label>
@@ -322,13 +322,13 @@ function SummaryBlock({
   children: ReactNode;
 }) {
   return (
-    <section className="border-t border-slate-200 py-2.5 first:border-t-0 first:pt-0 last:pb-0">
+    <section className="border-t border-[#dee2e6] py-2.5 first:border-t-0 first:pt-0 last:pb-0">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-        <h4 className="text-sm font-semibold text-slate-950">{title}</h4>
+        <h4 className="text-sm font-semibold text-[#212529]">{title}</h4>
         <button
           type="button"
           onClick={onEdit}
-          className="inline-flex min-h-8 items-center gap-1 rounded-md border border-blue-100 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
+          className="inline-flex min-h-8 items-center gap-1 rounded-md border border-[#bee5eb] bg-[#d1ecf1] px-2.5 py-1 text-xs font-semibold text-[#0c5460] transition hover:bg-[#bee5eb]"
         >
           <Pencil className="h-3.5 w-3.5" />
           {actionLabel}
@@ -345,9 +345,9 @@ function SummaryGrid({ children }: { children: ReactNode }) {
 
 function SummaryItem({ label, value }: { label: string; value: ReactNode }) {
   return (
-    <div className="rounded-md bg-slate-50 px-2.5 py-1.5">
-      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</dt>
-      <dd className="mt-1 text-slate-900">{value}</dd>
+    <div className="rounded-md bg-[#f8f9fa] px-2.5 py-1.5">
+      <dt className="text-xs font-semibold uppercase tracking-wide text-[#6c757d]">{label}</dt>
+      <dd className="mt-1 text-[#212529]">{value}</dd>
     </div>
   );
 }
@@ -355,7 +355,7 @@ function SummaryItem({ label, value }: { label: string; value: ReactNode }) {
 function SummaryItems({ items }: { items: Array<{ label: string; value: string }> }) {
   const visibleItems = items.filter((item) => item.value.trim());
   if (!visibleItems.length) {
-    return <p className="rounded-md bg-slate-50 px-2.5 py-1.5 text-sm text-slate-700">Sin datos cargados.</p>;
+    return <p className="rounded-md bg-[#f8f9fa] px-2.5 py-1.5 text-sm text-[#495057]">Sin datos cargados.</p>;
   }
 
   return (
@@ -531,7 +531,7 @@ export function DispatchWizardForm({
       <input type="hidden" name="usesHistoricalDate" value={values.usesHistoricalDate ? "true" : "false"} />
 
       <div className="space-y-3">
-        <div className="rounded-lg border border-slate-200 bg-white p-2.5 shadow-sm">
+        <div className="rounded-lg border border-[#dee2e6] bg-white p-2.5 shadow-sm">
           <ol className="grid grid-cols-4 gap-1.5">
             {steps.map((step, index) => {
               const isCurrent = index === currentStep;
@@ -552,12 +552,12 @@ export function DispatchWizardForm({
                     <span
                       className={cn(
                         "flex h-9 w-9 items-center justify-center rounded-full border text-sm font-bold transition",
-                        isCurrent && !hasError && "border-blue-600 bg-blue-600 text-white shadow-sm shadow-blue-200",
+                        isCurrent && !hasError && "border-[#0667b0] bg-[#0667b0] text-white shadow-sm shadow-blue-200",
                         isCurrent && hasError && "border-rose-500 bg-rose-500 text-white shadow-sm shadow-rose-200",
                         isComplete && "border-emerald-500 bg-emerald-500 text-white",
                         hasError && !isCurrent && "border-rose-500 bg-rose-50 text-rose-600",
-                        isLocked && "border-slate-200 bg-slate-100 text-slate-400",
-                        !isCurrent && !isComplete && !hasError && !isLocked && "border-slate-300 bg-white text-slate-600 group-hover:border-blue-300",
+                        isLocked && "border-[#dee2e6] bg-[#e9ecef] text-[#adb5bd]",
+                        !isCurrent && !isComplete && !hasError && !isLocked && "border-[#ced4da] bg-white text-[#6c757d] group-hover:border-blue-300",
                       )}
                     >
                       {isLocked ? (
@@ -573,11 +573,11 @@ export function DispatchWizardForm({
                     <span
                       className={cn(
                         "text-[11px] font-semibold leading-tight sm:text-xs",
-                        isCurrent && "text-blue-700",
+                        isCurrent && "text-[#0c5460]",
                         isComplete && "text-emerald-700",
                         hasError && "text-rose-600",
-                        isLocked && "text-slate-400",
-                        !isCurrent && !isComplete && !hasError && !isLocked && "text-slate-600",
+                        isLocked && "text-[#adb5bd]",
+                        !isCurrent && !isComplete && !hasError && !isLocked && "text-[#6c757d]",
                       )}
                     >
                       {step.label}
@@ -603,12 +603,12 @@ export function DispatchWizardForm({
                       attendedAt: isOpen ? current.attendedAt : currentDateTimeInputValue(),
                     }));
                   }}
-                  className="rounded-lg border border-slate-300 bg-slate-50 text-sm text-slate-700 shadow-sm open:bg-white"
+                  className="rounded-lg border border-[#ced4da] bg-[#f8f9fa] text-sm text-[#495057] shadow-sm open:bg-white"
                 >
-                  <summary className="cursor-pointer select-none px-2.5 py-2 font-semibold outline-none transition hover:bg-slate-100 focus-visible:ring-4 focus-visible:ring-blue-100">
+                  <summary className="cursor-pointer select-none px-2.5 py-2 font-semibold outline-none transition hover:bg-[#e9ecef] focus-visible:ring-4 focus-visible:ring-[rgba(0,123,255,.25)]">
                     Usar fecha histórica
                   </summary>
-                  <div className="border-t border-slate-200 bg-white p-2.5">
+                  <div className="border-t border-[#dee2e6] bg-white p-2.5">
                     <input
                       name="attendedAt"
                       type="datetime-local"
@@ -661,7 +661,7 @@ export function DispatchWizardForm({
               <button
                 type="button"
                 onClick={() => setValue("complainants", [...values.complainants, emptyComplainant()])}
-                className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-blue-100 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-[#bee5eb] bg-[#d1ecf1] px-2.5 py-1 text-xs font-semibold text-[#0c5460] transition hover:bg-[#bee5eb]"
               >
                 <Plus className="h-4 w-4" />
                 Agregar otro denunciante
@@ -670,9 +670,9 @@ export function DispatchWizardForm({
           >
             <div className="space-y-3">
               {values.complainants.map((person, personIndex) => (
-                <div key={person.id} className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+                <div key={person.id} className="rounded-lg border border-[#dee2e6] bg-[#f8f9fa] p-2.5">
                   <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-slate-900">Denunciante {personIndex + 1}</p>
+                    <p className="text-sm font-semibold text-[#212529]">Denunciante {personIndex + 1}</p>
                     {values.complainants.length > 1 ? (
                       <button
                         type="button"
@@ -689,7 +689,7 @@ export function DispatchWizardForm({
                       </button>
                     ) : null}
                   </div>
-                  <label className="mb-2 inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-sm font-semibold text-slate-700">
+                  <label className="mb-2 inline-flex items-center gap-1.5 rounded-lg bg-white px-2.5 py-1.5 text-sm font-semibold text-[#495057]">
                     <input
                       name={`complainants.${personIndex}.isAnonymous`}
                       type="checkbox"
@@ -702,12 +702,12 @@ export function DispatchWizardForm({
                             : { isAnonymous: false },
                         )
                       }
-                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                      className="h-4 w-4 rounded border-[#ced4da] text-[#0667b0] focus:ring-blue-500"
                     />
                     Denunciante anónimo
                   </label>
                   {person.isAnonymous ? (
-                    <p className="rounded-md bg-white px-2.5 py-1.5 text-sm text-slate-600">Los campos personales quedan ocultos para este denunciante.</p>
+                    <p className="rounded-md bg-white px-2.5 py-1.5 text-sm text-[#6c757d]">Los campos personales quedan ocultos para este denunciante.</p>
                   ) : (
                     <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
                       <Field label="DNI" error={errorFor(`complainants.${personIndex}.dni`)}>
@@ -804,7 +804,7 @@ export function DispatchWizardForm({
               <button
                 type="button"
                 onClick={() => setValue("linkedPersons", [...values.linkedPersons, emptyLinkedPerson()])}
-                className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-blue-100 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 transition hover:bg-blue-100"
+                className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-[#bee5eb] bg-[#d1ecf1] px-2.5 py-1 text-xs font-semibold text-[#0c5460] transition hover:bg-[#bee5eb]"
               >
                 <Plus className="h-4 w-4" />
                 Agregar otra persona denunciada
@@ -813,9 +813,9 @@ export function DispatchWizardForm({
           >
             <div className="space-y-3">
               {values.linkedPersons.map((person, personIndex) => (
-                <div key={person.id} className="rounded-lg border border-slate-200 bg-slate-50 p-2.5">
+                <div key={person.id} className="rounded-lg border border-[#dee2e6] bg-[#f8f9fa] p-2.5">
                   <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-semibold text-slate-900">Persona denunciada / vinculada {personIndex + 1}</p>
+                    <p className="text-sm font-semibold text-[#212529]">Persona denunciada / vinculada {personIndex + 1}</p>
                     {values.linkedPersons.length > 1 ? (
                       <button
                         type="button"
@@ -988,8 +988,8 @@ export function DispatchWizardForm({
               </Field>
               {allowAttachments ? (
                 <Field label="Adjuntos" className="md:col-span-2 xl:col-span-3">
-                  <div className="flex items-start gap-2 rounded-lg bg-slate-50 p-2.5">
-                    <UploadCloud className="mt-1 h-5 w-5 shrink-0 text-blue-600" />
+                  <div className="flex items-start gap-2 rounded-lg bg-[#f8f9fa] p-2.5">
+                    <UploadCloud className="mt-1 h-5 w-5 shrink-0 text-[#0667b0]" />
                     <div className="w-full space-y-1.5">
                       <input
                         name="attachments"
@@ -998,7 +998,7 @@ export function DispatchWizardForm({
                         onChange={(event) => setAttachmentNames(Array.from(event.target.files ?? []).map((file) => file.name))}
                         className={fileInputClass}
                       />
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-[#6c757d]">
                         {attachmentNames.length ? `${attachmentNames.length} archivo(s) seleccionado(s).` : "Sin adjuntos seleccionados."}
                       </p>
                     </div>
@@ -1022,10 +1022,10 @@ export function DispatchWizardForm({
                 {submittedComplainants.length ? (
                   <div className="space-y-2">
                     {submittedComplainants.map((person, index) => (
-                      <div key={`summary-complainant-${index}`} className="rounded-md border border-slate-100 bg-white p-2.5">
-                        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Denunciante {index + 1}</p>
+                      <div key={`summary-complainant-${index}`} className="rounded-md border border-[#e9ecef] bg-white p-2.5">
+                        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Denunciante {index + 1}</p>
                         {person.isAnonymous ? (
-                          <p className="text-sm font-semibold text-slate-900">Denunciante anónimo</p>
+                          <p className="text-sm font-semibold text-[#212529]">Denunciante anónimo</p>
                         ) : (
                           <SummaryItems
                             items={[
@@ -1041,7 +1041,7 @@ export function DispatchWizardForm({
                     ))}
                   </div>
                 ) : (
-                  <p className="rounded-md bg-slate-50 px-2.5 py-1.5 text-sm text-slate-700">Sin denunciantes cargados.</p>
+                  <p className="rounded-md bg-[#f8f9fa] px-2.5 py-1.5 text-sm text-[#495057]">Sin denunciantes cargados.</p>
                 )}
               </SummaryBlock>
 
@@ -1049,8 +1049,8 @@ export function DispatchWizardForm({
                 {submittedLinkedPersons.length ? (
                   <div className="space-y-2">
                     {submittedLinkedPersons.map((person, index) => (
-                      <div key={`summary-linked-${index}`} className="rounded-md border border-slate-100 bg-white p-2.5">
-                        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-slate-500">Persona denunciada / vinculada {index + 1}</p>
+                      <div key={`summary-linked-${index}`} className="rounded-md border border-[#e9ecef] bg-white p-2.5">
+                        <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Persona denunciada / vinculada {index + 1}</p>
                         <SummaryItems
                           items={[
                             { label: "DNI", value: person.dni },
@@ -1064,25 +1064,25 @@ export function DispatchWizardForm({
                     ))}
                   </div>
                 ) : (
-                  <p className="rounded-md bg-slate-50 px-2.5 py-1.5 text-sm text-slate-700">Sin personas denunciadas o vinculadas cargadas.</p>
+                  <p className="rounded-md bg-[#f8f9fa] px-2.5 py-1.5 text-sm text-[#495057]">Sin personas denunciadas o vinculadas cargadas.</p>
                 )}
               </SummaryBlock>
 
               <SummaryBlock title="Relato" actionLabel="Editar relato" onEdit={() => goToStep(2)}>
-                <div className="space-y-2 text-sm leading-6 text-slate-800">
+                <div className="space-y-2 text-sm leading-6 text-[#212529]">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Descripción redactada</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Descripción redactada</p>
                     <p className="mt-0.5 whitespace-pre-wrap">{display(values.description)}</p>
                   </div>
                   {values.initialGuidance ? (
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Orientación brindada / intervención inicial</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Orientación brindada / intervención inicial</p>
                       <p className="mt-0.5 whitespace-pre-wrap">{values.initialGuidance}</p>
                     </div>
                   ) : null}
                   {values.confidentialNotes ? (
                     <div>
-                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Notas internas confidenciales</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Notas internas confidenciales</p>
                       <p className="mt-0.5 whitespace-pre-wrap">{values.confidentialNotes}</p>
                     </div>
                   ) : null}
@@ -1096,7 +1096,7 @@ export function DispatchWizardForm({
                   <SummaryItem label="Cantidad de adjuntos" value={allowAttachments ? attachmentNames.length : "Sin cambios desde este formulario"} />
                 </SummaryGrid>
                 {attachmentNames.length ? (
-                  <ul className="mt-2 space-y-0.5 rounded-md bg-slate-50 px-2.5 py-1.5 text-sm text-slate-700">
+                  <ul className="mt-2 space-y-0.5 rounded-md bg-[#f8f9fa] px-2.5 py-1.5 text-sm text-[#495057]">
                     {attachmentNames.map((name) => (
                       <li key={name}>{name}</li>
                     ))}
@@ -1111,7 +1111,7 @@ export function DispatchWizardForm({
           </StepCard>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#dee2e6] bg-white px-3 py-2 shadow-sm">
           <div className="flex flex-wrap items-center gap-1.5">
             {currentStep === 0 ? (
               modal ? (
@@ -1143,7 +1143,7 @@ export function DispatchWizardForm({
           </div>
 
           {currentStep < steps.length - 1 ? (
-            <Button type="button" onClick={goNext} className="border-blue-600 bg-blue-600 hover:bg-blue-700">
+            <Button type="button" onClick={goNext} className="border-[#0667b0] bg-[#0667b0] hover:bg-blue-700">
               Continuar
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -1154,7 +1154,7 @@ export function DispatchWizardForm({
               onClick={() => {
                 createRequestedRef.current = true;
               }}
-              className="border-blue-600 bg-blue-600 hover:bg-blue-700"
+              className="border-[#0667b0] bg-[#0667b0] hover:bg-blue-700"
             >
               {effectiveSubmitLabel}
             </Button>

@@ -32,6 +32,7 @@ export default async function PeoplePage({ searchParams }: { searchParams?: Prom
       <PageHeader
         title="Personas"
         description="Indice unificado de denunciantes y personas denunciadas o vinculadas. El historial visible depende de los permisos del usuario."
+        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Personas" }]}
       />
 
       <FilterBar resetHref="/personas">
@@ -46,10 +47,10 @@ export default async function PeoplePage({ searchParams }: { searchParams?: Prom
         {people.map((person) => (
           <tr key={person.id}>
             <Td>
-              <Link href={`/personas/${person.id}`} className="font-medium text-sky-800 hover:underline">
+              <Link href={`/personas/${person.id}`} className="font-medium text-[#0667b0] hover:underline">
                 {person.displayName}
               </Link>
-              <div className="text-xs text-slate-500">{person.dni ?? "Sin DNI"}</div>
+              <div className="text-xs text-[#6c757d]">{person.dni ?? "Sin DNI"}</div>
             </Td>
             <Td>{[person.phone1, person.phone2].filter(Boolean).join(" / ") || "-"}</Td>
             <Td>{person.address ?? "-"}</Td>
@@ -57,13 +58,13 @@ export default async function PeoplePage({ searchParams }: { searchParams?: Prom
               {person.roles.filter((role) => role !== "REGISTRO").map(roleLabel).join(" / ") || "Registro"}
             </Td>
             <Td>
-              <div className="font-medium text-slate-900">{person.caseCount} casos</div>
+              <div className="font-medium text-[#212529]">{person.caseCount} casos</div>
               {person.latestCase ? (
                 <div className="mt-1">
-                  <Link href={person.latestCase.href} className="whitespace-nowrap font-medium text-sky-800 hover:underline">
+                  <Link href={person.latestCase.href} className="whitespace-nowrap font-medium text-[#0667b0] hover:underline">
                     {person.latestCase.internalNumber}
                   </Link>
-                  <div className="text-xs text-slate-500">{formatDateTime(person.latestCase.attendedAt)}</div>
+                  <div className="text-xs text-[#6c757d]">{formatDateTime(person.latestCase.attendedAt)}</div>
                 </div>
               ) : (
                 "-"

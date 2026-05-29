@@ -233,7 +233,7 @@ export function describeAuditLog(log: AuditTimelineLog): AuditDescription {
 }
 
 export function AuditTimeline({ logs }: { logs: AuditTimelineLog[] }) {
-  if (!logs.length) return <p className="text-sm text-slate-500">Sin eventos de auditoria registrados.</p>;
+  if (!logs.length) return <p className="text-sm text-[#6c757d]">Sin eventos de auditoria registrados.</p>;
 
   return (
     <ol className="space-y-4">
@@ -243,12 +243,12 @@ export function AuditTimeline({ logs }: { logs: AuditTimelineLog[] }) {
         return (
           <li key={log.id} className="border-l-2 border-sky-200 pl-4">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-sm font-medium text-slate-900">{description.title}</span>
-              <span className="text-xs text-slate-500">{formatDateTime(log.createdAt)}</span>
+              <span className="text-sm font-medium text-[#212529]">{description.title}</span>
+              <span className="text-xs text-[#6c757d]">{formatDateTime(log.createdAt)}</span>
             </div>
-            <p className="mt-1 text-sm text-slate-600">{description.actorLine}</p>
+            <p className="mt-1 text-sm text-[#6c757d]">{description.actorLine}</p>
             {description.details.length ? (
-              <ul className="mt-2 space-y-1 text-sm leading-6 text-slate-700">
+              <ul className="mt-2 space-y-1 text-sm leading-6 text-[#495057]">
                 {description.details.map((detail) => (
                   <li key={detail}>{detail}</li>
                 ))}

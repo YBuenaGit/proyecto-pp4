@@ -1,5 +1,6 @@
 import { Plus } from "lucide-react";
 import { AppModal } from "@/components/ui/app-modal";
+import { PageHeader } from "@/components/ui/page-header";
 import type { AgendaQueryValues } from "@/lib/agenda-query";
 import {
   firstDayOfMonth,
@@ -109,44 +110,42 @@ export default async function AgendaPage({ searchParams }: { searchParams?: Prom
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-3xl font-semibold leading-tight tracking-normal text-slate-950">Agenda</h1>
-          <p className="mt-1 text-sm text-slate-600">Gestioná tus citas, reuniones, vencimientos y tareas.</p>
-          <div className="mt-4">
-            <AgendaScopeTabs scopes={viewScopes} activeScope={activeScope} query={query} />
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white p-2 shadow-sm">
-          <AppointmentFilters
-            scopes={viewScopes}
-            activeScope={activeScope}
-            monthKey={monthKey}
-            selectedDay={selectedDay}
-            todayKey={todayKey}
-            filters={filters}
-            users={agendaUsers.users}
-            lawyers={agendaUsers.lawyers}
-          />
-          <AppModal
-            title="Nueva cita"
-            description="La agenda destino define quien puede ver la cita."
-            trigger={<><Plus className="h-4 w-4" />Nueva cita</>}
-            triggerClassName="border-[#0b2a55] bg-[#0b2a55] text-white shadow-none hover:bg-[#082044]"
-            size="xl"
-          >
-            <AppointmentForm
-              action={createAppointment}
-              allowedScopes={allowedScopes}
+      <PageHeader
+        title="Agenda"
+        description="Gestioná tus citas, reuniones, vencimientos y tareas."
+        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Agenda" }]}
+        actions={
+          <div className="flex flex-wrap items-center gap-2 rounded-sm border border-[#dee2e6] bg-white p-2 shadow-sm">
+            <AppointmentFilters
+              scopes={viewScopes}
+              activeScope={activeScope}
+              monthKey={monthKey}
+              selectedDay={selectedDay}
+              todayKey={todayKey}
+              filters={filters}
               users={agendaUsers.users}
               lawyers={agendaUsers.lawyers}
-              defaultDate={selectedDay}
-              modal
             />
-          </AppModal>
-        </div>
-      </div>
+            <AppModal
+              title="Nueva cita"
+              description="La agenda destino define quien puede ver la cita."
+              trigger={<><Plus className="h-4 w-4" />Nueva cita</>}
+              size="xl"
+            >
+              <AppointmentForm
+                action={createAppointment}
+                allowedScopes={allowedScopes}
+                users={agendaUsers.users}
+                lawyers={agendaUsers.lawyers}
+                defaultDate={selectedDay}
+                modal
+              />
+            </AppModal>
+          </div>
+        }
+      />
+
+      <AgendaScopeTabs scopes={viewScopes} activeScope={activeScope} query={query} />
 
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_350px]">
         <div>

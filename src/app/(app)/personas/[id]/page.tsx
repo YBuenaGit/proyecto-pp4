@@ -31,6 +31,7 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
       <PageHeader
         title={person.displayName}
         description="Perfil unificado. Los listados de historial respetan permisos por modulo e indican el rol de la persona en cada caso."
+        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Personas", href: "/personas" }, { label: person.displayName }]}
         actions={
           canJuridical && person.dni ? (
             <>
@@ -66,13 +67,13 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
               {dispatchCases.map((record) => (
                 <tr key={`${record.module}-${record.id}-${record.role}`}>
                   <Td>
-                    <Link href={record.href} className="whitespace-nowrap font-medium text-sky-800 hover:underline">
+                    <Link href={record.href} className="whitespace-nowrap font-medium text-[#0667b0] hover:underline">
                       {record.internalNumber}
                     </Link>
                   </Td>
                   <Td>
-                    <div className="font-medium text-slate-900">{formatDateTime(record.attendedAt)}</div>
-                    <div className="text-xs text-slate-500">Usuario: {record.createdByName}</div>
+                    <div className="font-medium text-[#212529]">{formatDateTime(record.attendedAt)}</div>
+                    <div className="text-xs text-[#6c757d]">Usuario: {record.createdByName}</div>
                   </Td>
                   <Td>{labelFromValue(record.kind)}</Td>
                   <Td><StatusBadge value={record.status} /></Td>
@@ -81,7 +82,7 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
               ))}
             </Table>
           ) : (
-            <p className="text-sm text-slate-500">Historial de Despacho no visible para este rol.</p>
+            <p className="text-sm text-[#6c757d]">Historial de Despacho no visible para este rol.</p>
           )}
         </DetailSection>
 
@@ -91,13 +92,13 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
               {juridicalCases.map((intervention) => (
                 <tr key={`${intervention.module}-${intervention.id}-${intervention.role}`}>
                   <Td>
-                    <Link href={intervention.href} className="whitespace-nowrap font-medium text-sky-800 hover:underline">
+                    <Link href={intervention.href} className="whitespace-nowrap font-medium text-[#0667b0] hover:underline">
                       {intervention.internalNumber}
                     </Link>
                   </Td>
                   <Td>
-                    <div className="font-medium text-slate-900">{formatDateTime(intervention.attendedAt)}</div>
-                    <div className="text-xs text-slate-500">Usuario: {intervention.createdByName}</div>
+                    <div className="font-medium text-[#212529]">{formatDateTime(intervention.attendedAt)}</div>
+                    <div className="text-xs text-[#6c757d]">Usuario: {intervention.createdByName}</div>
                   </Td>
                   <Td>{labelFromValue(intervention.kind)}</Td>
                   <Td><StatusBadge value={intervention.status} /></Td>
@@ -106,7 +107,7 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
               ))}
             </Table>
           ) : (
-            <p className="text-sm text-slate-500">Historial de Intervenciones no visible para este rol.</p>
+            <p className="text-sm text-[#6c757d]">Historial de Intervenciones no visible para este rol.</p>
           )}
         </DetailSection>
       </div>

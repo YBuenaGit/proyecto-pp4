@@ -1,14 +1,17 @@
 @import "tailwindcss";
 
 :root {
-  --background: #eef4f8;
-  --foreground: #172033;
-  --surface: #fbfdff;
-  --surface-soft: #f6f9fc;
-  --line: #d9e4ec;
-  --accent: #255f85;
-  --accent-strong: #173f63;
-  --accent-soft: #e4f0f7;
+  --background: #f8f9fa;
+  --foreground: #212529;
+  --surface: #ffffff;
+  --surface-soft: #f8f9fa;
+  --line: #dee2e6;
+  --accent: #0667b0;
+  --accent-strong: #0a61b9;
+  --accent-soft: #d1ecf1;
+  --info: #17a2b8;
+  --success: #28a745;
+  --danger: #dc3545;
 }
 
 @theme inline {
@@ -16,34 +19,32 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-  --text-xs: 0.875rem;
-  --text-xs--line-height: 1.35rem;
-  --text-sm: 1rem;
-  --text-sm--line-height: 1.65rem;
-  --text-base: 1.125rem;
-  --text-base--line-height: 1.8rem;
-  --text-lg: 1.25rem;
-  --text-lg--line-height: 1.95rem;
-  --text-xl: 1.5rem;
-  --text-xl--line-height: 2.1rem;
-  --text-2xl: 1.875rem;
-  --text-2xl--line-height: 2.35rem;
-  --text-3xl: 2.25rem;
-  --text-3xl--line-height: 2.75rem;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.1rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.35rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.55rem;
+  --text-lg: 1.125rem;
+  --text-lg--line-height: 1.7rem;
+  --text-xl: 1.35rem;
+  --text-xl--line-height: 1.9rem;
+  --text-2xl: 1.65rem;
+  --text-2xl--line-height: 2.05rem;
+  --text-3xl: 2rem;
+  --text-3xl--line-height: 2.35rem;
 }
 
 html {
   font-size: 15px;
   scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
 }
 
 body {
-  background:
-    radial-gradient(circle at 8% -10%, rgba(37, 95, 133, 0.18), transparent 34rem),
-    radial-gradient(circle at 110% 0%, rgba(16, 86, 116, 0.12), transparent 30rem),
-    linear-gradient(180deg, #f7fbfd 0%, var(--background) 44%, #e8f1f6 100%);
+  background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), "Segoe UI", Arial, Helvetica, sans-serif;
   font-size: 1rem;
   line-height: 1.5;
   font-variant-numeric: tabular-nums;
@@ -57,12 +58,12 @@ select {
 }
 
 ::selection {
-  background: #c7dcea;
-  color: #10283f;
+  background: #d1ecf1;
+  color: #0c5460;
 }
 
 * {
-  scrollbar-color: #9bb8ca transparent;
+  scrollbar-color: #adb5bd transparent;
 }
 
 ::-webkit-scrollbar {
@@ -71,7 +72,7 @@ select {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #9bb8ca;
+  background: #adb5bd;
   border: 0.18rem solid transparent;
   border-radius: 999px;
   background-clip: padding-box;
@@ -79,4 +80,8 @@ select {
 
 ::-webkit-scrollbar-track {
   background: transparent;
+}
+
+a {
+  color: inherit;
 }

@@ -159,13 +159,13 @@ export function AddJuridicalActionForm({
             type="file"
             multiple
             onChange={addAttachments}
-            className="block w-full text-sm text-[#334b5f] file:mr-2 file:rounded-lg file:border-0 file:bg-[#173f63] file:px-3 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-[#225b80]"
+            className="block w-full text-sm text-[#212529] file:mr-2 file:rounded-sm file:border-0 file:bg-[#0667b0] file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white hover:file:bg-[#0a61b9]"
           />
           <p className="text-xs text-[#607589]">
             {selectedAttachments.length ? `${selectedAttachments.length} archivo(s) seleccionado(s).` : "Sin adjuntos seleccionados."}
           </p>
           {selectedAttachments.length ? (
-            <ul className="space-y-1 rounded-md bg-white px-3 py-2 text-sm text-slate-700">
+            <ul className="space-y-1 rounded-md bg-white px-3 py-2 text-sm text-[#495057]">
               {selectedAttachments.map((file, index) => (
                 <li key={`${attachmentKey(file)}-${index}`} className="flex items-center justify-between gap-3">
                   <span className="min-w-0 truncate">{file.name}</span>

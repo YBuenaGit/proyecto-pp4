@@ -12,13 +12,13 @@ const eventDots: Record<AppointmentType, string> = {
   FIRMA_DOCUMENTACION: "bg-teal-500",
   LLAMADA: "bg-blue-500",
   TAREA_ADMINISTRATIVA: "bg-cyan-500",
-  GESTION_DOCUMENTAL: "bg-slate-500",
+  GESTION_DOCUMENTAL: "bg-[#f8f9fa]0",
   RECORDATORIO: "bg-amber-500",
   OTRO: "bg-zinc-400",
 };
 
 function eventDot(type: string) {
-  return eventDots[type as AppointmentType] ?? "bg-slate-400";
+  return eventDots[type as AppointmentType] ?? "bg-[#adb5bd]";
 }
 
 export function CalendarDayCell({
@@ -55,9 +55,9 @@ export function CalendarDayCell({
           className={cn(
             "flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold",
             selected || today
-              ? "bg-[#173f63] text-white"
+              ? "bg-[#0667b0] text-white"
               : inCurrentMonth
-                ? "text-[#172033]"
+                ? "text-[#212529]"
                 : "text-[#8da2b3]",
           )}
         >

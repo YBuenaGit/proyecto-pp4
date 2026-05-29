@@ -39,6 +39,7 @@ export default async function ExpedientDetailPage({ params }: { params: Promise<
       <PageHeader
         title={expedient.internalNumber}
         description="Detalle de expediente administrativo interno."
+        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Despacho", href: "/despacho" }, { label: "Expedientes internos", href: "/despacho/expedientes" }, { label: expedient.internalNumber }]}
         actions={
           <>
             <AppModal title={`Editar ${expedient.internalNumber}`} trigger={<><Edit className="h-4 w-4" />Editar</>} triggerVariant="secondary" size="lg">
@@ -69,7 +70,7 @@ export default async function ExpedientDetailPage({ params }: { params: Promise<
             </FieldGrid>
           </DetailSection>
           <DetailSection title="Descripcion">
-            <p className="whitespace-pre-wrap text-sm leading-6 text-slate-800">{expedient.description}</p>
+            <p className="whitespace-pre-wrap text-sm leading-6 text-[#212529]">{expedient.description}</p>
           </DetailSection>
         </div>
 

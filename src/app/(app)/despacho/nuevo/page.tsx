@@ -20,6 +20,7 @@ export default async function NewDispatchPage() {
       <PageHeader
         title="Nueva atencion de Despacho"
         description="Carga directa de reclamo, consulta, sugerencia, pedido o situacion vecinal."
+        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Despacho", href: "/despacho" }, { label: "Nueva atencion" }]}
         actions={
           <AppModal title="Nueva atencion de Despacho" trigger={<><Plus className="h-4 w-4" />Nueva atencion</>} size="xl">
             <DispatchForm
@@ -33,7 +34,7 @@ export default async function NewDispatchPage() {
           </AppModal>
         }
       />
-      <p className="text-sm text-slate-600">Usa el boton Nueva atencion para abrir el formulario de carga.</p>
+      <p className="text-sm text-[#6c757d]">Usa el boton Nueva atencion para abrir el formulario de carga.</p>
     </>
   );
 }
