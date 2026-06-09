@@ -633,22 +633,25 @@ async function main() {
 
   const expedients = [];
   const expedientSeeds = [
-    ["COMPRAS", "EXP-4521-2026", "Compra de linternas, chalecos reflectivos y elementos de apoyo operativo.", "EN_TRAMITE", byUser.despacho1.id],
-    ["REPUESTOS", "EXP-4522-2026", "Repuestos para mantenimiento preventivo de moviles municipales.", "OBSERVADO", byUser.despacho2.id],
-    ["SUELDOS", "EXP-4523-2026", "Expediente interno de liquidacion de horas adicionales.", "EN_APROBACION", byUser.despacho3.id],
-    ["ALIMENTOS", "EXP-4524-2026", "Solicitud de alimentos secos para guardias extendidas.", "APROBADO", byUser.despacho4.id],
-    ["INSUMOS", "EXP-4525-2026", "Reposicion de toner, papel y carpetas para despacho.", "INICIADO", byUser.despacho1.id],
-    ["MANTENIMIENTO", "EXP-4526-2026", "Mantenimiento de equipos de comunicacion interna.", "EN_TRAMITE", byUser.despacho2.id],
-    ["OTROS", "EXP-4527-2026", "Gestion administrativa por renovacion de credenciales internas.", "FINALIZADO", byUser.despacho3.id],
+    ["SOLICITUD_DE_INDUMENTARIA", "GENE00165", "EXP-4521-2026", "GUM", "Compra de linternas y chalecos reflectivos.", "Elementos de apoyo operativo para personal de calle.", "EN_TRAMITE", byUser.despacho1.id],
+    ["MECANICA_MANTENIMIENTO_VEHICULAR", "GENE00156", "EXP-4522-2026", "GUM", "Mantenimiento preventivo de moviles municipales.", "Revision general y compra de insumos vinculados.", "OBSERVADO", byUser.despacho2.id],
+    ["ASISTENCIA_MENSUAL", "GENE00162", "EXP-4523-2026", "SECRETARIA", "Liquidacion de horas adicionales.", "Expediente interno de asistencia y carga mensual.", "EN_APROBACION", byUser.despacho3.id],
+    ["PAGO_DE_FACTURA", "GENE00141", "EXP-4524-2026", "DIRECCION_DE_SEGURIDAD", "Pago de factura administrativa.", "Solicitud de aprobacion y registracion de pago.", "APROBADO", byUser.despacho4.id],
+    ["INSUMOS_DE_LIBRERIA", "GENE00148", "EXP-4525-2026", "SECRETARIA", "Reposicion de toner, papel y carpetas.", "Compra para funcionamiento ordinario de despacho.", "INICIADO", byUser.despacho1.id],
+    ["SOPORTE_TECNICO_INFORMATICA", "GENE00170", "EXP-4526-2026", "DIRECCION_DE_SEGURIDAD", "Actualizacion de equipos de comunicacion interna.", "Revision tecnica y seguimiento de proveedor.", "EN_TRAMITE", byUser.despacho2.id],
+    ["OTRO", "GENE00176", "EXP-4527-2026", "DEFENSA_CIVIL", "Gestion administrativa por credenciales internas.", "Tramite general sin categoria especifica.", "FINALIZADO", byUser.despacho3.id],
   ];
 
-  for (const [index, [category, expedienteNumber, description, status, createdById]] of expedientSeeds.entries()) {
+  for (const [index, [category, codigo, expedienteNumber, area, description, observation, status, createdById]] of expedientSeeds.entries()) {
     const expedient = await prisma.internalExpedient.create({
       data: {
         internalNumber: internalNumber("ADM", index + 1),
         expedienteNumber,
+        codigo,
         category,
+        area,
         description,
+        observation,
         status,
         createdById,
       },
@@ -657,7 +660,9 @@ async function main() {
     await audit("DESPACHO", "InternalExpedient", expedient.id, "CREATE", createdById, {
       internalNumber: expedient.internalNumber,
       status: expedient.status,
+      codigo: expedient.codigo,
       category: expedient.category,
+      area: expedient.area,
     });
   }
 

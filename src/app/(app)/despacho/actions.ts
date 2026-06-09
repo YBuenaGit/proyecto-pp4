@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { DISPATCH_STATUSES, EXPEDIENT_AREAS, EXPEDIENT_STATUSES, PRIORITIES } from "@/lib/constants";
+import { CODIGOS_EXPEDIENTES_SET } from "@/lib/constants/codigosExpedientes";
 import { checkbox, optionalDate, optionalText, text, nextInternalNumber } from "@/lib/form";
 import { saveAttachments } from "@/lib/files";
 import { prisma } from "@/lib/prisma";
@@ -20,6 +21,11 @@ const dispatchSchema = z.object({
 
 const expedientSchema = z.object({
   expedienteNumber: z.string().optional().nullable(),
+  codigo: z
+    .string()
+    .optional()
+    .nullable()
+    .refine((value) => !value || CODIGOS_EXPEDIENTES_SET.has(value), "Código de expediente inválido."),
   category: z.string().min(1),
   area: z.string().refine((value) => EXPEDIENT_AREAS.some((item) => item.value === value)),
   description: z.string().min(1),
@@ -501,6 +507,7 @@ export async function createExpedient(formData: FormData) {
   assertAccess(canAccessExpedients(user));
   const parsed = expedientSchema.parse({
     expedienteNumber: optionalText(formData, "expedienteNumber"),
+    codigo: optionalText(formData, "codigo"),
     category: text(formData, "category"),
     area: text(formData, "area"),
     description: text(formData, "description"),
@@ -512,6 +519,7 @@ export async function createExpedient(formData: FormData) {
     data: {
       internalNumber: await nextInternalNumber("ADM", "expedient"),
       expedienteNumber: parsed.expedienteNumber,
+      codigo: parsed.codigo,
       category: parsed.category,
       area: parsed.area,
       description: parsed.description,
@@ -545,6 +553,7 @@ export async function updateExpedient(expedientId: string, formData: FormData) {
   const before = await prisma.internalExpedient.findUniqueOrThrow({ where: { id: expedientId } });
   const parsed = expedientSchema.parse({
     expedienteNumber: optionalText(formData, "expedienteNumber"),
+    codigo: optionalText(formData, "codigo"),
     category: text(formData, "category"),
     area: text(formData, "area"),
     description: text(formData, "description"),

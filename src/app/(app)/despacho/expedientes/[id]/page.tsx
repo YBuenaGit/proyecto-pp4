@@ -9,6 +9,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { requireUser } from "@/lib/auth";
 import { EXPEDIENT_AREAS } from "@/lib/constants";
+import { codigoExpedienteLabel } from "@/lib/constants/codigosExpedientes";
 import { formatDateTime, labelFromValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessExpedients } from "@/lib/rbac";
@@ -67,6 +68,7 @@ export default async function ExpedientDetailPage({ params }: { params: Promise<
               <DetailField label="Estado" value={<StatusBadge value={expedient.status} />} />
               <DetailField label="Categoria" value={categoryLabel} />
               <DetailField label="Area" value={areaLabel} />
+              <DetailField label="Código" value={codigoExpedienteLabel(expedient.codigo)} />
               <DetailField label="Descripcion" value={expedient.description} />
               <DetailField label="Numero expediente" value={expedient.expedienteNumber} />
               <DetailField label="Creado" value={formatDateTime(expedient.createdAt)} />

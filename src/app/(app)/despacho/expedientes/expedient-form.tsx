@@ -2,10 +2,12 @@ import { Button, LinkButton } from "@/components/ui/button";
 import { DetailSection } from "@/components/ui/detail-section";
 import { FormField, FormGrid, inputClass, textareaClass } from "@/components/ui/form-controls";
 import { EXPEDIENT_AREAS, EXPEDIENT_STATUSES } from "@/lib/constants";
+import { CODIGOS_EXPEDIENTES } from "@/lib/constants/codigosExpedientes";
 import { labelFromValue } from "@/lib/format";
 
 type ExpedientRecord = {
   expedienteNumber?: string | null;
+  codigo?: string | null;
   category?: string | null;
   area?: string | null;
   description?: string | null;
@@ -34,6 +36,16 @@ export function ExpedientForm({
         <FormGrid>
           <FormField label="Numero de expediente">
             <input name="expedienteNumber" defaultValue={record?.expedienteNumber ?? ""} className={inputClass} />
+          </FormField>
+          <FormField label="Código">
+            <select name="codigo" defaultValue={record?.codigo ?? ""} className={inputClass}>
+              <option value="">Seleccionar</option>
+              {CODIGOS_EXPEDIENTES.map((item) => (
+                <option key={item.codigo} value={item.codigo}>
+                  {item.codigo} - {item.descripcion}
+                </option>
+              ))}
+            </select>
           </FormField>
           <FormField label="Categoria">
             <select name="category" defaultValue={record?.category ?? ""} className={inputClass} required>
