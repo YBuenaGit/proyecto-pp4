@@ -1,30 +1,31 @@
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { Clock, Download, Edit, FileText, Plus, Send, Upload } from "lucide-react";
+import { Clock, Download, Edit, FileText, Plus, Send } from "lucide-react";
 import { AppModal } from "@/components/ui/app-modal";
-import { AttachmentList, UploadForm } from "@/components/ui/attachments";
 import { AuditTimeline } from "@/components/ui/audit-timeline";
 import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Button, LinkButton } from "@/components/ui/button";
 import { DetailField, DetailSection, FieldGrid } from "@/components/ui/detail-section";
 import { FormField, inputClass, textareaClass } from "@/components/ui/form-controls";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Table, Td } from "@/components/ui/table";
 import { JURIDICAL_CONTEXT_LABELS } from "@/lib/constants";
 import { requireUser } from "@/lib/auth";
 import { formatDate, formatDateTime, labelFromValue } from "@/lib/format";
 import { parseJuridicalActionContent } from "@/lib/juridical-action-content";
 import { prisma } from "@/lib/prisma";
-import { assertAccess, canAccessDispatch, canAccessJuridical } from "@/lib/rbac";
+import { assertAccess, canAccessJuridical } from "@/lib/rbac";
 import {
   addJuridicalAction,
   deriveJuridicalToDispatch,
   updateJuridicalAction,
   updateJuridicalIntervention,
-  uploadJuridicalAttachment,
 } from "../actions";
 import { InterventionForm } from "../intervention-form";
 import { AddJuridicalActionForm } from "./add-juridical-action-form";
+import { AttachmentPreviewButton } from "./attachment-preview-button";
 import { LegajoBookViewer, type LegajoBookItem } from "./legajo-book-viewer";
 
 type JsonRecord = Record<string, unknown>;
@@ -160,8 +161,8 @@ function PersonBlock({
 function SheetText({ label, children }: { label: string; children: string | null | undefined }) {
   if (!children?.trim()) return null;
   return (
-    <div>
-      <p className="text-xs font-semibold uppercase tracking-wide text-[#6c757d]">{label}</p>
+    <div className="rounded-sm border border-[#b7dfee] bg-[#f6fcff] px-3 py-2.5">
+      <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">{label}</p>
       <p className="mt-1 whitespace-pre-wrap text-[15px] leading-7 text-[#212529]">{children}</p>
     </div>
   );
@@ -171,23 +172,188 @@ function SheetAttachments({ attachments }: { attachments: LegajoAttachment[] }) 
   if (!attachments.length) return null;
   return (
     <div className="rounded-sm border border-[#dee2e6] bg-[#f8f9fa] p-3">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Adjuntos de esta hoja</p>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Adjuntos de esta intervencion</p>
       <div className="grid gap-2 sm:grid-cols-2">
         {attachments.map((attachment) => (
-          <Link
+          <div
             key={attachment.id}
-            href={`/adjuntos/${attachment.id}`}
             className="flex min-w-0 items-start gap-2 rounded-sm border border-[#dee2e6] bg-white px-3 py-2 text-sm text-[#212529] transition hover:bg-[#e9ecef]"
           >
             <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[#0667b0]" />
-            <span className="min-w-0">
+            <span className="min-w-0 flex-1">
               <span className="block truncate font-semibold">{attachment.originalName}</span>
-              <span className="text-xs text-[#6c757d]">{Math.ceil(attachment.size / 1024)} KB · {attachment.uploadedBy.name}</span>
+              <span className="block text-xs text-[#6c757d]">{Math.ceil(attachment.size / 1024)} KB · {attachment.uploadedBy.name}</span>
+              <span className="mt-2 block">
+                <AttachmentPreviewButton href={`/adjuntos/${attachment.id}`} name={attachment.originalName} mimeType={attachment.mimeType} compact />
+              </span>
             </span>
-          </Link>
+          </div>
         ))}
       </div>
     </div>
+  );
+}
+
+function CoverField({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="border-b border-[#b7dfee] py-2">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-[#0c5460]">{label}</p>
+      <div className="mt-0.5 text-sm font-semibold leading-6 text-[#212529]">{value || "-"}</div>
+    </div>
+  );
+}
+
+function LegajoCoverSheet({
+  internalNumber,
+  type,
+  context,
+  status,
+  urgency,
+  attendedAt,
+  createdBy,
+  oficioNumber,
+  expedienteNumber,
+  personName,
+  personDni,
+  attachments,
+}: {
+  internalNumber: string;
+  type: string;
+  context: string;
+  status: string;
+  urgency: string;
+  attendedAt: Date;
+  createdBy: string;
+  oficioNumber?: string | null;
+  expedienteNumber?: string | null;
+  personName: string;
+  personDni?: string | null;
+  attachments: LegajoAttachment[];
+}) {
+  return (
+    <article className="min-h-[720px] rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_16px_38px_rgba(0,0,0,0.30)]">
+      <div className="border-b border-[#b7dfee] bg-[#dff3fb] px-5 py-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex h-20 w-28 items-center justify-center rounded-sm border border-[#b7dfee] bg-white px-2 py-1">
+              <Image src="/logo-gum1.webp" alt="Secretaria de Seguridad" width={180} height={80} className="max-h-full w-auto object-contain" priority />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Caratula</p>
+              <h3 className="mt-2 text-xl font-semibold uppercase tracking-wide text-[#212529]">Legajo de intervencion</h3>
+              <p className="mt-1 text-sm font-semibold text-[#0c5460]">Secretaria de Seguridad Municipal</p>
+            </div>
+          </div>
+          <div className="rounded-sm border border-[#86cfdf] bg-white px-3 py-2 text-right">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#0c5460]">N° de legajo</p>
+            <p className="mt-1 text-base font-semibold text-[#212529]">{internalNumber}</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="space-y-5 px-5 py-5">
+        <div className="rounded-sm border border-[#b7dfee] bg-white/80 px-4 py-3">
+          <CoverField label="Tipo / contexto" value={`${type} · ${context}`} />
+          <CoverField label="Fecha de apertura" value={formatDateTime(attendedAt)} />
+          <CoverField label="Usuario que inicio" value={createdBy} />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <CoverField label="Estado" value={<StatusBadge value={status} className="w-auto max-w-none" />} />
+          <CoverField label="Urgencia" value={<StatusBadge value={urgency} className="w-auto max-w-none" />} />
+          <CoverField label="Persona vinculada" value={personName} />
+          <CoverField label="DNI" value={personDni} />
+          <CoverField label="Oficio" value={oficioNumber} />
+          <CoverField label="Expediente / legajo" value={expedienteNumber} />
+          <CoverField label="Archivos generales" value={attachments.length === 1 ? "1 archivo vinculado" : `${attachments.length} archivos vinculados`} />
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function LegajoAttachmentSheet({ attachments }: { attachments: LegajoAttachment[] }) {
+  return (
+    <article className="min-h-[680px] rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_12px_34px_rgba(0,0,0,0.22)]">
+      <div className="border-b border-[#b7dfee] bg-[#dff3fb] px-4 py-4 sm:px-5">
+        <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Archivos</p>
+        <h3 className="mt-1 text-lg font-semibold text-[#212529]">Archivos generales del legajo</h3>
+        <p className="mt-1 text-sm text-[#6c757d]">Documentacion adjunta disponible para abrir o descargar.</p>
+      </div>
+      <div className="grid gap-3 px-4 py-4 sm:grid-cols-2 sm:px-5">
+        {attachments.map((attachment) => (
+          <div key={attachment.id} className="rounded-sm border border-[#dee2e6] bg-white px-3 py-3 shadow-sm">
+            <div className="flex min-w-0 items-start gap-2">
+              <FileText className="mt-1 h-4 w-4 shrink-0 text-[#0667b0]" />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-semibold text-[#212529]">{attachment.originalName}</p>
+                <p className="text-xs text-[#6c757d]">{Math.ceil(attachment.size / 1024)} KB · {attachment.uploadedBy.name}</p>
+                <div className="mt-3">
+                  <AttachmentPreviewButton href={`/adjuntos/${attachment.id}`} name={attachment.originalName} mimeType={attachment.mimeType} />
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </article>
+  );
+}
+
+function InterventionReadModal({
+  title,
+  date,
+  actor,
+  role,
+  actionType,
+  statusText,
+  description,
+  guidance,
+  nextStepDescription,
+  nextStepDate,
+  confidentialNotes,
+  attachments,
+}: {
+  title: string;
+  date: Date;
+  actor: string;
+  role: string;
+  actionType?: string | null;
+  statusText?: string | null;
+  description: string;
+  guidance?: string | null;
+  nextStepDescription?: string | null;
+  nextStepDate?: Date | null;
+  confidentialNotes?: string | null;
+  attachments: LegajoAttachment[];
+}) {
+  return (
+    <AppModal title={title} trigger={<><FileText className="h-3.5 w-3.5" />Leer contenido</>} triggerVariant="subtle" size="lg" triggerClassName="min-h-8 px-2.5 py-1 text-xs">
+      <div className="space-y-4">
+        <div className="grid gap-3 rounded-sm border border-[#b7dfee] bg-[#eefaff] p-3 sm:grid-cols-2">
+          <CoverField label="Fecha y hora" value={formatDateTime(date)} />
+          <CoverField label="Quien cargo" value={`${actor} (${labelFromValue(role)})`} />
+          <CoverField label="Tipo de actuacion" value={actionType ? labelFromValue(actionType) : "-"} />
+          <CoverField label="Estado / seguimiento" value={statusText ?? (nextStepDate ? `Seguimiento: ${formatDate(nextStepDate)}` : "-")} />
+        </div>
+
+        <SheetText label="Descripcion del relato">{description}</SheetText>
+        <SheetText label="Lo que se instruyo">{guidance}</SheetText>
+        <SheetText label="Proxima accion">{nextStepDescription}</SheetText>
+        <SheetText label="Notas internas confidenciales">{confidentialNotes}</SheetText>
+
+        {attachments.length ? (
+          <div className="rounded-sm border border-[#dee2e6] bg-[#f8f9fa] p-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Archivos vinculados</p>
+            <div className="flex flex-wrap gap-2">
+              {attachments.map((attachment) => (
+                <AttachmentPreviewButton key={attachment.id} href={`/adjuntos/${attachment.id}`} name={attachment.originalName} mimeType={attachment.mimeType} compact />
+              ))}
+            </div>
+          </div>
+        ) : null}
+      </div>
+    </AppModal>
   );
 }
 
@@ -225,11 +391,11 @@ function LegajoSheet({
   editAction?: ReactNode;
 }) {
   return (
-    <article className="min-h-[680px] rounded-sm border border-[#e3d6bd] bg-[#fffdf7] shadow-[0_12px_34px_rgba(0,0,0,0.22)]">
-      <div className="border-b border-[#e3d6bd] bg-[#fff8e6] px-4 py-4 sm:px-5">
+    <article className="min-h-[680px] rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_12px_34px_rgba(0,0,0,0.22)]">
+      <div className="border-b border-[#b7dfee] bg-[#dff3fb] px-4 py-4 sm:px-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Hoja {sheetNumber}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Intervencion N° {sheetNumber}</p>
             <h3 className="mt-1 text-lg font-semibold text-[#212529]">{title}</h3>
             <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-[#6c757d]">
               <span>{formatDateTime(date)}</span>
@@ -240,12 +406,16 @@ function LegajoSheet({
             {editAction}
             <LinkButton href={pdfHref} variant="secondary" target="_blank" rel="noreferrer" className="min-h-9 px-3 py-1.5 text-xs">
               <Download className="h-3.5 w-3.5" />
-              PDF hoja
+              PDF intervencion
             </LinkButton>
           </div>
         </div>
       </div>
       <div className="space-y-4 px-4 py-4 sm:px-5">
+        <div className="grid gap-3 rounded-sm border border-[#b7dfee] bg-white/80 p-3 sm:grid-cols-2">
+          <CoverField label="Fecha y hora" value={formatDateTime(date)} />
+          <CoverField label="Quien cargo" value={`${actor} (${labelFromValue(role)})`} />
+        </div>
         <div className="flex flex-wrap gap-2">
           {actionType ? <span className="rounded-sm border border-[#bee5eb] bg-[#d1ecf1] px-2.5 py-1 text-xs font-semibold text-[#0c5460]">{labelFromValue(actionType)}</span> : null}
           {statusText ? <span className="rounded-sm border border-[#c3e6cb] bg-[#d4edda] px-2.5 py-1 text-xs font-semibold text-[#155724]">{statusText}</span> : null}
@@ -256,8 +426,8 @@ function LegajoSheet({
             </span>
           ) : null}
         </div>
-        <SheetText label="Descripcion / relato">{description}</SheetText>
-        <SheetText label="Intervencion realizada / orientacion brindada">{guidance}</SheetText>
+        <SheetText label="Descripcion del relato">{description}</SheetText>
+        <SheetText label="Lo que se instruyo">{guidance}</SheetText>
         <SheetText label="Proxima accion">{nextStepDescription}</SheetText>
         <SheetText label="Notas internas confidenciales">{confidentialNotes}</SheetText>
         <SheetAttachments attachments={attachments} />
@@ -315,7 +485,6 @@ export default async function InterventionDetailPage({ params }: { params: Promi
     }),
   ]);
 
-  const directivoCanSeeDispatch = canAccessDispatch(user);
   const generalAttachments = attachments.filter((attachment) => attachment.entityType === "JuridicalIntervention");
   const attachmentsByActionId = new Map<string, LegajoAttachment[]>();
   attachments
@@ -361,6 +530,8 @@ export default async function InterventionDetailPage({ params }: { params: Promi
           },
         ]
       : [];
+  const primaryLinkedPerson = linkedPersons[0] ?? null;
+  const primaryLinkedName = primaryLinkedPerson ? display(fullName(primaryLinkedPerson)) : "-";
 
   const statusChanges = statusChangeByActionId(auditLogs);
   const visibleActions = intervention.actions.filter((action) => !(action.actionType === "DERIVACION" && action.content.startsWith("Derivacion a Despacho:")));
@@ -375,13 +546,25 @@ export default async function InterventionDetailPage({ params }: { params: Promi
     };
   });
   const displayActionSheets = [...actionSheets].sort((a, b) => b.action.createdAt.getTime() - a.action.createdAt.getTime());
-  const lastAudit = auditLogs[0] ?? null;
-  const referrals = [...intervention.destinationReferrals, ...intervention.originReferrals];
-  const nextAction = visibleActions
-    .filter((action) => action.nextStepDate && action.nextStepDate >= new Date())
-    .sort((a, b) => (a.nextStepDate?.getTime() ?? 0) - (b.nextStepDate?.getTime() ?? 0))[0];
   const initialStatusText = `Estado inicial: ${labelFromValue(initialStatusFromAudit(auditLogs, intervention.status))}`;
   const bookItems: LegajoBookItem[] = [
+    {
+      sheetNumber: 0,
+      label: "Caratula",
+      title: "Datos principales",
+      dateText: formatDateTime(intervention.attendedAt),
+      statusText: labelFromValue(intervention.status),
+      searchText: [
+        intervention.internalNumber,
+        labelFromValue(intervention.type),
+        contextLabel(intervention.interventionContext),
+        intervention.oficioNumber,
+        intervention.expedienteNumber,
+        primaryLinkedName,
+        primaryLinkedPerson?.dni,
+        intervention.description,
+      ].filter(Boolean).join(" "),
+    },
     ...displayActionSheets.map(({ action, sheetNumber, parsed, statusText }) => ({
       sheetNumber,
       title: labelFromValue(action.actionType),
@@ -408,6 +591,18 @@ export default async function InterventionDetailPage({ params }: { params: Promi
         labelFromValue(intervention.type),
       ].filter(Boolean).join(" "),
     },
+    ...(generalAttachments.length
+      ? [
+          {
+            sheetNumber: displayActionSheets.length + 2,
+            label: "Archivos",
+            title: "Archivos del legajo",
+            dateText: formatDateTime(generalAttachments[0]?.createdAt ?? intervention.createdAt),
+            statusText: `${generalAttachments.length} archivo${generalAttachments.length === 1 ? "" : "s"}`,
+            searchText: generalAttachments.map((attachment) => attachment.originalName).join(" "),
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -439,8 +634,30 @@ export default async function InterventionDetailPage({ params }: { params: Promi
                 submitLabel="Guardar cambios"
               />
             </AppModal>
-            <AppModal title="Nuevo registro de intervencion" description="Crea una nueva hoja documental dentro de este legajo." trigger={<><Plus className="h-4 w-4" />Nueva hoja</>} size="md">
-              <AddJuridicalActionForm action={addJuridicalAction.bind(null, intervention.id)} submitLabel="Crear hoja" />
+            <AppModal title="Nuevo registro de intervencion" description="Crea una nueva intervencion documental dentro de este legajo." trigger={<><Plus className="h-4 w-4" />Nueva intervencion</>} size="md">
+              <AddJuridicalActionForm action={addJuridicalAction.bind(null, intervention.id)} submitLabel="Crear intervencion" />
+            </AppModal>
+            <AppModal title="Derivar a Despacho" trigger={<><Send className="h-4 w-4" />Derivar</>} triggerVariant="secondary" size="md">
+              <form action={deriveJuridicalToDispatch.bind(null, intervention.id)} className="space-y-4">
+                <FormField label="Derivar a Despacho">
+                  <textarea name="summary" className={textareaClass} placeholder="Resumen operativo, sin notas sensibles innecesarias" required />
+                </FormField>
+                <FormField label="Area sugerida">
+                  <select name="area" className={inputClass} defaultValue="">
+                    <option value="">Despacho</option>
+                    {areas.map((item) => (
+                      <option key={item.value} value={item.label}>{item.label}</option>
+                    ))}
+                  </select>
+                </FormField>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button type="submit">Guardar</Button>
+                  <Button type="button" variant="secondary" data-modal-close>Cancelar</Button>
+                </div>
+              </form>
+            </AppModal>
+            <AppModal title="Historial completo de auditoria" trigger={<><FileText className="h-4 w-4" />Auditoria</>} triggerVariant="secondary" size="lg">
+              <AuditTimeline logs={auditLogs} />
             </AppModal>
             <LinkButton href={`/intervenciones/${intervention.id}/legajo.pdf`} variant="secondary" target="_blank" rel="noreferrer">
               <Download className="h-4 w-4" />
@@ -477,17 +694,39 @@ export default async function InterventionDetailPage({ params }: { params: Promi
         </DetailSection>
       </section>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
-        <section className="space-y-4">
+      <DetailSection
+        title="Intervenciones del legajo"
+        action={
           <LegajoBookViewer
             items={bookItems}
             downloadHref={`/intervenciones/${intervention.id}/legajo.pdf`}
             headerAction={
-              <AppModal title="Nuevo registro de intervencion" description="Crea una nueva hoja documental dentro de este legajo." trigger={<><Plus className="h-4 w-4" />Nueva hoja</>} size="md">
-                <AddJuridicalActionForm action={addJuridicalAction.bind(null, intervention.id)} submitLabel="Crear hoja" />
+              <AppModal
+                title="Nuevo registro de intervencion"
+                description="Crea una nueva intervencion documental dentro de este legajo."
+                trigger={<><Plus className="h-4 w-4" />Nueva intervencion</>}
+                triggerVariant="secondary"
+                size="md"
+              >
+                <AddJuridicalActionForm action={addJuridicalAction.bind(null, intervention.id)} submitLabel="Crear intervencion" />
               </AppModal>
             }
           >
+            <LegajoCoverSheet
+              internalNumber={intervention.internalNumber}
+              type={labelFromValue(intervention.type)}
+              context={contextLabel(intervention.interventionContext)}
+              status={intervention.status}
+              urgency={intervention.urgency}
+              attendedAt={intervention.attendedAt}
+              createdBy={intervention.createdBy.name}
+              oficioNumber={intervention.oficioNumber}
+              expedienteNumber={intervention.expedienteNumber}
+              personName={primaryLinkedName}
+              personDni={primaryLinkedPerson?.dni}
+              attachments={generalAttachments}
+            />
+
             {displayActionSheets.map(({ action, sheetNumber, parsed, statusText }) => (
               <LegajoSheet
                 key={action.id}
@@ -505,7 +744,7 @@ export default async function InterventionDetailPage({ params }: { params: Promi
                 attachments={attachmentsByActionId.get(action.id) ?? []}
                 pdfHref={`/intervenciones/${intervention.id}/legajo.pdf?hoja=${sheetNumber}`}
                 editAction={
-                  <AppModal title={`Editar hoja ${sheetNumber}`} trigger={<><Edit className="h-3.5 w-3.5" />Editar hoja</>} triggerVariant="secondary" size="md" triggerClassName="min-h-9 px-3 py-1.5 text-xs">
+                  <AppModal title={`Editar intervencion N° ${sheetNumber}`} trigger={<><Edit className="h-3.5 w-3.5" />Editar</>} triggerVariant="secondary" size="md" triggerClassName="min-h-9 px-3 py-1.5 text-xs">
                     <AddJuridicalActionForm
                       action={updateJuridicalAction.bind(null, action.id)}
                       initialValues={{
@@ -516,7 +755,7 @@ export default async function InterventionDetailPage({ params }: { params: Promi
                         nextStepDescription: parsed.nextStepDescription,
                         nextStepDate: action.nextStepDate,
                       }}
-                      submitLabel="Guardar hoja"
+                      submitLabel="Guardar intervencion"
                     />
                   </AppModal>
                 }
@@ -539,97 +778,115 @@ export default async function InterventionDetailPage({ params }: { params: Promi
               attachments={[]}
               pdfHref={`/intervenciones/${intervention.id}/legajo.pdf?hoja=1`}
             />
+
+            {generalAttachments.length ? <LegajoAttachmentSheet attachments={generalAttachments} /> : null}
           </LegajoBookViewer>
-        </section>
-
-        <aside className="space-y-5">
-          <DetailSection title="Acciones rapidas">
-            <div className="grid gap-2">
-              <AppModal title="Nuevo registro de intervencion" description="Crea una nueva hoja documental dentro de este legajo." trigger={<><Plus className="h-4 w-4" />Nueva hoja</>} size="md">
-                <AddJuridicalActionForm action={addJuridicalAction.bind(null, intervention.id)} submitLabel="Crear hoja" />
-              </AppModal>
-              <AppModal title="Adjuntar archivo general" trigger={<><Upload className="h-4 w-4" />Adjuntar archivo</>} triggerVariant="secondary" size="md">
-                <UploadForm action={uploadJuridicalAttachment.bind(null, intervention.id)} modal />
-              </AppModal>
-              <AppModal title="Derivar a Despacho" trigger={<><Send className="h-4 w-4" />Derivar a Despacho</>} triggerVariant="secondary" size="md">
-                <form action={deriveJuridicalToDispatch.bind(null, intervention.id)} className="space-y-4">
-                  <FormField label="Derivar a Despacho">
-                    <textarea name="summary" className={textareaClass} placeholder="Resumen operativo, sin notas sensibles innecesarias" required />
-                  </FormField>
-                  <FormField label="Area sugerida">
-                    <select name="area" className={inputClass} defaultValue="">
-                      <option value="">Despacho</option>
-                      {areas.map((item) => (
-                        <option key={item.value} value={item.label}>{item.label}</option>
-                      ))}
-                    </select>
-                  </FormField>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button type="submit">Guardar</Button>
-                    <Button type="button" variant="secondary" data-modal-close>Cancelar</Button>
+        }
+      >
+        <Table headers={["Intervencion", "Fecha / usuario", "Actuacion", "Estado / seguimiento", "Archivo"]} minWidth={980}>
+          {displayActionSheets.map(({ action, sheetNumber, parsed, statusText }) => {
+            const rowAttachments = attachmentsByActionId.get(action.id) ?? [];
+            return (
+              <tr key={action.id}>
+                <Td className="w-[150px]">
+                  <span className="block font-semibold text-[#0667b0]">Intervencion N° {sheetNumber}</span>
+                  <span className="mt-0.5 block text-xs text-[#6c757d]">Registro agregado</span>
+                </Td>
+                <Td className="w-[210px]">
+                  <span className="block font-semibold">{formatDateTime(action.createdAt)}</span>
+                  <span className="mt-0.5 block text-xs text-[#6c757d]">{action.createdBy.name} · {labelFromValue(action.createdBy.role)}</span>
+                </Td>
+                <Td>
+                  <span className="block font-semibold">{labelFromValue(action.actionType)}</span>
+                  {parsed.description ? <p className="mt-1 max-w-2xl whitespace-pre-wrap text-xs leading-5 text-[#495057]">{parsed.description}</p> : null}
+                  <div className="mt-2">
+                    <InterventionReadModal
+                      title={`Intervencion N° ${sheetNumber}`}
+                      date={action.createdAt}
+                      actor={action.createdBy.name}
+                      role={action.createdBy.role}
+                      actionType={action.actionType}
+                      statusText={statusText}
+                      description={parsed.description}
+                      guidance={parsed.guidanceProvided}
+                      nextStepDescription={parsed.nextStepDescription}
+                      nextStepDate={action.nextStepDate}
+                      attachments={rowAttachments}
+                    />
                   </div>
-                </form>
-              </AppModal>
-              <LinkButton href={`/intervenciones/${intervention.id}/legajo.pdf`} variant="secondary" target="_blank" rel="noreferrer">
-                <Download className="h-4 w-4" />
-                Descargar legajo PDF
-              </LinkButton>
-            </div>
-          </DetailSection>
+                </Td>
+                <Td className="w-[230px]">
+                  <div className="flex flex-wrap gap-1.5">
+                    {statusText ? <span className="rounded-sm border border-[#c3e6cb] bg-[#d4edda] px-2 py-0.5 text-xs font-semibold text-[#155724]">{statusText}</span> : null}
+                    {action.nextStepDate ? (
+                      <span className="rounded-sm border border-[#ffeeba] bg-[#fff3cd] px-2 py-0.5 text-xs font-semibold text-[#856404]">
+                        Seguimiento: {formatDate(action.nextStepDate)}
+                      </span>
+                    ) : null}
+                    {!statusText && !action.nextStepDate ? <span className="text-sm text-[#6c757d]">Sin seguimiento</span> : null}
+                  </div>
+                </Td>
+                <Td className="w-[180px]">
+                  <div className="flex flex-col items-start gap-2">
+                    <LinkButton href={`/intervenciones/${intervention.id}/legajo.pdf?hoja=${sheetNumber}`} variant="secondary" target="_blank" rel="noreferrer" className="min-h-8 px-2.5 py-1 text-xs">
+                      <Download className="h-3.5 w-3.5" />
+                      PDF
+                    </LinkButton>
+                    {rowAttachments.map((attachment) => (
+                      <AttachmentPreviewButton key={attachment.id} href={`/adjuntos/${attachment.id}`} name={attachment.originalName} mimeType={attachment.mimeType} compact />
+                    ))}
+                  </div>
+                </Td>
+              </tr>
+            );
+          })}
 
-          <DetailSection title="Estado actual">
-            <div className="space-y-3 text-sm leading-6">
-              <DetailField label="Estado" value={<StatusBadge value={intervention.status} />} />
-              <DetailField label="Urgencia" value={<StatusBadge value={intervention.urgency} />} />
-              <DetailField label="Ultima actualizacion" value={formatDateTime(intervention.lastStatusAt)} />
-              <DetailField label="Proxima accion" value={nextAction?.nextStepDate ? `${labelFromValue(nextAction.actionType)} - ${formatDate(nextAction.nextStepDate)}` : "Sin fecha programada"} />
-            </div>
-          </DetailSection>
-
-          <DetailSection title="Derivaciones">
-            <div className="space-y-2">
-              {referrals.map((referral) => (
-                <div key={referral.id} className="rounded-lg bg-[#f6fafc] p-3 text-sm ring-1 ring-[#d7e4ee]">
-                  <p className="font-semibold text-[#212529]">
-                    {referral.originModule} {"->"} {referral.destinationModule}
-                  </p>
-                  <p className="mt-1 leading-6 text-[#334b5f]">{referral.summary}</p>
-                  <p className="mt-1 text-xs text-[#607589]">{formatDateTime(referral.referredAt)}</p>
-                  {directivoCanSeeDispatch && referral.destinationDispatchRecordId ? (
-                    <Link className="mt-2 inline-block text-xs font-semibold text-[#0667b0] hover:underline" href={`/despacho/${referral.destinationDispatchRecordId}`}>
-                      Ver atencion vinculada
-                    </Link>
-                  ) : null}
-                </div>
-              ))}
-              {!referrals.length ? <p className="text-sm text-[#607589]">Sin derivaciones.</p> : null}
-            </div>
-          </DetailSection>
-
-          <DetailSection title="Adjuntos privados">
-            <AttachmentList attachments={generalAttachments} />
-          </DetailSection>
-
-          <DetailSection title="Auditoria tecnica">
-            <div className="space-y-3">
-              <div className="rounded-lg bg-[#f6fafc] p-3 text-sm leading-6 ring-1 ring-[#d7e4ee]">
-                {lastAudit ? (
-                  <>
-                    <p className="font-semibold text-[#212529]">Ultima modificacion</p>
-                    <p className="text-[#607589]">{lastAudit.createdBy?.name ?? "Sistema"}</p>
-                    <p className="text-[#607589]">{formatDateTime(lastAudit.createdAt)}</p>
-                  </>
-                ) : (
-                  <p className="text-[#607589]">Sin auditoria registrada.</p>
-                )}
+          <tr>
+            <Td className="w-[150px]">
+              <span className="block font-semibold text-[#0667b0]">Intervencion N° 1</span>
+              <span className="mt-0.5 block text-xs text-[#6c757d]">Primera atencion</span>
+            </Td>
+            <Td className="w-[210px]">
+              <span className="block font-semibold">{formatDateTime(intervention.attendedAt)}</span>
+              <span className="mt-0.5 block text-xs text-[#6c757d]">{intervention.createdBy.name} · {labelFromValue(intervention.createdBy.role)}</span>
+            </Td>
+            <Td>
+              <span className="block font-semibold">{labelFromValue(intervention.type)}</span>
+              {intervention.description ? <p className="mt-1 max-w-2xl whitespace-pre-wrap text-xs leading-5 text-[#495057]">{intervention.description}</p> : null}
+              <div className="mt-2">
+                <InterventionReadModal
+                  title="Intervencion N° 1"
+                  date={intervention.attendedAt}
+                  actor={intervention.createdBy.name}
+                  role={intervention.createdBy.role}
+                  actionType={intervention.type}
+                  statusText={initialStatusText}
+                  description={intervention.description}
+                  guidance={intervention.guidanceProvided}
+                  nextStepDescription={null}
+                  nextStepDate={null}
+                  confidentialNotes={intervention.confidentialNotes}
+                  attachments={generalAttachments}
+                />
               </div>
-              <AppModal title="Historial completo de auditoria" trigger="Ver historial completo" triggerVariant="secondary" size="lg">
-                <AuditTimeline logs={auditLogs} />
-              </AppModal>
-            </div>
-          </DetailSection>
-        </aside>
-      </div>
+            </Td>
+            <Td className="w-[230px]">
+              <span className="rounded-sm border border-[#c3e6cb] bg-[#d4edda] px-2 py-0.5 text-xs font-semibold text-[#155724]">{initialStatusText}</span>
+            </Td>
+            <Td className="w-[180px]">
+              <div className="flex flex-col items-start gap-2">
+                <LinkButton href={`/intervenciones/${intervention.id}/legajo.pdf?hoja=1`} variant="secondary" target="_blank" rel="noreferrer" className="min-h-8 px-2.5 py-1 text-xs">
+                  <Download className="h-3.5 w-3.5" />
+                  PDF
+                </LinkButton>
+                {generalAttachments.map((attachment) => (
+                  <AttachmentPreviewButton key={attachment.id} href={`/adjuntos/${attachment.id}`} name={attachment.originalName} mimeType={attachment.mimeType} compact />
+                ))}
+              </div>
+            </Td>
+          </tr>
+        </Table>
+      </DetailSection>
     </main>
   );
 }

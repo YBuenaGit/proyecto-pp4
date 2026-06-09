@@ -8,6 +8,7 @@ import { DetailField, DetailSection, FieldGrid } from "@/components/ui/detail-se
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { requireUser } from "@/lib/auth";
+import { EXPEDIENT_AREAS } from "@/lib/constants";
 import { formatDateTime, labelFromValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessExpedients } from "@/lib/rbac";
@@ -33,6 +34,8 @@ export default async function ExpedientDetailPage({ params }: { params: Promise<
     prisma.catalogItem.findMany({ where: { type: "expedient_category", active: true }, orderBy: { sortOrder: "asc" } }),
   ]);
   if (!expedient) notFound();
+  const categoryLabel = categories.find((item) => item.value === expedient.category)?.label ?? labelFromValue(expedient.category);
+  const areaLabel = EXPEDIENT_AREAS.find((item) => item.value === expedient.area)?.label ?? labelFromValue(expedient.area);
 
   return (
     <>
@@ -62,15 +65,17 @@ export default async function ExpedientDetailPage({ params }: { params: Promise<
           <DetailSection title="Datos del expediente">
             <FieldGrid>
               <DetailField label="Estado" value={<StatusBadge value={expedient.status} />} />
-              <DetailField label="Categoria" value={labelFromValue(expedient.category)} />
+              <DetailField label="Categoria" value={categoryLabel} />
+              <DetailField label="Area" value={areaLabel} />
+              <DetailField label="Descripcion" value={expedient.description} />
               <DetailField label="Numero expediente" value={expedient.expedienteNumber} />
               <DetailField label="Creado" value={formatDateTime(expedient.createdAt)} />
               <DetailField label="Actualizado" value={formatDateTime(expedient.updatedAt)} />
               <DetailField label="Usuario" value={expedient.createdBy.name} />
             </FieldGrid>
           </DetailSection>
-          <DetailSection title="Descripcion">
-            <p className="whitespace-pre-wrap text-sm leading-6 text-[#212529]">{expedient.description}</p>
+          <DetailSection title="Observacion">
+            <p className="whitespace-pre-wrap text-sm leading-6 text-[#212529]">{expedient.observation || "-"}</p>
           </DetailSection>
         </div>
 

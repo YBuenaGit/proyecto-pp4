@@ -32,9 +32,11 @@ const fieldDescriptors = [
   },
   { key: "oficioNumber", label: "Numero de oficio" },
   { key: "expedienteNumber", label: "Numero de expediente" },
+  { key: "area", label: "Area" },
   { key: "derivedArea", label: "Area derivada" },
   { key: "attendedAt", label: "Fecha de atencion", format: formatAuditDateTime },
   { key: "description", label: "Descripcion" },
+  { key: "observation", label: "Observacion" },
   { key: "guidanceProvided", label: "Orientacion / intervencion realizada" },
   { key: "confidentialNotes", label: "Notas internas confidenciales" },
 ] satisfies Array<{

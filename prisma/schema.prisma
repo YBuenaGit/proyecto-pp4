@@ -316,7 +316,9 @@ model InternalExpedient {
   internalNumber   String   @unique
   expedienteNumber String?
   category         String
+  area             String?
   description      String
+  observation      String?
   status           String   @default("INICIADO")
   createdById      String
   createdAt        DateTime @default(now())
@@ -325,6 +327,7 @@ model InternalExpedient {
   createdBy User @relation("ExpedientCreatedBy", fields: [createdById], references: [id])
 
   @@index([category])
+  @@index([area])
   @@index([status])
   @@index([createdById])
   @@index([createdAt])

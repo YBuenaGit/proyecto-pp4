@@ -6,7 +6,7 @@ import { FilterBar, FilterInput, FilterSelect } from "@/components/ui/filter-bar
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Table, Td } from "@/components/ui/table";
-import { EXPEDIENT_STATUSES } from "@/lib/constants";
+import { EXPEDIENT_AREAS, EXPEDIENT_STATUSES } from "@/lib/constants";
 import { requireUser } from "@/lib/auth";
 import { formatDateTime, labelFromValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
@@ -23,12 +23,14 @@ export default async function ExpedientsListPage({ searchParams }: { searchParam
   const from = param(params, "from");
   const to = param(params, "to");
   const category = param(params, "category");
+  const area = param(params, "area");
   const status = param(params, "status");
   const expedienteNumber = param(params, "expedienteNumber");
 
   const where: Prisma.InternalExpedientWhereInput = {
     ...(dateRangeWhere(from, to) ? { createdAt: dateRangeWhere(from, to) } : {}),
     ...(category ? { category } : {}),
+    ...(area ? { area } : {}),
     ...(status ? { status } : {}),
     ...(expedienteNumber ? { expedienteNumber: { contains: expedienteNumber } } : {}),
   };
@@ -61,11 +63,12 @@ export default async function ExpedientsListPage({ searchParams }: { searchParam
         <FilterInput label="Desde" name="from" type="date" defaultValue={from} />
         <FilterInput label="Hasta" name="to" type="date" defaultValue={to} />
         <FilterSelect label="Categoria" name="category" defaultValue={category} options={categories.map((item) => [item.value, item.label])} />
+        <FilterSelect label="Area" name="area" defaultValue={area} options={EXPEDIENT_AREAS.map((item) => [item.value, item.label])} />
         <FilterSelect label="Estado" name="status" defaultValue={status} options={EXPEDIENT_STATUSES.map((s) => [s, labelFromValue(s)])} />
         <FilterInput label="Nro expediente" name="expedienteNumber" defaultValue={expedienteNumber} />
       </FilterBar>
 
-      <Table headers={["Numero interno", "Expediente", "Categoria", "Creado / Usuario", "Estado"]} empty={!expedients.length}>
+      <Table headers={["Numero interno", "Expediente", "Categoria", "Area", "Creado / Usuario", "Estado"]} empty={!expedients.length}>
         {expedients.map((expedient) => (
           <tr key={expedient.id}>
             <Td>
@@ -75,6 +78,7 @@ export default async function ExpedientsListPage({ searchParams }: { searchParam
             </Td>
             <Td>{expedient.expedienteNumber ?? "-"}</Td>
             <Td>{categories.find((item) => item.value === expedient.category)?.label ?? labelFromValue(expedient.category)}</Td>
+            <Td>{EXPEDIENT_AREAS.find((item) => item.value === expedient.area)?.label ?? labelFromValue(expedient.area)}</Td>
             <Td>
               <div className="font-medium text-[#212529]">{formatDateTime(expedient.createdAt)}</div>
               <div className="text-xs text-[#6c757d]">Usuario: {expedient.createdBy.name}</div>

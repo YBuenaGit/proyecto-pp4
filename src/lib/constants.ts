@@ -37,10 +37,22 @@ export const EXPEDIENT_STATUSES = [
   "INICIADO",
   "EN_TRAMITE",
   "OBSERVADO",
+  "TRAMITACION",
+  "GUARDA_TEMPORAL",
   "EN_APROBACION",
   "APROBADO",
   "FINALIZADO",
   "ARCHIVADO",
+];
+
+export const EXPEDIENT_AREAS = [
+  { value: "GUM", label: "GUM" },
+  { value: "SECRETARIA", label: "Secretaria" },
+  { value: "DIRECCION_DE_SEGURIDAD", label: "Direccion de Seguridad" },
+  { value: "DEFENSA_CIVIL", label: "Defensa Civil" },
+  { value: "SERENOS", label: "Serenos" },
+  { value: "ATENCION_Y_CONTENCION_A_LA_VICTIMA", label: "Atencion y Contencion a la Victima" },
+  { value: "PARTES_MEDICOS", label: "Partes Medicos" },
 ];
 
 export const PRIORITIES = ["BAJA", "MEDIA", "ALTA", "URGENTE"];
@@ -144,11 +156,33 @@ export const JURIDICAL_CONTEXT_LABELS: Record<string, string> = {
 };
 
 export const EXPEDIENT_CATEGORY_LABELS: Record<string, string> = {
-  COMPRAS: "Compras",
-  REPUESTOS: "Repuestos",
-  SUELDOS: "Sueldos",
-  ALIMENTOS: "Alimentos",
-  INSUMOS: "Insumos",
-  MANTENIMIENTO: "Mantenimiento",
-  OTROS: "Otros",
+  AYUDA_ECONOMICA: "Ayuda economica",
+  HONORARIOS: "Honorarios",
+  CONTRATOS_DE_PERSONAL: "Contratos de personal",
+  SOLICITUD_DE_INFORMES: "Solicitud de informes",
+  INFORMES_NOVEDADES_SERENOS: "Informes / novedades de serenos",
+  SOLICITUD_DE_INDUMENTARIA: "Solicitud de indumentaria",
+  SOLICITUD_DE_CAMARAS: "Solicitud de camaras",
+  SOLICITUD_DE_ELEMENTOS_DE_TRANSITO: "Solicitud de elementos de transito",
+  PEDIDO_DE_ALFALFA_PARA_EQUINOS: "Pedido de alfalfa para equinos",
+  PAGO_DE_FACTURA: "Pago de factura",
+  PEDIDO_DE_PAGO_DE_FACTURA: "Pedido de pago de factura",
+  REINTEGROS: "Reintegros",
+  ALQUILERES: "Alquileres",
+  INSUMOS_DE_LIBRERIA: "Insumos de libreria",
+  ELEMENTOS_DE_LIMPIEZA: "Elementos de limpieza",
+  ELEMENTOS_PARA_REACONDICIONAMIENTO: "Elementos para reacondicionamiento",
+  VETERINARIA: "Veterinaria",
+  MECANICA_MANTENIMIENTO_VEHICULAR: "Mecanica / mantenimiento vehicular",
+  SERVICE_DE_CAMIONETA: "Service de camioneta",
+  REPUESTOS_VEHICULARES: "Repuestos vehiculares",
+  REPUESTOS_PARA_BICICLETAS: "Repuestos para bicicletas",
+  MANTENIMIENTO_DE_MATAFUEGOS: "Mantenimiento de matafuegos",
+  SOPORTE_TECNICO_INFORMATICA: "Soporte tecnico / informatica",
+  BONIFICACION: "Bonificacion",
+  ASISTENCIA_MENSUAL: "Asistencia mensual",
+  VACACIONES: "Vacaciones",
+  GESTION_DE_SEGUROS: "Gestion de seguros",
+  LICENCIA_MEDICA: "Licencia medica",
+  OTRO: "Otro",
 };

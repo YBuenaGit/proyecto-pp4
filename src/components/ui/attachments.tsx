@@ -54,7 +54,7 @@ export function UploadForm({
   modal?: boolean;
 }) {
   return (
-    <form action={action} encType="multipart/form-data" className="flex flex-col gap-3 rounded-sm border border-dashed border-[#17a2b8] bg-[#d1ecf1]/40 p-3">
+    <form action={action} className="flex flex-col gap-3 rounded-sm border border-dashed border-[#17a2b8] bg-[#d1ecf1]/40 p-3">
       <label className="block">
         <span className="mb-1.5 block text-xs font-semibold tracking-wide text-[#495057]">Adjuntar archivos</span>
         <input

@@ -1,13 +1,15 @@
 import { Button, LinkButton } from "@/components/ui/button";
 import { DetailSection } from "@/components/ui/detail-section";
 import { FormField, FormGrid, inputClass, textareaClass } from "@/components/ui/form-controls";
-import { EXPEDIENT_STATUSES } from "@/lib/constants";
+import { EXPEDIENT_AREAS, EXPEDIENT_STATUSES } from "@/lib/constants";
 import { labelFromValue } from "@/lib/format";
 
 type ExpedientRecord = {
   expedienteNumber?: string | null;
   category?: string | null;
+  area?: string | null;
   description?: string | null;
+  observation?: string | null;
   status?: string | null;
 };
 
@@ -41,6 +43,17 @@ export function ExpedientForm({
               ))}
             </select>
           </FormField>
+          <FormField label="Area">
+            <select name="area" defaultValue={record?.area ?? ""} className={inputClass} required>
+              <option value="">Seleccionar</option>
+              {EXPEDIENT_AREAS.map((item) => (
+                <option key={item.value} value={item.value}>{item.label}</option>
+              ))}
+            </select>
+          </FormField>
+          <FormField label="Descripcion">
+            <input name="description" defaultValue={record?.description ?? ""} className={inputClass} required />
+          </FormField>
           <FormField label="Estado">
             <select name="status" defaultValue={record?.status ?? "INICIADO"} className={inputClass}>
               {EXPEDIENT_STATUSES.map((item) => (
@@ -48,8 +61,8 @@ export function ExpedientForm({
               ))}
             </select>
           </FormField>
-          <FormField label="Descripcion" className="md:col-span-2 xl:col-span-3">
-            <textarea name="description" defaultValue={record?.description ?? ""} className={textareaClass} required />
+          <FormField label="Observacion" className="md:col-span-2 xl:col-span-3">
+            <textarea name="observation" defaultValue={record?.observation ?? ""} className={textareaClass} />
           </FormField>
           {!record ? (
             <FormField label="Adjuntos" className="md:col-span-2 xl:col-span-3">
