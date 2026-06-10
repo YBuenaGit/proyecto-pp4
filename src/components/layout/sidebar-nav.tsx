@@ -41,7 +41,8 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
     <nav className="flex gap-1 overflow-x-auto px-2 py-2 lg:block lg:space-y-1 lg:overflow-visible lg:px-2 lg:py-3">
       {items.map((item) => {
         const Icon = iconMap[item.icon];
-        const active = pathname === item.href || pathname.startsWith(`${item.href}/`);
+        const childActive = item.children?.some((child) => pathname === child.href || pathname.startsWith(`${child.href}/`)) ?? false;
+        const active = pathname === item.href || pathname.startsWith(`${item.href}/`) || childActive;
         return (
           <div key={item.href} className="shrink-0 lg:shrink">
             <Link

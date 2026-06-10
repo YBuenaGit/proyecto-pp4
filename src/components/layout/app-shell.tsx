@@ -13,14 +13,19 @@ function buildNav(user: CurrentUser): NavItem[] {
     items.push({ href: "/agenda", label: "Agenda", icon: "agenda" });
   }
 
-  if (visible.despacho) {
+  if (visible.despacho || visible.retenciones) {
     items.push({
-      href: "/despacho",
+      href: visible.despacho ? "/despacho" : "/retenciones",
       label: "Despacho",
       icon: "despacho",
       children: [
-        { href: "/despacho", label: "Atenciones / Reclamos" },
-        { href: "/despacho/expedientes", label: "Expedientes internos" },
+        ...(visible.despacho
+          ? [
+              { href: "/despacho", label: "Atenciones / Reclamos" },
+              { href: "/despacho/expedientes", label: "Expedientes internos" },
+            ]
+          : []),
+        ...(visible.retenciones ? [{ href: "/retenciones", label: "Retenciones / actas" }] : []),
       ],
     });
   }

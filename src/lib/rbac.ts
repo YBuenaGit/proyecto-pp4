@@ -35,6 +35,10 @@ export function canAccessAdmin(user: CurrentUser | null) {
   return user?.role === ROLES.admin;
 }
 
+export function canAccessRetentions(user: CurrentUser | null) {
+  return user?.role === ROLES.despacho || user?.role === ROLES.admin;
+}
+
 export function visibleModules(user: CurrentUser | null) {
   return {
     agenda: canAccessAgenda(user),
@@ -43,6 +47,7 @@ export function visibleModules(user: CurrentUser | null) {
     expedientes: canAccessExpedients(user),
     personas: canAccessPeople(user),
     reportes: canAccessReports(user),
+    retenciones: canAccessRetentions(user),
     administracion: canAccessAdmin(user),
   };
 }

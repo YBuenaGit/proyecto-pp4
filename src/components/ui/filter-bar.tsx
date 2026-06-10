@@ -1,8 +1,43 @@
-import type { ReactNode } from "react";
+import type { FormEventHandler, ReactNode } from "react";
 import { Search, SlidersHorizontal } from "lucide-react";
 import { Button, LinkButton } from "./button";
 
-export function FilterBar({ children, resetHref }: { children: ReactNode; resetHref: string }) {
+function ClearControl({
+  compact = false,
+  onClear,
+  resetHref,
+}: {
+  compact?: boolean;
+  onClear?: () => void;
+  resetHref: string;
+}) {
+  const className = compact ? "min-h-8 px-2.5 py-1 text-xs" : undefined;
+  if (onClear) {
+    return (
+      <Button type="button" variant="secondary" className={className} onClick={onClear}>
+        Limpiar
+      </Button>
+    );
+  }
+
+  return (
+    <LinkButton href={resetHref} variant="secondary" className={className}>
+      Limpiar
+    </LinkButton>
+  );
+}
+
+export function FilterBar({
+  children,
+  resetHref,
+  onSubmit,
+  onClear,
+}: {
+  children: ReactNode;
+  resetHref: string;
+  onSubmit?: FormEventHandler<HTMLFormElement>;
+  onClear?: () => void;
+}) {
   return (
     <section className="mb-4 overflow-hidden rounded-sm border border-[#dee2e6] bg-white shadow-sm">
       <div className="flex items-center justify-between gap-3 border-b border-[#dee2e6] bg-[#e9ecef] px-3 py-2">
@@ -11,18 +46,14 @@ export function FilterBar({ children, resetHref }: { children: ReactNode; resetH
           Buscar registros
         </div>
         <div className="hidden items-center gap-2 md:flex">
-          <LinkButton href={resetHref} variant="secondary" className="min-h-8 px-2.5 py-1 text-xs">
-            Limpiar
-          </LinkButton>
+          <ClearControl resetHref={resetHref} onClear={onClear} compact />
         </div>
       </div>
 
-      <form className="hidden p-3 md:block">
+      <form className="hidden p-3 md:block" onSubmit={onSubmit}>
         <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-5">{children}</div>
         <div className="mt-3 flex flex-wrap items-center justify-end gap-2 border-t border-[#dee2e6] pt-3">
-          <LinkButton href={resetHref} variant="secondary">
-            Limpiar
-          </LinkButton>
+          <ClearControl resetHref={resetHref} onClear={onClear} />
           <Button type="submit" variant="info">
             <Search className="h-4 w-4" />
             Buscar
@@ -35,12 +66,10 @@ export function FilterBar({ children, resetHref }: { children: ReactNode; resetH
           <SlidersHorizontal className="h-4 w-4" />
           Mostrar filtros
         </summary>
-        <form className="space-y-3 border-t border-[#dee2e6] p-3">
+        <form className="space-y-3 border-t border-[#dee2e6] p-3" onSubmit={onSubmit}>
           <div className="grid gap-3">{children}</div>
           <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[#dee2e6] pt-3">
-            <LinkButton href={resetHref} variant="secondary">
-              Limpiar
-            </LinkButton>
+            <ClearControl resetHref={resetHref} onClear={onClear} />
             <Button type="submit" variant="info">
               <Search className="h-4 w-4" />
               Buscar

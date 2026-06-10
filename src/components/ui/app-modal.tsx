@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useId, useState, type ReactNode } from "react";
 import { X } from "lucide-react";
 import { cn } from "./cn";
 
@@ -19,6 +19,12 @@ const modalSizes = {
   xl: "max-w-6xl",
 };
 
+type ModalRenderProps = {
+  close: () => void;
+};
+
+type ModalChildren = ReactNode | ((props: ModalRenderProps) => ReactNode);
+
 export function AppModal({
   title,
   description,
@@ -36,16 +42,17 @@ export function AppModal({
   triggerClassName?: string;
   size?: keyof typeof modalSizes;
   defaultOpen?: boolean;
-  children: ReactNode;
+  children: ModalChildren;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   const titleId = useId();
+  const close = useCallback(() => setOpen(false), []);
 
   useEffect(() => {
     if (!open) return;
 
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") close();
     }
 
     document.addEventListener("keydown", onKeyDown);
@@ -55,7 +62,7 @@ export function AppModal({
       document.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = originalOverflow;
     };
-  }, [open]);
+  }, [close, open]);
 
   return (
     <>
@@ -76,11 +83,11 @@ export function AppModal({
           className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
           role="presentation"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setOpen(false);
+            if (event.target === event.currentTarget) close();
           }}
           onClick={(event) => {
             const target = event.target as HTMLElement;
-            if (target.closest("[data-modal-close]")) setOpen(false);
+            if (target.closest("[data-modal-close]")) close();
           }}
         >
           <div
@@ -101,14 +108,14 @@ export function AppModal({
               </div>
               <button
                 type="button"
-                onClick={() => setOpen(false)}
+                onClick={close}
                 className="rounded-sm p-2 text-[#6c757d] transition duration-150 hover:bg-white hover:text-[#212529] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff]"
                 aria-label="Cerrar modal"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="overflow-y-auto p-3 sm:p-4">{children}</div>
+            <div className="overflow-y-auto p-3 sm:p-4">{typeof children === "function" ? children({ close }) : children}</div>
           </div>
         </div>
       ) : null}
