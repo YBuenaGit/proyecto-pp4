@@ -555,7 +555,7 @@ function DaySummaryTable({ panel, rows }: { panel: DayPanel; rows: DayRow[] }) {
         {rows.map((row) => (
           <tr key={row.id}>
             <Td>
-              <Link href={row.href} className="inline-flex items-center gap-2 font-semibold text-[#1877f2] hover:underline">
+              <Link href={row.href} className="inline-flex items-center gap-2 font-semibold text-[#0667b0] hover:underline">
                 {row.time}
                 <Eye className="h-3.5 w-3.5" />
               </Link>

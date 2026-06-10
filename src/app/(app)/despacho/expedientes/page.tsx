@@ -43,7 +43,7 @@ function PdfLinks({ attachments }: { attachments: ExpedientPdf[] }) {
           target="_blank"
           rel="noreferrer"
           title={attachment.originalName}
-          className="inline-flex min-h-8 items-center gap-1 rounded-sm border border-[#b6cfeb] bg-[#e8f2ff] px-2 py-1 text-xs font-semibold text-[#1877f2] transition duration-150 hover:border-[#8ec5ff] hover:bg-[#d7ecff]"
+          className="inline-flex min-h-8 items-center gap-1 rounded-sm border border-[#b6cfeb] bg-[#e8f2ff] px-2 py-1 text-xs font-semibold text-[#0667b0] transition duration-150 hover:border-[#8ec5ff] hover:bg-[#d7ecff]"
         >
           <FileText className="h-3.5 w-3.5" />
           PDF {index + 1}
@@ -56,6 +56,7 @@ function PdfLinks({ attachments }: { attachments: ExpedientPdf[] }) {
 export default async function ExpedientsListPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
   const user = await requireUser();
   assertAccess(canAccessExpedients(user));
+
   const params = searchParams ? await searchParams : {};
   const from = param(params, "from");
   const to = param(params, "to");
@@ -84,20 +85,29 @@ export default async function ExpedientsListPage({ searchParams }: { searchParam
       take,
     }),
     prisma.internalExpedient.count({ where }),
-    prisma.catalogItem.findMany({ where: { type: "expedient_category", active: true }, orderBy: { sortOrder: "asc" } }),
+    prisma.catalogItem.findMany({
+      where: { type: "expedient_category", active: true },
+      orderBy: { sortOrder: "asc" },
+    }),
   ]);
+
   const attachments = expedients.length
     ? await prisma.attachment.findMany({
-        where: { entityType: "InternalExpedient", entityId: { in: expedients.map((expedient) => expedient.id) } },
+        where: {
+          entityType: "InternalExpedient",
+          entityId: { in: expedients.map((expedient) => expedient.id) },
+        },
         orderBy: { createdAt: "asc" },
       })
     : [];
+
   const pdfsByExpedient = new Map<string, ExpedientPdf[]>();
   const categoryLabels = new Map(categories.map((item) => [item.value, item.label]));
   const areaLabels = new Map(EXPEDIENT_AREAS.map((item) => [item.value, item.label]));
 
   for (const attachment of attachments) {
     if (!isPdfAttachment(attachment)) continue;
+
     const current = pdfsByExpedient.get(attachment.entityId) ?? [];
     current.push(attachment);
     pdfsByExpedient.set(attachment.entityId, current);
@@ -105,12 +115,20 @@ export default async function ExpedientsListPage({ searchParams }: { searchParam
 
   return (
     <>
-      <PageHeader
-        title="Despacho · Expedientes internos"
-        description="Submódulo administrativo para compras, repuestos, sueldos, alimentos, insumos, mantenimiento y otros expedientes."
-        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Despacho", href: "/despacho" }, { label: "Expedientes internos" }]}
-        actions={
-          <AppModal title="Nuevo expediente interno" trigger={<><Plus className="h-4 w-4" />Nuevo expediente</>} size="lg">
+      <PageHeader title="Despacho · Expedientes internos" />
+
+      <div className="relative mb-5">
+        <div className="mb-3 flex justify-end sm:absolute sm:right-0 sm:top-0 z-50 sm:mb-0">
+          <AppModal
+            title="Nuevo expediente interno"
+            trigger={
+              <>
+                <Plus className="h-4 w-4" />
+                Nuevo expediente
+              </>
+            }
+            size="lg"
+          >
             <ExpedientForm
               action={createExpedient}
               categories={categories.map((item) => ({ value: item.value, label: item.label }))}
@@ -119,18 +137,18 @@ export default async function ExpedientsListPage({ searchParams }: { searchParam
               submitLabel="Crear"
             />
           </AppModal>
-        }
-      />
+        </div>
 
-      <FilterBar resetHref="/despacho/expedientes">
-        <FilterInput label="Desde" name="from" type="date" defaultValue={from} />
-        <FilterInput label="Hasta" name="to" type="date" defaultValue={to} />
-        <FilterSelect label="Categoría" name="category" defaultValue={category} options={categories.map((item) => [item.value, item.label])} />
-        <FilterSelect label="Área" name="area" defaultValue={area} options={EXPEDIENT_AREAS.map((item) => [item.value, item.label])} />
-        <FilterSelect label="Código" name="codigo" defaultValue={codigo} options={CODIGOS_EXPEDIENTES.map((item) => [item.codigo, `${item.codigo} - ${item.descripcion}`])} />
-        <FilterSelect label="Estado" name="status" defaultValue={status} options={EXPEDIENT_STATUSES.map((s) => [s, labelFromValue(s)])} />
-        <FilterInput label="Nro expediente" name="expedienteNumber" defaultValue={expedienteNumber} />
-      </FilterBar>
+        <FilterBar resetHref="/despacho/expedientes">
+          <FilterInput label="Desde" name="from" type="date" defaultValue={from} />
+          <FilterInput label="Hasta" name="to" type="date" defaultValue={to} />
+          <FilterSelect label="Categoría" name="category" defaultValue={category} options={categories.map((item) => [item.value, item.label])} />
+          <FilterSelect label="Área" name="area" defaultValue={area} options={EXPEDIENT_AREAS.map((item) => [item.value, item.label])} />
+          <FilterSelect label="Código" name="codigo" defaultValue={codigo} options={CODIGOS_EXPEDIENTES.map((item) => [item.codigo, `${item.codigo} - ${item.descripcion}`])} />
+          <FilterSelect label="Estado" name="status" defaultValue={status} options={EXPEDIENT_STATUSES.map((s) => [s, labelFromValue(s)])} />
+          <FilterInput label="Nro expediente" name="expedienteNumber" defaultValue={expedienteNumber} />
+        </FilterBar>
+      </div>
 
       <Table
         title="Expedientes"
@@ -145,24 +163,37 @@ export default async function ExpedientsListPage({ searchParams }: { searchParam
         {expedients.map((expedient, index) => (
           <tr key={expedient.id}>
             <Td className="w-[72px] text-center">
-              <Link href={`/despacho/expedientes/${expedient.id}`} className="whitespace-nowrap font-semibold text-[#1877f2] hover:underline">
+              <Link href={`/despacho/expedientes/${expedient.id}`} className="whitespace-nowrap font-semibold text-[#0667b0] hover:underline">
                 {rowNumber(skip + index)}
               </Link>
             </Td>
+
             <Td>
               <div className="font-medium text-[#212529]">{formatDateTime(expedient.createdAt)}</div>
               <div className="mt-1 text-xs text-[#6c757d]">Usuario: {expedient.createdBy.name}</div>
             </Td>
+
             <Td>
               <div className="font-medium text-[#212529]">{expedient.expedienteNumber ?? "-"}</div>
               <div className="mt-1 text-xs text-[#6c757d]">{codigoExpedienteLabel(expedient.codigo)}</div>
             </Td>
+
             <Td>
-              <div className="font-medium text-[#212529]">{categoryLabels.get(expedient.category) ?? labelFromValue(expedient.category)}</div>
-              <div className="mt-1 text-xs font-semibold text-[#343a40]">Área: {areaLabels.get(expedient.area ?? "") ?? labelFromValue(expedient.area)}</div>
+              <div className="font-medium text-[#212529]">
+                {categoryLabels.get(expedient.category) ?? labelFromValue(expedient.category)}
+              </div>
+              <div className="mt-1 text-xs font-semibold text-[#343a40]">
+                Área: {areaLabels.get(expedient.area ?? "") ?? labelFromValue(expedient.area)}
+              </div>
             </Td>
-            <Td><StatusBadge value={expedient.status} /></Td>
-            <Td><PdfLinks attachments={pdfsByExpedient.get(expedient.id) ?? []} /></Td>
+
+            <Td>
+              <StatusBadge value={expedient.status} />
+            </Td>
+
+            <Td>
+              <PdfLinks attachments={pdfsByExpedient.get(expedient.id) ?? []} />
+            </Td>
           </tr>
         ))}
       </Table>
