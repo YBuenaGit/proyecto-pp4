@@ -31,7 +31,7 @@ export function ExpedientForm({
   submitLabel?: string;
 }) {
   return (
-    <form action={action} encType="multipart/form-data" className="space-y-5">
+    <form action={action} className="space-y-5">
       <DetailSection title="Expediente interno">
         <FormGrid>
           <FormField label="Numero de expediente">

@@ -13,7 +13,7 @@ import type { SearchParams } from "@/lib/types";
 function CountTable({ title, rows, badgeValues }: { title: string; rows: Array<{ key: string | null; count: number }>; badgeValues?: boolean }) {
   return (
     <DetailSection title={title}>
-      <Table headers={["Concepto", "Cantidad"]} empty={!rows.length}>
+      <Table title={title} itemLabel="conceptos" total={rows.length} showPagination={false} headers={["Concepto", "Cantidad"]} empty={!rows.length}>
         {rows.map((row) => {
           const concept = row.key ?? "Sin dato";
           return (

@@ -6,7 +6,7 @@ import { requireUser } from "@/lib/auth";
 import { formatDateTime } from "@/lib/format";
 import { getPeopleIndex, roleLabel } from "@/lib/people-index";
 import { assertAccess, canAccessDispatch, canAccessJuridical, canAccessPeople } from "@/lib/rbac";
-import { param } from "@/lib/search";
+import { pagination, param } from "@/lib/search";
 import type { SearchParams } from "@/lib/types";
 
 export default async function PeoplePage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
@@ -20,12 +20,13 @@ export default async function PeoplePage({ searchParams }: { searchParams?: Prom
   const lastName = param(params, "lastName");
   const name = param(params, "name");
   const caseQuery = param(params, "case");
+  const { page, pageSize, skip, take } = pagination(params);
 
-  const people = await getPeopleIndex({
+  const allPeople = await getPeopleIndex({
     permissions: { canDispatch, canJuridical },
     filters: { dni, firstName, lastName, name, caseQuery },
-    take: 100,
   });
+  const people = allPeople.slice(skip, skip + take);
 
   return (
     <>
@@ -43,7 +44,15 @@ export default async function PeoplePage({ searchParams }: { searchParams?: Prom
         <FilterInput label="Caso" name="case" defaultValue={caseQuery} />
       </FilterBar>
 
-      <Table headers={["Persona / DNI", "Contacto", "Domicilio", "Roles", "Casos / Ultimo caso"]} empty={!people.length}>
+      <Table
+        title="Personas"
+        itemLabel="personas"
+        total={allPeople.length}
+        page={page}
+        pageSize={pageSize}
+        headers={["Persona / DNI", "Contacto", "Domicilio", "Roles", "Casos / Ultimo caso"]}
+        empty={!people.length}
+      >
         {people.map((person) => (
           <tr key={person.id}>
             <Td>

@@ -3,10 +3,10 @@ import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from "reac
 import { cn } from "./cn";
 
 const variants = {
-  primary: "border-[#0667b0] bg-[#0667b0] text-white hover:border-[#0a61b9] hover:bg-[#0a61b9]",
-  secondary: "border-[#6c757d] bg-white text-[#495057] hover:bg-[#e9ecef]",
-  subtle: "border-[#bee5eb] bg-[#d1ecf1] text-[#0c5460] hover:bg-[#bee5eb]",
-  info: "border-[#17a2b8] bg-[#17a2b8] text-white hover:border-[#138496] hover:bg-[#138496]",
+  primary: "border-[#1877f2] bg-[#1877f2] text-white hover:border-[#1464cf] hover:bg-[#1464cf]",
+  secondary: "border-[#6c757d] bg-white text-[#495057] hover:bg-[#e5edf5]",
+  subtle: "border-[#9fd3e3] bg-[#c4e7f3] text-[#064d60] hover:bg-[#aee0ee]",
+  info: "border-[#1291a8] bg-[#1291a8] text-white hover:border-[#0f7d91] hover:bg-[#0f7d91]",
   success: "border-[#28a745] bg-[#28a745] text-white hover:border-[#218838] hover:bg-[#218838]",
   danger: "border-[#dc3545] bg-[#dc3545] text-white hover:border-[#c82333] hover:bg-[#c82333]",
 };

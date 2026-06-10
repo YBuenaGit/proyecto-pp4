@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
-import { Edit3, Eye, FileText, Plus, RefreshCw, Upload } from "lucide-react";
+import { Edit3, Eye, FileText, Plus, Upload } from "lucide-react";
 import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { FilterBar, FilterInput, FilterSelect } from "@/components/ui/filter-bar";
@@ -294,7 +294,15 @@ function RetentionDetailsPanel({ record }: { record: RetentionRecord }) {
 
       <section>
         <h3 className="mb-2 text-sm font-semibold text-[#212529]">Historial de edicion</h3>
-        <Table headers={["Campo", "Valor anterior", "Valor nuevo", "Editado por", "Fecha"]} empty={!current.histories.length} minWidth={760}>
+        <Table
+          title="Historial de edición"
+          itemLabel="cambios"
+          total={current.histories.length}
+          showPagination={false}
+          headers={["Campo", "Valor anterior", "Valor nuevo", "Editado por", "Fecha"]}
+          empty={!current.histories.length}
+          minWidth={760}
+        >
           {current.histories.map((history) => (
             <tr key={history.id}>
               <Td>{RETENTION_FIELD_LABELS[history.field] ?? history.field}</Td>
@@ -446,18 +454,20 @@ export function RetentionsClient() {
   const [filters, setFilters] = useState<RetentionFilters>({});
   const [filterRenderKey, setFilterRenderKey] = useState(0);
   const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const hasActiveFilters = Object.keys(filters).length > 0;
+  const pageSize = 10;
 
   const queryString = useMemo(() => {
-    const params = new URLSearchParams({ page: "1", pageSize: "50" });
+    const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
     Object.entries(filters).forEach(([key, value]) => {
       if (value) params.set(key, value);
     });
     return params.toString();
-  }, [filters]);
+  }, [filters, page]);
 
   const refreshRetentions = useCallback(() => setRefreshKey((current) => current + 1), []);
 
@@ -468,6 +478,7 @@ export function RetentionsClient() {
         if (!ignore) {
           setRetentions(data.items);
           setTotal(data.total);
+          if (data.total > 0 && data.items.length === 0 && page > 1) setPage(1);
         }
       })
       .catch((err) => {
@@ -479,7 +490,7 @@ export function RetentionsClient() {
     return () => {
       ignore = true;
     };
-  }, [queryString, refreshKey]);
+  }, [page, queryString, refreshKey]);
 
   const refreshList = useCallback(() => {
     setLoading(true);
@@ -491,6 +502,7 @@ export function RetentionsClient() {
     event.preventDefault();
     setLoading(true);
     setError(null);
+    setPage(1);
     setFilters(cleanFilters(new FormData(event.currentTarget)));
     setFilterRenderKey((current) => current + 1);
   }
@@ -498,6 +510,7 @@ export function RetentionsClient() {
   function clearFilters() {
     setLoading(true);
     setError(null);
+    setPage(1);
     setFilters({});
     setFilterRenderKey((current) => current + 1);
   }
@@ -569,22 +582,25 @@ export function RetentionsClient() {
         </FilterBar>
       </div>
 
-      <div className="mb-2 flex flex-col gap-1 text-sm text-[#495057] sm:flex-row sm:items-center sm:justify-between">
-        <p className="font-medium">Fecha de inicio: 11 de Octubre de 2024</p>
-        <div className="flex flex-wrap items-center gap-2">
-          <p>
-            {hasActiveFilters ? "Retenciones filtradas" : "Total de retenciones"}: <strong>{total}</strong>
-          </p>
-          <Button type="button" variant="secondary" className="min-h-8 px-2.5 py-1 text-xs" onClick={refreshList} disabled={loading}>
-            <RefreshCw className={cn("h-3.5 w-3.5", loading && "animate-spin")} />
-            Actualizar
-          </Button>
-        </div>
-      </div>
+      <p className="mb-2 text-sm font-medium text-[#495057]">Fecha de inicio: 11 de Octubre de 2024</p>
 
       {error ? <div className="mb-3 rounded-sm border border-[#f5c6cb] bg-[#f8d7da] px-3 py-2 text-sm font-semibold text-[#721c24]">{error}</div> : null}
 
-      <Table headers={["Fecha y hora", "Tipo de acta / Nro", "Identificador", "Vehiculo / Marca / Color", "Estado", "Acciones"]} empty={!loading && !retentions.length} minWidth={1180}>
+      <Table
+        title={hasActiveFilters ? "Retenciones filtradas" : "Retenciones"}
+        itemLabel="retenciones"
+        total={total}
+        page={page}
+        pageSize={pageSize}
+        onPageChange={(nextPage) => {
+          setLoading(true);
+          setPage(nextPage);
+        }}
+        onRefresh={refreshList}
+        headers={["Fecha y hora", "Tipo de acta / Nro", "Identificador", "Vehiculo / Marca / Color", "Estado", "Acciones"]}
+        empty={!loading && !retentions.length}
+        minWidth={1180}
+      >
         {retentions.map((record) => (
           <tr key={record.id}>
             <Td>

@@ -783,7 +783,15 @@ export default async function InterventionDetailPage({ params }: { params: Promi
           </LegajoBookViewer>
         }
       >
-        <Table headers={["Intervencion", "Fecha / usuario", "Actuacion", "Estado / seguimiento", "Archivo"]} minWidth={980}>
+        <Table
+          title="Intervenciones del legajo"
+          itemLabel="intervenciones"
+          total={displayActionSheets.length + 1}
+          showPagination={false}
+          rowClick={false}
+          headers={["Intervencion", "Fecha / usuario", "Actuacion", "Estado / seguimiento", "Archivo"]}
+          minWidth={980}
+        >
           {displayActionSheets.map(({ action, sheetNumber, parsed, statusText }) => {
             const rowAttachments = attachmentsByActionId.get(action.id) ?? [];
             return (

@@ -90,7 +90,7 @@ export function AddJuridicalActionForm({
   }
 
   return (
-    <form ref={formRef} action={action} encType="multipart/form-data" className="space-y-4">
+    <form ref={formRef} action={action} className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2">
         <FormField label="Tipo de registro">
           <select name="actionType" className={inputClass} defaultValue={initialValues?.actionType ?? "SEGUIMIENTO"}>

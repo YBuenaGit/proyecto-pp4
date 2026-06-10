@@ -1,4 +1,4 @@
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Search } from "lucide-react";
 import { AppModal } from "@/components/ui/app-modal";
 import { Button, LinkButton } from "@/components/ui/button";
 import { cn } from "@/components/ui/cn";
@@ -56,12 +56,12 @@ export function AppointmentFilters({
         description="Busca y filtra las citas respetando la agenda seleccionada."
         trigger={(
           <>
-            <SlidersHorizontal className="h-4 w-4" />
-            Filtrar
+            <Search className="h-4 w-4" />
+            Buscar
           </>
         )}
-        triggerVariant="secondary"
-        triggerClassName="border-[#17a2b8] bg-white text-[#0667b0] shadow-none hover:bg-[#d1ecf1]"
+        triggerVariant="success"
+        triggerClassName="shadow-sm"
         size="xl"
       >
         <form className="space-y-4">

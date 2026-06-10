@@ -1,14 +1,17 @@
 import Link from "next/link";
-import { BriefcaseBusiness, ClipboardList, Eye, Scale, TimerReset } from "lucide-react";
+import { BriefcaseBusiness, CalendarCheck, CalendarDays, ClipboardList, Eye, Newspaper, Scale, TimerReset, Users } from "lucide-react";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { Table, Td } from "@/components/ui/table";
 import { requireUser } from "@/lib/auth";
 import {
   DISPATCH_CATEGORY_LABELS,
   EXPEDIENT_CATEGORY_LABELS,
   JURIDICAL_TYPE_LABELS,
 } from "@/lib/constants";
+import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_TYPE_LABELS } from "@/lib/appointment-constants";
+import { canAccessAgenda } from "@/lib/appointment-permissions";
 import { formatDateTime, labelFromValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { canAccessDispatch, canAccessExpedients, canAccessJuridical, isAdmin, isDirectivo } from "@/lib/rbac";
@@ -20,6 +23,7 @@ const openJuridicalStatuses = ["RECIBIDO", "EN_ORIENTACION", "PENDIENTE_DOCUMENT
 const activeExpedientStatuses = ["INICIADO", "EN_TRAMITE", "OBSERVADO", "EN_APROBACION", "APROBADO"];
 
 type DashboardPanel = "dispatch" | "juridical" | "followups" | "expedients";
+type DayPanel = "news" | "agenda" | "myAgenda" | "groupAgenda";
 
 type DashboardRow = {
   id: string;
@@ -30,6 +34,16 @@ type DashboardRow = {
   requester: string;
   category: string;
   priority: string;
+  status: string;
+};
+
+type DayRow = {
+  id: string;
+  href: string;
+  time: string;
+  type: string;
+  detail: string;
+  owner: string;
   status: string;
 };
 
@@ -56,12 +70,43 @@ const panelCopy: Record<DashboardPanel, { title: string; description: string; em
   },
 };
 
+const dayPanelCopy: Record<DayPanel, { label: string; title: string; empty: string }> = {
+  news: {
+    label: "Novedades del día",
+    title: "Novedades del día",
+    empty: "No hay novedades cargadas para hoy.",
+  },
+  agenda: {
+    label: "Agenda",
+    title: "Agenda del día",
+    empty: "No hay compromisos agendados para hoy.",
+  },
+  myAgenda: {
+    label: "Mi agenda",
+    title: "Mi agenda de hoy",
+    empty: "No hay compromisos agendados para hoy.",
+  },
+  groupAgenda: {
+    label: "Agenda grupal",
+    title: "Agenda grupal de hoy",
+    empty: "No hay compromisos grupales agendados para hoy.",
+  },
+};
+
 function dashboardHref(panel: DashboardPanel) {
   return `/?panel=${panel}`;
 }
 
+function dayHref(panel: DayPanel) {
+  return `/?dayPanel=${panel}`;
+}
+
 function normalizePanel(value: string | undefined, availablePanels: DashboardPanel[], fallback: DashboardPanel) {
   return availablePanels.includes(value as DashboardPanel) ? (value as DashboardPanel) : fallback;
+}
+
+function normalizeDayPanel(value: string | undefined, availablePanels: DayPanel[]) {
+  return availablePanels.includes(value as DayPanel) ? (value as DayPanel) : availablePanels[0] ?? "news";
 }
 
 function truncate(value: string | null | undefined, max = 86) {
@@ -87,6 +132,14 @@ function reportedBy(value: string | null | undefined) {
   return value ?? "Sin datos";
 }
 
+function appointmentType(value: string) {
+  return APPOINTMENT_TYPE_LABELS[value as keyof typeof APPOINTMENT_TYPE_LABELS] ?? labelFromValue(value);
+}
+
+function appointmentStatus(value: string) {
+  return APPOINTMENT_STATUS_LABELS[value as keyof typeof APPOINTMENT_STATUS_LABELS] ?? labelFromValue(value);
+}
+
 function defaultPanel(availablePanels: DashboardPanel[]) {
   return availablePanels[0] ?? "dispatch";
 }
@@ -106,6 +159,66 @@ async function countTodayJuridicalActions(today: Date, tomorrow: Date) {
       juridicalIntervention: { status: { in: openJuridicalStatuses } },
     },
   });
+}
+
+async function getTodayNews(today: Date, tomorrow: Date, canDashboardDispatch: boolean): Promise<DayRow[]> {
+  if (!canDashboardDispatch) return [];
+  const records = await prisma.dispatchRecord.findMany({
+    where: { attendedAt: { gte: today, lt: tomorrow } },
+    include: { createdBy: { select: { name: true } } },
+    orderBy: { attendedAt: "desc" },
+    take: 10,
+  });
+
+  return records.map((record) => ({
+    id: record.id,
+    href: `/despacho/${record.id}`,
+    time: formatDateTime(record.attendedAt),
+    type: categoryLabel(DISPATCH_CATEGORY_LABELS, record.category),
+    detail: requesterFrom(record),
+    owner: reportedBy(record.createdBy.name),
+    status: record.status,
+  }));
+}
+
+async function getTodayAppointments({
+  panel,
+  dateKey,
+  userId,
+  canDashboardAgenda,
+}: {
+  panel: DayPanel;
+  dateKey: string;
+  userId: string;
+  canDashboardAgenda: boolean;
+}): Promise<DayRow[]> {
+  if (!canDashboardAgenda || panel === "news") return [];
+
+  const appointments = await prisma.appointment.findMany({
+    where: {
+      date: dateKey,
+      ...(panel === "myAgenda" ? { OR: [{ ownerUserId: userId }, { assignedUserId: userId }, { assignedLawyerId: userId }] } : {}),
+      ...(panel === "groupAgenda" ? { calendarScope: { in: ["lawyers", "dispatch"] } } : {}),
+    },
+    include: {
+      owner: { select: { name: true } },
+      createdBy: { select: { name: true } },
+      assignedUser: { select: { name: true } },
+      assignedLawyer: { select: { name: true } },
+    },
+    orderBy: [{ startTime: "asc" }, { createdAt: "desc" }],
+    take: 10,
+  });
+
+  return appointments.map((appointment) => ({
+    id: appointment.id,
+    href: `/agenda?day=${appointment.date}&month=${appointment.date.slice(0, 7)}&scope=${appointment.calendarScope}`,
+    time: appointment.endTime ? `${appointment.startTime} - ${appointment.endTime}` : appointment.startTime,
+    type: appointmentType(appointment.type),
+    detail: appointment.title,
+    owner: appointment.owner?.name ?? appointment.assignedUser?.name ?? appointment.assignedLawyer?.name ?? appointment.createdBy.name,
+    status: appointmentStatus(appointment.status),
+  }));
 }
 
 async function getRowsForPanel({
@@ -245,6 +358,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
   const canDashboardDispatch = canAccessDispatch(user) || hasDashboardOverview;
   const canDashboardJuridical = canAccessJuridical(user) || hasDashboardOverview;
   const canDashboardExpedients = canAccessExpedients(user) || hasDashboardOverview;
+  const canDashboardAgenda = canAccessAgenda(user) || hasDashboardOverview;
   const canDashboardFollowUps = canDashboardDispatch || canDashboardJuridical || canDashboardExpedients;
 
   const availablePanels: DashboardPanel[] = [
@@ -255,13 +369,30 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
   ];
 
   const selectedPanel = normalizePanel(param(params, "panel"), availablePanels, defaultPanel(availablePanels));
+  const availableDayPanels: DayPanel[] = [
+    ...(canDashboardDispatch ? (["news"] as const) : []),
+    ...(canDashboardAgenda ? (["agenda", "myAgenda", "groupAgenda"] as const) : []),
+  ];
+  const selectedDayPanel = normalizeDayPanel(param(params, "dayPanel"), availableDayPanels);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
+  const todayKey = today.toISOString().slice(0, 10);
 
-  const [pendingDispatch, openJuridical, todayJuridicalActions, activeExpedients, rows] = await Promise.all([
+  const [
+    pendingDispatch,
+    openJuridical,
+    todayJuridicalActions,
+    activeExpedients,
+    todayNewsRows,
+    todayAgendaRows,
+    todayMyAgendaRows,
+    todayGroupAgendaRows,
+    dayRows,
+    rows,
+  ] = await Promise.all([
     canDashboardDispatch
       ? countByStatuses("DispatchRecord", pendingDispatchStatuses)
       : 0,
@@ -274,6 +405,13 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
     canDashboardExpedients
       ? countByStatuses("InternalExpedient", activeExpedientStatuses)
       : 0,
+    getTodayNews(today, tomorrow, canDashboardDispatch),
+    getTodayAppointments({ panel: "agenda", dateKey: todayKey, userId: user.id, canDashboardAgenda }),
+    getTodayAppointments({ panel: "myAgenda", dateKey: todayKey, userId: user.id, canDashboardAgenda }),
+    getTodayAppointments({ panel: "groupAgenda", dateKey: todayKey, userId: user.id, canDashboardAgenda }),
+    selectedDayPanel === "news"
+      ? getTodayNews(today, tomorrow, canDashboardDispatch)
+      : getTodayAppointments({ panel: selectedDayPanel, dateKey: todayKey, userId: user.id, canDashboardAgenda }),
     getRowsForPanel({
       panel: selectedPanel,
       canDashboardDispatch,
@@ -283,6 +421,41 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
       tomorrow,
     }),
   ]);
+
+  const dayCards = [
+    {
+      panel: "news" as const,
+      visible: canDashboardDispatch,
+      label: dayPanelCopy.news.label,
+      value: todayNewsRows.length,
+      icon: <Newspaper className="h-5 w-5" />,
+      hint: "Cargadas hoy",
+    },
+    {
+      panel: "agenda" as const,
+      visible: canDashboardAgenda,
+      label: dayPanelCopy.agenda.label,
+      value: todayAgendaRows.length,
+      icon: <CalendarDays className="h-5 w-5" />,
+      hint: "Compromisos de hoy",
+    },
+    {
+      panel: "myAgenda" as const,
+      visible: canDashboardAgenda,
+      label: dayPanelCopy.myAgenda.label,
+      value: todayMyAgendaRows.length,
+      icon: <CalendarCheck className="h-5 w-5" />,
+      hint: "Asignados a mi usuario",
+    },
+    {
+      panel: "groupAgenda" as const,
+      visible: canDashboardAgenda,
+      label: dayPanelCopy.groupAgenda.label,
+      value: todayGroupAgendaRows.length,
+      icon: <Users className="h-5 w-5" />,
+      hint: "Agendas compartidas",
+    },
+  ].filter((card) => card.visible);
 
   const cards = [
     {
@@ -327,6 +500,26 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
         breadcrumbs={[{ label: "Inicio" }]}
       />
 
+      {dayCards.length ? (
+        <>
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {dayCards.map((card) => (
+              <KpiCard
+                key={card.panel}
+                label={card.label}
+                value={card.value}
+                icon={card.icon}
+                hint={card.hint}
+                href={dayHref(card.panel)}
+                active={selectedDayPanel === card.panel}
+              />
+            ))}
+          </div>
+
+          <DaySummaryTable panel={selectedDayPanel} rows={dayRows} />
+        </>
+      ) : null}
+
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {cards.map((card) => (
           <KpiCard
@@ -343,6 +536,39 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
 
       <DashboardTable panel={selectedPanel} rows={rows} />
     </>
+  );
+}
+
+function DaySummaryTable({ panel, rows }: { panel: DayPanel; rows: DayRow[] }) {
+  const copy = dayPanelCopy[panel];
+
+  return (
+    <div className="mt-4">
+      <Table
+        title={copy.title}
+        itemLabel="registros"
+        total={rows.length}
+        showPagination={false}
+        headers={["Hora", "Tipo", "Detalle", "Responsable", "Estado"]}
+        empty={!rows.length}
+      >
+        {rows.map((row) => (
+          <tr key={row.id}>
+            <Td>
+              <Link href={row.href} className="inline-flex items-center gap-2 font-semibold text-[#1877f2] hover:underline">
+                {row.time}
+                <Eye className="h-3.5 w-3.5" />
+              </Link>
+            </Td>
+            <Td>{row.type}</Td>
+            <Td>{row.detail}</Td>
+            <Td>{row.owner}</Td>
+            <Td><StatusBadge value={row.status} /></Td>
+          </tr>
+        ))}
+      </Table>
+      {!rows.length ? <p className="mt-2 text-sm font-medium text-[#6c757d]">{copy.empty}</p> : null}
+    </div>
   );
 }
 
@@ -366,8 +592,8 @@ function DashboardTable({ panel, rows }: { panel: DashboardPanel; rows: Dashboar
         <div className="px-5 py-10 text-center text-sm font-medium text-[#6c757d]">{copy.empty}</div>
       ) : (
         <>
-          <div className="hidden overflow-x-auto md:block">
-            <table className="w-full min-w-[1000px] table-auto border-collapse text-sm">
+          <div className="hidden overflow-hidden md:block">
+            <table className="w-full table-fixed border-collapse text-sm">
               <thead className="bg-[#e9ecef]">
                 <tr>
                   <DashboardTh>Número</DashboardTh>
@@ -377,7 +603,7 @@ function DashboardTable({ panel, rows }: { panel: DashboardPanel; rows: Dashboar
                   <DashboardTh>Prioridad / Estado</DashboardTh>
                 </tr>
               </thead>
-              <tbody className="bg-white [&_tr:hover]:bg-[#d1ecf1]/60">
+              <tbody className="bg-white [&_tr:hover]:bg-[#c4e7f3]/65">
                 {rows.map((row) => (
                   <tr key={row.id}>
                     <td className="border border-[#dee2e6] px-2.5 py-2 align-top">

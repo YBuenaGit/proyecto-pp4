@@ -11,7 +11,7 @@ import { requireUser } from "@/lib/auth";
 import { formatDateTime, normalizeName, labelFromValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessDispatch } from "@/lib/rbac";
-import { dateRangeWhere, param } from "@/lib/search";
+import { dateRangeWhere, pagination, param } from "@/lib/search";
 import type { SearchParams } from "@/lib/types";
 import { createDispatchRecord } from "./actions";
 import { DispatchForm } from "./dispatch-form";
@@ -33,6 +33,7 @@ export default async function DispatchListPage({
   const dni = param(params, "dni");
   const name = param(params, "name");
   const createdById = param(params, "createdById");
+  const { page, pageSize, skip, take } = pagination(params);
 
   const andFilters: Prisma.DispatchRecordWhereInput[] = [];
   if (dni) {
@@ -67,7 +68,7 @@ export default async function DispatchListPage({
     ...(andFilters.length ? { AND: andFilters } : {}),
   };
 
-  const [records, categories, users, areas] = await Promise.all([
+  const [records, totalRecords, categories, users, areas] = await Promise.all([
     prisma.dispatchRecord.findMany({
       where,
       include: {
@@ -77,8 +78,10 @@ export default async function DispatchListPage({
         linkedPersons: { orderBy: { sortOrder: "asc" } },
       },
       orderBy: { attendedAt: "desc" },
-      take: 100,
+      skip,
+      take,
     }),
+    prisma.dispatchRecord.count({ where }),
     prisma.catalogItem.findMany({
       where: { type: "dispatch_category", active: true },
       orderBy: { sortOrder: "asc" },
@@ -128,7 +131,15 @@ export default async function DispatchListPage({
         <FilterSelect label="Prioridad" name="priority" defaultValue={priority} options={PRIORITIES.map((p) => [p, labelFromValue(p)])} />
       </FilterBar>
 
-      <Table headers={["Numero", "Fecha y hora / Reportado por", "Persona", "Categoria", "Prioridad / Estado"]} empty={!records.length}>
+      <Table
+        title="Atenciones / Reclamos"
+        itemLabel="atenciones"
+        total={totalRecords}
+        page={page}
+        pageSize={pageSize}
+        headers={["Numero", "Fecha y hora / Reportado por", "Persona", "Categoria", "Prioridad / Estado"]}
+        empty={!records.length}
+      >
         {records.map((record) => (
           <tr key={record.id}>
             <Td>

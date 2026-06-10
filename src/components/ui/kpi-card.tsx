@@ -25,15 +25,15 @@ export function KpiCard({
           <p className="mt-1 text-3xl font-semibold tracking-normal text-[#212529]">{value}</p>
           {hint ? <p className="mt-1 text-xs font-medium text-[#6c757d]">{hint}</p> : null}
         </div>
-        <div className="rounded-sm border border-[#bee5eb] bg-[#d1ecf1] p-2 text-[#0c5460]">{icon}</div>
+        <div className="rounded-sm border border-[#9fd3e3] bg-[#c4e7f3] p-2 text-[#064d60]">{icon}</div>
       </div>
     </>
   );
 
   const className = cn(
     "block rounded-sm border bg-white p-3 shadow-sm transition duration-150",
-    href && "cursor-pointer hover:border-[#17a2b8] hover:bg-[#f8f9fa]",
-    active ? "border-[#0667b0] bg-[#d1ecf1]" : "border-[#dee2e6]",
+    href && "cursor-pointer hover:border-[#1291a8] hover:bg-[#f4f8fb]",
+    active ? "border-[#1877f2] bg-[#e8f2ff]" : "border-[#dee2e6]",
   );
 
   if (href) {

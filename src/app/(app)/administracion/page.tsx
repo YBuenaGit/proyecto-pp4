@@ -66,7 +66,7 @@ export default async function AdminPage() {
             </AppModal>
           }
         >
-          <Table headers={["Nombre", "Usuario", "Rol", "Estado", "Creado", "Accion"]} empty={!users.length}>
+          <Table title="Usuarios" itemLabel="usuarios" total={users.length} showPagination={false} headers={["Nombre", "Usuario", "Rol", "Estado", "Creado", "Accion"]} empty={!users.length}>
             {users.map((item) => (
               <tr key={item.id}>
                 <Td>
@@ -119,7 +119,7 @@ export default async function AdminPage() {
             </AppModal>
           }
         >
-          <Table headers={["Tipo", "Modulo", "Valor", "Etiqueta", "Estado"]} empty={!catalogItems.length}>
+          <Table title="Catalogos" itemLabel="catalogos" total={catalogItems.length} showPagination={false} headers={["Tipo", "Modulo", "Valor", "Etiqueta", "Estado"]} empty={!catalogItems.length}>
             {catalogItems.map((item) => (
               <tr key={item.id}>
                 <Td>{item.type}</Td>
@@ -133,7 +133,7 @@ export default async function AdminPage() {
         </DetailSection>
 
         <DetailSection title="Auditoria tecnica reciente">
-          <Table headers={["Fecha", "Modulo", "Entidad", "Accion", "Usuario"]} empty={!auditLogs.length}>
+          <Table title="Auditoria tecnica reciente" itemLabel="registros" total={auditLogs.length} showPagination={false} headers={["Fecha", "Modulo", "Entidad", "Accion", "Usuario"]} empty={!auditLogs.length}>
             {auditLogs.map((log) => (
               <tr key={log.id}>
                 <Td>{formatDateTime(log.createdAt)}</Td>

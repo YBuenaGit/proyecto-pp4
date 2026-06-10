@@ -1,4 +1,3 @@
-import type { ReactNode } from "react";
 import Link from "next/link";
 import type { Prisma } from "@prisma/client";
 import { FileText, Plus } from "lucide-react";
@@ -13,7 +12,7 @@ import { requireUser } from "@/lib/auth";
 import { formatDateTime, labelFromValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessExpedients } from "@/lib/rbac";
-import { dateRangeWhere, param } from "@/lib/search";
+import { dateRangeWhere, pagination, param } from "@/lib/search";
 import type { SearchParams } from "@/lib/types";
 import { createExpedient } from "../actions";
 import { ExpedientForm } from "./expedient-form";
@@ -44,21 +43,12 @@ function PdfLinks({ attachments }: { attachments: ExpedientPdf[] }) {
           target="_blank"
           rel="noreferrer"
           title={attachment.originalName}
-          className="inline-flex min-h-8 items-center gap-1 rounded-sm border border-[#b8daff] bg-[#e7f3ff] px-2 py-1 text-xs font-semibold text-[#064f88] transition duration-150 hover:border-[#80bdff] hover:bg-[#d7ecff]"
+          className="inline-flex min-h-8 items-center gap-1 rounded-sm border border-[#b6cfeb] bg-[#e8f2ff] px-2 py-1 text-xs font-semibold text-[#1877f2] transition duration-150 hover:border-[#8ec5ff] hover:bg-[#d7ecff]"
         >
           <FileText className="h-3.5 w-3.5" />
           PDF {index + 1}
         </Link>
       ))}
-    </div>
-  );
-}
-
-function MobileField({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="px-3 py-2.5">
-      <div className="mb-1 text-[11px] font-semibold uppercase tracking-normal text-[#6c757d]">{label}</div>
-      <div className="text-sm text-[#212529]">{children}</div>
     </div>
   );
 }
@@ -74,6 +64,7 @@ export default async function ExpedientsListPage({ searchParams }: { searchParam
   const status = param(params, "status");
   const expedienteNumber = param(params, "expedienteNumber");
   const codigo = param(params, "codigo");
+  const { page, pageSize, skip, take } = pagination(params);
 
   const where: Prisma.InternalExpedientWhereInput = {
     ...(dateRangeWhere(from, to) ? { createdAt: dateRangeWhere(from, to) } : {}),
@@ -84,8 +75,15 @@ export default async function ExpedientsListPage({ searchParams }: { searchParam
     ...(codigo ? { codigo } : {}),
   };
 
-  const [expedients, categories] = await Promise.all([
-    prisma.internalExpedient.findMany({ where, include: { createdBy: true }, orderBy: { createdAt: "desc" }, take: 100 }),
+  const [expedients, totalExpedients, categories] = await Promise.all([
+    prisma.internalExpedient.findMany({
+      where,
+      include: { createdBy: true },
+      orderBy: { createdAt: "desc" },
+      skip,
+      take,
+    }),
+    prisma.internalExpedient.count({ where }),
     prisma.catalogItem.findMany({ where: { type: "expedient_category", active: true }, orderBy: { sortOrder: "asc" } }),
   ]);
   const attachments = expedients.length
@@ -134,67 +132,40 @@ export default async function ExpedientsListPage({ searchParams }: { searchParam
         <FilterInput label="Nro expediente" name="expedienteNumber" defaultValue={expedienteNumber} />
       </FilterBar>
 
-      <div className="hidden lg:block">
-        <Table headers={["Número", "Creado / Usuario", "Expediente / Código", "Categoría / Área", "Estado", "PDF"]} empty={!expedients.length} minWidth={900}>
-          {expedients.map((expedient, index) => (
-            <tr key={expedient.id}>
-              <Td className="w-[72px] text-center">
-                <Link href={`/despacho/expedientes/${expedient.id}`} className="whitespace-nowrap font-semibold text-[#0667b0] hover:underline">
-                  {rowNumber(index)}
-                </Link>
-              </Td>
-              <Td>
-                <div className="font-medium text-[#212529]">{formatDateTime(expedient.createdAt)}</div>
-                <div className="mt-1 text-xs text-[#6c757d]">Usuario: {expedient.createdBy.name}</div>
-              </Td>
-              <Td>
-                <div className="font-medium text-[#212529]">{expedient.expedienteNumber ?? "-"}</div>
-                <div className="mt-1 text-xs text-[#6c757d]">{codigoExpedienteLabel(expedient.codigo)}</div>
-              </Td>
-              <Td>
-                <div className="font-medium text-[#212529]">{categoryLabels.get(expedient.category) ?? labelFromValue(expedient.category)}</div>
-                <div className="mt-1 text-xs font-semibold text-[#343a40]">Área: {areaLabels.get(expedient.area ?? "") ?? labelFromValue(expedient.area)}</div>
-              </Td>
-              <Td><StatusBadge value={expedient.status} /></Td>
-              <Td><PdfLinks attachments={pdfsByExpedient.get(expedient.id) ?? []} /></Td>
-            </tr>
-          ))}
-        </Table>
-      </div>
-
-      <div className="space-y-3 lg:hidden">
-        {!expedients.length ? (
-          <div className="rounded-sm border border-[#dee2e6] bg-white px-4 py-8 text-center text-sm font-medium text-[#6c757d] shadow-sm">No hay registros para mostrar.</div>
-        ) : (
-          expedients.map((expedient, index) => (
-            <article key={expedient.id} className="overflow-hidden rounded-sm border border-[#dee2e6] bg-white shadow-sm">
-              <div className="flex items-center justify-between gap-3 border-b border-[#dee2e6] bg-[#e9ecef] px-3 py-2">
-                <Link href={`/despacho/expedientes/${expedient.id}`} className="text-sm font-bold text-[#0667b0] hover:underline">
-                  Número {rowNumber(index)}
-                </Link>
-                <StatusBadge value={expedient.status} />
-              </div>
-              <div className="divide-y divide-[#dee2e6]">
-                <MobileField label="Creado / Usuario">
-                  <div className="font-medium">{formatDateTime(expedient.createdAt)}</div>
-                  <div className="mt-0.5 text-xs text-[#6c757d]">Usuario: {expedient.createdBy.name}</div>
-                </MobileField>
-                <MobileField label="Expediente / Código">
-                  <div className="font-medium">{expedient.expedienteNumber ?? "-"}</div>
-                  <div className="mt-0.5 text-xs text-[#6c757d]">{codigoExpedienteLabel(expedient.codigo)}</div>
-                </MobileField>
-                <MobileField label="Categoría / Área">
-                  <div className="font-medium">{categoryLabels.get(expedient.category) ?? labelFromValue(expedient.category)}</div>
-                  <div className="mt-0.5 text-xs font-semibold text-[#343a40]">Área: {areaLabels.get(expedient.area ?? "") ?? labelFromValue(expedient.area)}</div>
-                </MobileField>
-                <MobileField label="PDF">
-                  <PdfLinks attachments={pdfsByExpedient.get(expedient.id) ?? []} />
-                </MobileField>
-              </div>
-            </article>
-          ))
-        )}
-      </div>
+      <Table
+        title="Expedientes"
+        itemLabel="expedientes"
+        total={totalExpedients}
+        page={page}
+        pageSize={pageSize}
+        headers={["Número", "Creado / Usuario", "Expediente / Código", "Categoría / Área", "Estado", "PDF"]}
+        empty={!expedients.length}
+        minWidth={900}
+      >
+        {expedients.map((expedient, index) => (
+          <tr key={expedient.id}>
+            <Td className="w-[72px] text-center">
+              <Link href={`/despacho/expedientes/${expedient.id}`} className="whitespace-nowrap font-semibold text-[#1877f2] hover:underline">
+                {rowNumber(skip + index)}
+              </Link>
+            </Td>
+            <Td>
+              <div className="font-medium text-[#212529]">{formatDateTime(expedient.createdAt)}</div>
+              <div className="mt-1 text-xs text-[#6c757d]">Usuario: {expedient.createdBy.name}</div>
+            </Td>
+            <Td>
+              <div className="font-medium text-[#212529]">{expedient.expedienteNumber ?? "-"}</div>
+              <div className="mt-1 text-xs text-[#6c757d]">{codigoExpedienteLabel(expedient.codigo)}</div>
+            </Td>
+            <Td>
+              <div className="font-medium text-[#212529]">{categoryLabels.get(expedient.category) ?? labelFromValue(expedient.category)}</div>
+              <div className="mt-1 text-xs font-semibold text-[#343a40]">Área: {areaLabels.get(expedient.area ?? "") ?? labelFromValue(expedient.area)}</div>
+            </Td>
+            <Td><StatusBadge value={expedient.status} /></Td>
+            <Td><PdfLinks attachments={pdfsByExpedient.get(expedient.id) ?? []} /></Td>
+          </tr>
+        ))}
+      </Table>
     </>
   );
 }

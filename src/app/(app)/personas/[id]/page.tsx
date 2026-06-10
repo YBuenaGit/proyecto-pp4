@@ -63,7 +63,7 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
 
         <DetailSection title="Historial de Despacho">
           {canDispatch ? (
-            <Table headers={["Numero", "Fecha / Usuario", "Categoria", "Estado", "Rol"]} empty={!dispatchCases.length}>
+            <Table title="Historial de Despacho" itemLabel="casos" total={dispatchCases.length} showPagination={false} headers={["Numero", "Fecha / Usuario", "Categoria", "Estado", "Rol"]} empty={!dispatchCases.length}>
               {dispatchCases.map((record) => (
                 <tr key={`${record.module}-${record.id}-${record.role}`}>
                   <Td>
@@ -88,7 +88,7 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
 
         <DetailSection title="Historial de Intervenciones">
           {canJuridical ? (
-            <Table headers={["Numero", "Fecha / Usuario", "Tipo", "Estado", "Rol"]} empty={!juridicalCases.length}>
+            <Table title="Historial de Intervenciones" itemLabel="casos" total={juridicalCases.length} showPagination={false} headers={["Numero", "Fecha / Usuario", "Tipo", "Estado", "Rol"]} empty={!juridicalCases.length}>
               {juridicalCases.map((intervention) => (
                 <tr key={`${intervention.module}-${intervention.id}-${intervention.role}`}>
                   <Td>

@@ -21,8 +21,8 @@ export function AgendaScopeTabs({
           className={cn(
             "inline-flex h-9 items-center rounded-md border px-4 text-xs font-semibold transition",
             activeScope === scope
-              ? "border-[#0b2a55] bg-[#0b2a55] text-white shadow-sm"
-              : "border-[#dee2e6] bg-white text-[#14213d] hover:bg-[#f8f9fa]",
+              ? "border-[#1877f2] bg-[#1877f2] text-white shadow-sm"
+              : "border-[#c7d2de] bg-white text-[#14213d] hover:bg-[#e8f2ff]",
           )}
         >
           {CALENDAR_SCOPE_LABELS[scope]}

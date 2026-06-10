@@ -11,7 +11,7 @@ import { requireUser } from "@/lib/auth";
 import { formatDateTime, labelFromValue, normalizeName } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessJuridical } from "@/lib/rbac";
-import { dateRangeWhere, param } from "@/lib/search";
+import { dateRangeWhere, pagination, param } from "@/lib/search";
 import type { SearchParams } from "@/lib/types";
 import { createJuridicalIntervention } from "./actions";
 import { InterventionForm } from "./intervention-form";
@@ -30,6 +30,7 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
   const oficioNumber = param(params, "oficioNumber");
   const expedienteNumber = param(params, "expedienteNumber");
   const createdById = param(params, "createdById");
+  const { page, pageSize, skip, take } = pagination(params);
 
   const andFilters: Prisma.JuridicalInterventionWhereInput[] = [];
   if (dni) {
@@ -66,13 +67,15 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
     ...(andFilters.length ? { AND: andFilters } : {}),
   };
 
-  const [interventions, types, users, contexts] = await Promise.all([
+  const [interventions, totalInterventions, types, users, contexts] = await Promise.all([
     prisma.juridicalIntervention.findMany({
       where,
       include: { person: true, createdBy: true, destinationReferrals: true },
       orderBy: { attendedAt: "desc" },
-      take: 100,
+      skip,
+      take,
     }),
+    prisma.juridicalIntervention.count({ where }),
     prisma.catalogItem.findMany({ where: { type: "juridical_type", active: true }, orderBy: { sortOrder: "asc" } }),
     prisma.user.findMany({ where: { role: "juridico", active: true }, orderBy: { name: "asc" } }),
     prisma.catalogItem.findMany({ where: { type: "intervention_context", active: true }, orderBy: { sortOrder: "asc" } }),
@@ -111,7 +114,15 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
         <FilterSelect label="Usuario" name="createdById" defaultValue={createdById} options={users.map((item) => [item.id, item.name])} />
       </FilterBar>
 
-      <Table headers={["Numero", "Fecha y hora / Reportado por", "Persona", "Tipo", "Urgencia / Estado"]} empty={!interventions.length}>
+      <Table
+        title="Intervenciones"
+        itemLabel="intervenciones"
+        total={totalInterventions}
+        page={page}
+        pageSize={pageSize}
+        headers={["Numero", "Fecha y hora / Reportado por", "Persona", "Tipo", "Urgencia / Estado"]}
+        empty={!interventions.length}
+      >
         {interventions.map((intervention) => (
           <tr key={intervention.id}>
             <Td>

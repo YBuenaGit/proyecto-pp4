@@ -50,8 +50,8 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
               className={cn(
                 "flex items-center gap-2 rounded-sm px-3 py-2 text-sm font-semibold transition duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff] lg:w-full",
                 active
-                  ? "bg-[#0667b0] text-white shadow-sm"
-                  : "text-[#495057] hover:bg-[#e9ecef] hover:text-[#0667b0]",
+                  ? "bg-[#1877f2] text-white shadow-sm"
+                  : "text-[#495057] hover:bg-[#e8f2ff] hover:text-[#1877f2]",
               )}
             >
               <Icon className="h-4 w-4 shrink-0" />
@@ -66,8 +66,8 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
                     className={cn(
                       "block whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff]",
                       pathname === child.href || pathname.startsWith(`${child.href}/`)
-                        ? "bg-[#e9ecef] text-[#0667b0] ring-1 ring-[#dee2e6]"
-                        : "text-[#6c757d] hover:bg-[#f8f9fa] hover:text-[#0667b0]",
+                        ? "bg-[#1877f2] text-white ring-1 ring-[#9cc7ff]"
+                        : "text-[#6c757d] hover:bg-[#e8f2ff] hover:text-[#1877f2]",
                     )}
                   >
                     {child.label}
