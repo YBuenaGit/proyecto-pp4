@@ -3,8 +3,9 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 model User {
@@ -32,6 +33,9 @@ model User {
   personalAppointments   Appointment[]           @relation("AppointmentOwner")
   assignedAppointments   Appointment[]           @relation("AppointmentAssignedUser")
   lawyerAppointments     Appointment[]           @relation("AppointmentAssignedLawyer")
+  retentionsCreated      Retention[]             @relation("RetentionCreatedBy")
+  retentionHistories     RetentionHistory[]      @relation("RetentionEditedBy")
+  retentionAttachments   RetentionAttachment[]   @relation("RetentionAttachmentUploadedBy")
 
   @@index([role])
   @@index([active])
@@ -395,6 +399,76 @@ model Attachment {
 
   @@index([module])
   @@index([entityType, entityId])
+  @@index([uploadedById])
+  @@index([createdAt])
+}
+
+model Retention {
+  id             String   @id @default(cuid())
+  internalNumber String   @unique
+  dateTime       DateTime @default(now())
+  actNumber      String
+  actType        String
+  recordNumber   String
+  domain         String?
+  engineNumber   String?
+  chassisNumber  String?
+  vehicleType    String
+  brand          String
+  color          String
+  description    String
+  status         String   @default("PENDIENTE")
+  createdById    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  createdBy   User                  @relation("RetentionCreatedBy", fields: [createdById], references: [id])
+  histories   RetentionHistory[]
+  attachments RetentionAttachment[]
+
+  @@index([dateTime])
+  @@index([actNumber])
+  @@index([recordNumber])
+  @@index([domain])
+  @@index([engineNumber])
+  @@index([chassisNumber])
+  @@index([status])
+  @@index([createdById])
+}
+
+model RetentionHistory {
+  id          String   @id @default(cuid())
+  retentionId String
+  field       String
+  oldValue    String?
+  newValue    String?
+  editedById  String
+  editedAt    DateTime @default(now())
+
+  retention Retention @relation(fields: [retentionId], references: [id], onDelete: Cascade)
+  editedBy  User      @relation("RetentionEditedBy", fields: [editedById], references: [id])
+
+  @@index([retentionId])
+  @@index([editedById])
+  @@index([editedAt])
+}
+
+model RetentionAttachment {
+  id           String   @id @default(cuid())
+  retentionId  String
+  objectKey    String
+  publicUrl    String
+  fileName     String
+  originalName String
+  mimeType     String
+  size         Int
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  retention  Retention @relation(fields: [retentionId], references: [id], onDelete: Cascade)
+  uploadedBy User      @relation("RetentionAttachmentUploadedBy", fields: [uploadedById], references: [id])
+
+  @@index([retentionId])
   @@index([uploadedById])
   @@index([createdAt])
 }

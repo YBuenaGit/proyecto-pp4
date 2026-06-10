@@ -1,13 +1,5 @@
-import { randomUUID } from "node:crypto";
 import { normalizeName } from "./format";
-import { sqliteExecute, sqliteNow, sqliteQueryOne } from "./sqlite";
-
-type ExternalPersonFormResult = {
-  id: string;
-  dni: string | null;
-  firstName: string;
-  lastName: string;
-};
+import { prisma } from "./prisma";
 
 export function text(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -70,44 +62,34 @@ export async function upsertPersonFromForm(formData: FormData) {
   const fullNameNormalized = normalizeName(`${safeFirstName} ${safeLastName}`);
 
   if (dni) {
-    const existing = await sqliteQueryOne<{ id: string }>("SELECT id FROM ExternalPerson WHERE dni = ? LIMIT 1", [dni]);
+    const existing = await prisma.externalPerson.findUnique({
+      where: { dni },
+      select: { id: true },
+    });
     if (existing) {
-      await sqliteExecute(
-        `UPDATE ExternalPerson
-         SET firstName = ?, lastName = ?, fullNameNormalized = ?, phone1 = ?, phone2 = ?, address = ?, updatedAt = ?
-         WHERE id = ?`,
-        [safeFirstName, safeLastName, fullNameNormalized, phone1, phone2, address, sqliteNow(), existing.id],
-      );
-      return sqliteQueryOne<ExternalPersonFormResult>(
-        "SELECT id, dni, firstName, lastName FROM ExternalPerson WHERE id = ? LIMIT 1",
-        [existing.id],
-      );
+      return prisma.externalPerson.update({
+        where: { id: existing.id },
+        data: { firstName: safeFirstName, lastName: safeLastName, fullNameNormalized, phone1, phone2, address },
+        select: { id: true, dni: true, firstName: true, lastName: true },
+      });
     }
   }
 
-  const id = randomUUID();
-  const now = sqliteNow();
-  await sqliteExecute(
-    `INSERT INTO ExternalPerson (
-       id, dni, firstName, lastName, fullNameNormalized, phone1, phone2, address, createdAt, updatedAt
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, dni, safeFirstName, safeLastName, fullNameNormalized, phone1, phone2, address, now, now],
-  );
-  return sqliteQueryOne<ExternalPersonFormResult>(
-    "SELECT id, dni, firstName, lastName FROM ExternalPerson WHERE id = ? LIMIT 1",
-    [id],
-  );
+  return prisma.externalPerson.create({
+    data: { dni, firstName: safeFirstName, lastName: safeLastName, fullNameNormalized, phone1, phone2, address },
+    select: { id: true, dni: true, firstName: true, lastName: true },
+  });
 }
 
-export async function nextInternalNumber(prefix: string, model: "dispatch" | "juridical" | "expedient") {
+export async function nextInternalNumber(prefix: string, model: "dispatch" | "juridical" | "expedient" | "retention") {
   const year = new Date().getFullYear();
-  const table =
+  const count =
     model === "dispatch"
-      ? "DispatchRecord"
+      ? await prisma.dispatchRecord.count()
       : model === "juridical"
-        ? "JuridicalIntervention"
-        : "InternalExpedient";
-  const row = await sqliteQueryOne<{ count: number }>(`SELECT COUNT(*) AS count FROM ${table}`);
-  const count = row?.count ?? 0;
+        ? await prisma.juridicalIntervention.count()
+        : model === "expedient"
+          ? await prisma.internalExpedient.count()
+          : await prisma.retention.count();
   return `${prefix}-${year}-${String(count + 1).padStart(4, "0")}`;
 }

@@ -6,5 +6,5 @@ export default async function RetentionsPage() {
   const user = await requireUser();
   assertAccess(canAccessRetentions(user));
 
-  return <RetentionsClient currentUserName={user.name} />;
+  return <RetentionsClient />;
 }

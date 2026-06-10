@@ -67,6 +67,9 @@ async function audit(
 
 async function main() {
   await prisma.auditLog.deleteMany();
+  await prisma.retentionAttachment.deleteMany();
+  await prisma.retentionHistory.deleteMany();
+  await prisma.retention.deleteMany();
   await prisma.attachment.deleteMany();
   await prisma.referral.deleteMany();
   await prisma.juridicalAction.deleteMany();
@@ -665,6 +668,79 @@ async function main() {
       area: expedient.area,
     });
   }
+
+  const retentionSeeds = [
+    {
+      internalNumber: internalNumber("RET", 1),
+      dateTime: daysAgo(2, 15),
+      actNumber: "1287",
+      actType: "ALCOHOLEMIA",
+      recordNumber: "4421",
+      domain: "AB123CD",
+      engineNumber: null,
+      chassisNumber: null,
+      vehicleType: "AUTO",
+      brand: "Toyota",
+      color: "Gris",
+      description: "Control preventivo con resultado positivo. Vehiculo trasladado al corralon municipal.",
+      status: "PENDIENTE",
+      createdById: byUser.despacho1.id,
+    },
+    {
+      internalNumber: internalNumber("RET", 2),
+      dateTime: daysAgo(3, 19),
+      actNumber: "1286",
+      actType: "INFRACCION",
+      recordNumber: "4419",
+      domain: "A112BCD",
+      engineNumber: null,
+      chassisNumber: "8AJBA3CD4E1234567",
+      vehicleType: "CAMIONETA",
+      brand: "Ford",
+      color: "Blanco",
+      description: "Retencion por falta de documentacion obligatoria durante operativo nocturno.",
+      status: "ENTREGADO",
+      createdById: byUser.despacho2.id,
+    },
+    {
+      internalNumber: internalNumber("RET", 3),
+      dateTime: daysAgo(4, 10),
+      actNumber: "1285",
+      actType: "INFRACCION",
+      recordNumber: "4415",
+      domain: null,
+      engineNumber: "E3J739502",
+      chassisNumber: "9C2KC2200MR000182",
+      vehicleType: "MOTO",
+      brand: "Honda",
+      color: "Negro",
+      description: "Motovehiculo retenido por circular sin dominio visible y sin documentacion respaldatoria.",
+      status: "PENDIENTE",
+      createdById: byUser.despacho3.id,
+    },
+  ];
+
+  const retentions = [];
+  for (const seed of retentionSeeds) {
+    const retention = await prisma.retention.create({ data: seed });
+    retentions.push(retention);
+    await audit("RETENCIONES", "Retention", retention.id, "CREATE", seed.createdById, {
+      internalNumber: retention.internalNumber,
+      status: retention.status,
+      actNumber: retention.actNumber,
+    });
+  }
+
+  await prisma.retentionHistory.create({
+    data: {
+      retentionId: retentions[1].id,
+      field: "status",
+      oldValue: "Pendiente",
+      newValue: "Entregado",
+      editedById: byUser.despacho4.id,
+      editedAt: daysAgo(1, 10),
+    },
+  });
 
   const uploadDir = path.join(process.cwd(), "storage", "uploads");
   await mkdir(uploadDir, { recursive: true });

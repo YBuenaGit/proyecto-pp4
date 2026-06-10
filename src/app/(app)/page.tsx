@@ -10,9 +10,9 @@ import {
   JURIDICAL_TYPE_LABELS,
 } from "@/lib/constants";
 import { formatDateTime, labelFromValue } from "@/lib/format";
+import { prisma } from "@/lib/prisma";
 import { canAccessDispatch, canAccessExpedients, canAccessJuridical, isAdmin, isDirectivo } from "@/lib/rbac";
 import { param } from "@/lib/search";
-import { placeholders, sqliteQuery, sqliteQueryOne, type SqliteParam } from "@/lib/sqlite";
 import type { SearchParams } from "@/lib/types";
 
 const pendingDispatchStatuses = ["RECIBIDO", "EN_ANALISIS", "EN_GESTION"];
@@ -31,56 +31,6 @@ type DashboardRow = {
   category: string;
   priority: string;
   status: string;
-};
-
-type CountRow = {
-  count: number;
-};
-
-type DispatchDashboardRow = {
-  id: string;
-  internalNumber: string;
-  attendedAt: number | string;
-  nameSnapshot: string | null;
-  category: string;
-  priority: string;
-  status: string;
-  createdByName: string | null;
-};
-
-type JuridicalDashboardRow = {
-  id: string;
-  internalNumber: string;
-  attendedAt: number | string;
-  nameSnapshot: string | null;
-  type: string;
-  urgency: string;
-  status: string;
-  createdByName: string | null;
-};
-
-type FollowUpDashboardRow = {
-  id: string;
-  juridicalInterventionId: string;
-  nextStepDate: number | string | null;
-  createdAt: number | string;
-  actionType: string;
-  createdByName: string | null;
-  internalNumber: string;
-  nameSnapshot: string | null;
-  urgency: string;
-  status: string;
-};
-
-type ExpedientDashboardRow = {
-  id: string;
-  internalNumber: string;
-  expedienteNumber: string | null;
-  createdAt: number | string;
-  description: string;
-  category: string;
-  status: string;
-  createdByName: string | null;
 };
 
 const panelCopy: Record<DashboardPanel, { title: string; description: string; empty: string }> = {
@@ -128,9 +78,9 @@ function categoryLabel(labels: Record<string, string>, value: string | null | un
   return labels[value] ?? labelFromValue(value);
 }
 
-function sqliteDate(value: number | string | null | undefined) {
+function dateValue(value: Date | string | null | undefined) {
   if (!value) return new Date(0);
-  return typeof value === "number" ? new Date(value) : value;
+  return value;
 }
 
 function reportedBy(value: string | null | undefined) {
@@ -142,26 +92,20 @@ function defaultPanel(availablePanels: DashboardPanel[]) {
 }
 
 async function countByStatuses(table: "DispatchRecord" | "JuridicalIntervention" | "InternalExpedient", statuses: string[]) {
-  const row = await sqliteQueryOne<CountRow>(
-    `SELECT COUNT(*) AS count
-     FROM ${table}
-     WHERE status IN (${placeholders(statuses)})`,
-    statuses,
-  );
-  return row?.count ?? 0;
+  if (table === "DispatchRecord") return prisma.dispatchRecord.count({ where: { status: { in: statuses } } });
+  if (table === "JuridicalIntervention") {
+    return prisma.juridicalIntervention.count({ where: { status: { in: statuses } } });
+  }
+  return prisma.internalExpedient.count({ where: { status: { in: statuses } } });
 }
 
 async function countTodayJuridicalActions(today: Date, tomorrow: Date) {
-  const row = await sqliteQueryOne<CountRow>(
-    `SELECT COUNT(*) AS count
-     FROM JuridicalAction action
-     INNER JOIN JuridicalIntervention intervention ON intervention.id = action.juridicalInterventionId
-     WHERE action.nextStepDate >= ?
-       AND action.nextStepDate < ?
-       AND intervention.status IN (${placeholders(openJuridicalStatuses)})`,
-    [today.getTime(), tomorrow.getTime(), ...openJuridicalStatuses],
-  );
-  return row?.count ?? 0;
+  return prisma.juridicalAction.count({
+    where: {
+      nextStepDate: { gte: today, lt: tomorrow },
+      juridicalIntervention: { status: { in: openJuridicalStatuses } },
+    },
+  });
 }
 
 async function getRowsForPanel({
@@ -180,148 +124,109 @@ async function getRowsForPanel({
   tomorrow: Date;
 }): Promise<DashboardRow[]> {
   if (panel === "dispatch" && canDashboardDispatch) {
-    const records = await sqliteQuery<DispatchDashboardRow>(
-      `SELECT
-         record.id,
-         record.internalNumber,
-         record.attendedAt,
-         record.nameSnapshot,
-         record.category,
-         record.priority,
-         record.status,
-         user.name AS createdByName
-       FROM DispatchRecord record
-       LEFT JOIN User user ON user.id = record.createdById
-       WHERE record.status IN (${placeholders(pendingDispatchStatuses)})
-       ORDER BY
-         CASE record.priority
-           WHEN 'URGENTE' THEN 4
-           WHEN 'ALTA' THEN 3
-           WHEN 'MEDIA' THEN 2
-           WHEN 'BAJA' THEN 1
-           ELSE 0
-         END DESC,
-         record.attendedAt DESC
-       LIMIT 10`,
-      pendingDispatchStatuses,
-    );
+    const priorityRank: Record<string, number> = { URGENTE: 4, ALTA: 3, MEDIA: 2, BAJA: 1 };
+    const records = await prisma.dispatchRecord.findMany({
+      where: { status: { in: pendingDispatchStatuses } },
+      include: { createdBy: { select: { name: true } } },
+      orderBy: { attendedAt: "desc" },
+      take: 100,
+    });
 
-    return records.map((record) => ({
-      id: record.id,
-      number: record.internalNumber,
-      href: `/despacho/${record.id}`,
-      dateTime: sqliteDate(record.attendedAt),
-      reportedBy: reportedBy(record.createdByName),
-      requester: requesterFrom(record),
-      category: categoryLabel(DISPATCH_CATEGORY_LABELS, record.category),
-      priority: record.priority,
-      status: record.status,
-    }));
+    return records
+      .sort((a, b) => {
+        const byPriority = (priorityRank[b.priority] ?? 0) - (priorityRank[a.priority] ?? 0);
+        return byPriority || b.attendedAt.getTime() - a.attendedAt.getTime();
+      })
+      .slice(0, 10)
+      .map((record) => ({
+        id: record.id,
+        number: record.internalNumber,
+        href: `/despacho/${record.id}`,
+        dateTime: dateValue(record.attendedAt),
+        reportedBy: reportedBy(record.createdBy.name),
+        requester: requesterFrom(record),
+        category: categoryLabel(DISPATCH_CATEGORY_LABELS, record.category),
+        priority: record.priority,
+        status: record.status,
+      }));
   }
 
   if (panel === "juridical" && canDashboardJuridical) {
-    const interventions = await sqliteQuery<JuridicalDashboardRow>(
-      `SELECT
-         intervention.id,
-         intervention.internalNumber,
-         intervention.attendedAt,
-         intervention.nameSnapshot,
-         intervention.type,
-         intervention.urgency,
-         intervention.status,
-         user.name AS createdByName
-       FROM JuridicalIntervention intervention
-       LEFT JOIN User user ON user.id = intervention.createdById
-       WHERE intervention.status IN (${placeholders(openJuridicalStatuses)})
-       ORDER BY
-         CASE intervention.urgency
-           WHEN 'URGENTE' THEN 4
-           WHEN 'ALTA' THEN 3
-           WHEN 'MEDIA' THEN 2
-           WHEN 'BAJA' THEN 1
-           ELSE 0
-         END DESC,
-         intervention.attendedAt DESC
-       LIMIT 10`,
-      openJuridicalStatuses,
-    );
+    const urgencyRank: Record<string, number> = { URGENTE: 4, ALTA: 3, MEDIA: 2, BAJA: 1 };
+    const interventions = await prisma.juridicalIntervention.findMany({
+      where: { status: { in: openJuridicalStatuses } },
+      include: { createdBy: { select: { name: true } } },
+      orderBy: { attendedAt: "desc" },
+      take: 100,
+    });
 
-    return interventions.map((intervention) => ({
-      id: intervention.id,
-      number: intervention.internalNumber,
-      href: `/intervenciones/${intervention.id}`,
-      dateTime: sqliteDate(intervention.attendedAt),
-      reportedBy: reportedBy(intervention.createdByName),
-      requester: requesterFrom(intervention),
-      category: categoryLabel(JURIDICAL_TYPE_LABELS, intervention.type),
-      priority: intervention.urgency,
-      status: intervention.status,
-    }));
+    return interventions
+      .sort((a, b) => {
+        const byUrgency = (urgencyRank[b.urgency] ?? 0) - (urgencyRank[a.urgency] ?? 0);
+        return byUrgency || b.attendedAt.getTime() - a.attendedAt.getTime();
+      })
+      .slice(0, 10)
+      .map((intervention) => ({
+        id: intervention.id,
+        number: intervention.internalNumber,
+        href: `/intervenciones/${intervention.id}`,
+        dateTime: dateValue(intervention.attendedAt),
+        reportedBy: reportedBy(intervention.createdBy.name),
+        requester: requesterFrom(intervention),
+        category: categoryLabel(JURIDICAL_TYPE_LABELS, intervention.type),
+        priority: intervention.urgency,
+        status: intervention.status,
+      }));
   }
 
   if (panel === "followups" && canDashboardJuridical) {
-    const params: SqliteParam[] = [today.getTime(), tomorrow.getTime(), ...openJuridicalStatuses];
-    const actions = await sqliteQuery<FollowUpDashboardRow>(
-      `SELECT
-         action.id,
-         action.juridicalInterventionId,
-         action.nextStepDate,
-         action.createdAt,
-         action.actionType,
-         user.name AS createdByName,
-         intervention.internalNumber,
-         intervention.nameSnapshot,
-         intervention.urgency,
-         intervention.status
-       FROM JuridicalAction action
-       INNER JOIN JuridicalIntervention intervention ON intervention.id = action.juridicalInterventionId
-       LEFT JOIN User user ON user.id = action.createdById
-       WHERE action.nextStepDate >= ?
-         AND action.nextStepDate < ?
-         AND intervention.status IN (${placeholders(openJuridicalStatuses)})
-       ORDER BY action.nextStepDate ASC, action.createdAt DESC
-       LIMIT 10`,
-      params,
-    );
+    const actions = await prisma.juridicalAction.findMany({
+      where: {
+        nextStepDate: { gte: today, lt: tomorrow },
+        juridicalIntervention: { status: { in: openJuridicalStatuses } },
+      },
+      include: {
+        createdBy: { select: { name: true } },
+        juridicalIntervention: {
+          select: {
+            internalNumber: true,
+            nameSnapshot: true,
+            urgency: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: [{ nextStepDate: "asc" }, { createdAt: "desc" }],
+      take: 10,
+    });
 
     return actions.map((action) => ({
       id: action.id,
-      number: action.internalNumber,
+      number: action.juridicalIntervention.internalNumber,
       href: `/intervenciones/${action.juridicalInterventionId}`,
-      dateTime: sqliteDate(action.nextStepDate ?? action.createdAt),
-      reportedBy: reportedBy(action.createdByName),
-      requester: requesterFrom(action),
+      dateTime: dateValue(action.nextStepDate ?? action.createdAt),
+      reportedBy: reportedBy(action.createdBy.name),
+      requester: requesterFrom(action.juridicalIntervention),
       category: `Intervenciones · ${labelFromValue(action.actionType)}`,
-      priority: action.urgency,
-      status: action.status,
+      priority: action.juridicalIntervention.urgency,
+      status: action.juridicalIntervention.status,
     }));
   }
 
   if (panel === "expedients" && canDashboardExpedients) {
-    const expedients = await sqliteQuery<ExpedientDashboardRow>(
-      `SELECT
-         expedient.id,
-         expedient.internalNumber,
-         expedient.expedienteNumber,
-         expedient.createdAt,
-         expedient.description,
-         expedient.category,
-         expedient.status,
-         user.name AS createdByName
-       FROM InternalExpedient expedient
-       LEFT JOIN User user ON user.id = expedient.createdById
-       WHERE expedient.status IN (${placeholders(activeExpedientStatuses)})
-       ORDER BY expedient.createdAt DESC
-       LIMIT 10`,
-      activeExpedientStatuses,
-    );
+    const expedients = await prisma.internalExpedient.findMany({
+      where: { status: { in: activeExpedientStatuses } },
+      include: { createdBy: { select: { name: true } } },
+      orderBy: { createdAt: "desc" },
+      take: 10,
+    });
 
     return expedients.map((expedient) => ({
       id: expedient.id,
       number: expedient.expedienteNumber ?? expedient.internalNumber,
       href: `/despacho/expedientes/${expedient.id}`,
-      dateTime: sqliteDate(expedient.createdAt),
-      reportedBy: reportedBy(expedient.createdByName),
+      dateTime: dateValue(expedient.createdAt),
+      reportedBy: reportedBy(expedient.createdBy.name),
       requester: truncate(expedient.description),
       category: categoryLabel(EXPEDIENT_CATEGORY_LABELS, expedient.category),
       priority: "NO_APLICA",
