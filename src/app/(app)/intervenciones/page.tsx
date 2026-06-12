@@ -3,6 +3,7 @@ import type { Prisma } from "@prisma/client";
 import { Plus } from "lucide-react";
 import { AppModal } from "@/components/ui/app-modal";
 import { FilterBar, FilterInput, FilterSelect } from "@/components/ui/filter-bar";
+import { ListToolbar } from "@/components/ui/list-toolbar";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Table, Td } from "@/components/ui/table";
@@ -85,8 +86,10 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
     <>
       <PageHeader
         title="Intervenciones Juridico-Institucionales"
-        description="Registro amplio de orientaciones, contencion, informes, oficios, actuaciones y conflictos vecinales."
         breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Intervenciones" }]}
+      />
+
+      <ListToolbar
         actions={
           <AppModal title="Nueva intervencion" trigger={<><Plus className="h-4 w-4" />Nueva intervencion</>} size="xl">
             <InterventionForm
@@ -99,20 +102,20 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
             />
           </AppModal>
         }
-      />
-
-      <FilterBar resetHref="/intervenciones">
-        <FilterInput label="Desde" name="from" type="date" defaultValue={from} />
-        <FilterInput label="Hasta" name="to" type="date" defaultValue={to} />
-        <FilterSelect label="Tipo" name="type" defaultValue={type} options={types.map((item) => [item.value, item.label])} />
-        <FilterSelect label="Estado" name="status" defaultValue={status} options={JURIDICAL_STATUSES.map((s) => [s, labelFromValue(s)])} />
-        <FilterSelect label="Urgencia" name="urgency" defaultValue={urgency} options={PRIORITIES.map((p) => [p, labelFromValue(p)])} />
-        <FilterInput label="DNI" name="dni" defaultValue={dni} />
-        <FilterInput label="Nombre y apellido" name="name" defaultValue={name} />
-        <FilterInput label="Oficio" name="oficioNumber" defaultValue={oficioNumber} />
-        <FilterInput label="Expediente" name="expedienteNumber" defaultValue={expedienteNumber} />
-        <FilterSelect label="Usuario" name="createdById" defaultValue={createdById} options={users.map((item) => [item.id, item.name])} />
-      </FilterBar>
+      >
+        <FilterBar resetHref="/intervenciones" label="Buscar intervencion">
+          <FilterInput label="Desde" name="from" type="date" defaultValue={from} />
+          <FilterInput label="Hasta" name="to" type="date" defaultValue={to} />
+          <FilterSelect label="Tipo" name="type" defaultValue={type} options={types.map((item) => [item.value, item.label])} />
+          <FilterSelect label="Estado" name="status" defaultValue={status} options={JURIDICAL_STATUSES.map((s) => [s, labelFromValue(s)])} />
+          <FilterSelect label="Urgencia" name="urgency" defaultValue={urgency} options={PRIORITIES.map((p) => [p, labelFromValue(p)])} />
+          <FilterInput label="DNI" name="dni" defaultValue={dni} />
+          <FilterInput label="Nombre y apellido" name="name" defaultValue={name} />
+          <FilterInput label="Oficio" name="oficioNumber" defaultValue={oficioNumber} />
+          <FilterInput label="Expediente" name="expedienteNumber" defaultValue={expedienteNumber} />
+          <FilterSelect label="Usuario" name="createdById" defaultValue={createdById} options={users.map((item) => [item.id, item.name])} />
+        </FilterBar>
+      </ListToolbar>
 
       <Table
         title="Intervenciones"

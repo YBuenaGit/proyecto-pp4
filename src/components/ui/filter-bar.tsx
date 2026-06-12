@@ -29,22 +29,24 @@ export function FilterBar({
   resetHref,
   onSubmit,
   onClear,
+  label = "Buscar",
 }: {
   children: ReactNode;
   resetHref: string;
   onSubmit?: FormEventHandler<HTMLFormElement>;
   onClear?: () => void;
+  label?: string;
 }) {
   return (
-    <details className="group mb-4">
+    <details className="group">
       <summary className="flex w-fit cursor-pointer list-none marker:hidden">
-        <span className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-sm border border-[#1f8f4d] bg-[#218c4f] px-3 py-1.5 text-sm font-semibold leading-tight text-white shadow-sm transition duration-150 hover:border-[#197a42] hover:bg-[#197a42] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9bd8b4]">
+        <span className="inline-flex h-9 items-center justify-center gap-1.5 rounded-sm border border-[#1f8f4d] bg-[#218c4f] px-3 py-1.5 text-sm font-semibold leading-tight text-white shadow-sm transition duration-150 hover:border-[#197a42] hover:bg-[#197a42] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#9bd8b4]">
           <Search className="h-4 w-4" />
-          Buscar
+          {label}
         </span>
       </summary>
 
-      <section className="mt-3 overflow-hidden rounded-sm border border-[#c7d2de] bg-white shadow-sm">
+      <section className="mt-3 w-[min(calc(100vw-2rem),72rem)] overflow-hidden rounded-sm border border-[#c7d2de] bg-white shadow-sm">
         <div className="border-b border-[#c7d2de] bg-[#edf5fb] px-3 py-2 text-sm font-semibold text-[#263544]">
           Filtros de búsqueda
         </div>
@@ -54,7 +56,7 @@ export function FilterBar({
             <ClearControl resetHref={resetHref} onClear={onClear} />
             <Button type="submit" variant="success">
               <Search className="h-4 w-4" />
-              Buscar
+              {label}
             </Button>
           </div>
         </form>
@@ -81,7 +83,7 @@ export function FilterInput({
         type={type}
         name={name}
         defaultValue={defaultValue}
-        className="h-9 w-full rounded-sm border border-[#b9c6d3] bg-white px-2.5 text-sm text-[#212529] outline-none transition duration-150 placeholder:text-[#6c757d] focus:border-[#559eea] focus:ring-2 focus:ring-[rgba(24,119,242,.22)]"
+        className="h-9 w-full rounded-sm border border-[#b9c6d3] bg-white px-2.5 text-sm text-[#212529] outline-none transition duration-150 placeholder:text-[#6c757d] focus:border-[#0667b0] focus:ring-2 focus:ring-[rgba(6,103,176,.22)]"
       />
     </label>
   );
@@ -104,7 +106,7 @@ export function FilterSelect({
       <select
         name={name}
         defaultValue={defaultValue ?? ""}
-        className="h-9 w-full rounded-sm border border-[#b9c6d3] bg-white px-2.5 text-sm text-[#212529] outline-none transition duration-150 focus:border-[#559eea] focus:ring-2 focus:ring-[rgba(24,119,242,.22)]"
+        className="h-9 w-full rounded-sm border border-[#b9c6d3] bg-white px-2.5 text-sm text-[#212529] outline-none transition duration-150 focus:border-[#0667b0] focus:ring-2 focus:ring-[rgba(6,103,176,.22)]"
       >
         <option value="">Todos</option>
         {options.map((option) => {

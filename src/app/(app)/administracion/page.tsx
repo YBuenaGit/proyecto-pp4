@@ -27,7 +27,6 @@ export default async function AdminPage() {
     <>
       <PageHeader
         title="Administracion"
-        description="Gestion tecnica de usuarios, roles, catalogos iniciales y auditoria del sistema."
         breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Administracion" }]}
       />
 

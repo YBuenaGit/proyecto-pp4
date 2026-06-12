@@ -3,6 +3,7 @@ import { Plus } from "lucide-react";
 import type { Prisma } from "@prisma/client";
 import { AppModal } from "@/components/ui/app-modal";
 import { FilterBar, FilterInput, FilterSelect } from "@/components/ui/filter-bar";
+import { ListToolbar } from "@/components/ui/list-toolbar";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Table, Td } from "@/components/ui/table";
@@ -94,8 +95,10 @@ export default async function DispatchListPage({
     <>
       <PageHeader
         title="Despacho · Atenciones / Reclamos"
-        description="Registro operativo de reclamos, consultas, sugerencias, pedidos, derivaciones y seguimiento simple."
         breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Despacho" }]}
+      />
+
+      <ListToolbar
         actions={
           <AppModal title="Nueva atencion de Despacho" trigger={<><Plus className="h-4 w-4" />Nueva atencion</>} size="xl">
             <DispatchForm
@@ -108,28 +111,28 @@ export default async function DispatchListPage({
             />
           </AppModal>
         }
-      />
-
-      <FilterBar resetHref="/despacho">
-        <FilterInput label="Desde" name="from" type="date" defaultValue={from} />
-        <FilterInput label="Hasta" name="to" type="date" defaultValue={to} />
-        <FilterSelect
-          label="Categoria"
-          name="category"
-          defaultValue={category}
-          options={categories.map((item) => [item.value, item.label])}
-        />
-        <FilterSelect label="Estado" name="status" defaultValue={status} options={DISPATCH_STATUSES.map((s) => [s, labelFromValue(s)])} />
-        <FilterInput label="DNI" name="dni" defaultValue={dni} />
-        <FilterInput label="Nombre y apellido" name="name" defaultValue={name} />
-        <FilterSelect
-          label="Usuario que atendio"
-          name="createdById"
-          defaultValue={createdById}
-          options={users.map((item) => [item.id, item.name])}
-        />
-        <FilterSelect label="Prioridad" name="priority" defaultValue={priority} options={PRIORITIES.map((p) => [p, labelFromValue(p)])} />
-      </FilterBar>
+      >
+        <FilterBar resetHref="/despacho" label="Buscar atencion">
+          <FilterInput label="Desde" name="from" type="date" defaultValue={from} />
+          <FilterInput label="Hasta" name="to" type="date" defaultValue={to} />
+          <FilterSelect
+            label="Categoria"
+            name="category"
+            defaultValue={category}
+            options={categories.map((item) => [item.value, item.label])}
+          />
+          <FilterSelect label="Estado" name="status" defaultValue={status} options={DISPATCH_STATUSES.map((s) => [s, labelFromValue(s)])} />
+          <FilterInput label="DNI" name="dni" defaultValue={dni} />
+          <FilterInput label="Nombre y apellido" name="name" defaultValue={name} />
+          <FilterSelect
+            label="Usuario que atendio"
+            name="createdById"
+            defaultValue={createdById}
+            options={users.map((item) => [item.id, item.name])}
+          />
+          <FilterSelect label="Prioridad" name="priority" defaultValue={priority} options={PRIORITIES.map((p) => [p, labelFromValue(p)])} />
+        </FilterBar>
+      </ListToolbar>
 
       <Table
         title="Atenciones / Reclamos"

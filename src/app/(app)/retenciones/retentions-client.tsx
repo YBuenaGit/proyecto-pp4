@@ -6,6 +6,7 @@ import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { FilterBar, FilterInput, FilterSelect } from "@/components/ui/filter-bar";
 import { FormField, FormGrid, inputClass, textareaClass } from "@/components/ui/form-controls";
+import { ListToolbar } from "@/components/ui/list-toolbar";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Table, Td } from "@/components/ui/table";
@@ -554,33 +555,35 @@ export function RetentionsClient() {
     <>
       <PageHeader
         title="Retenciones / actas"
-        description="Registro operativo de actas de retencion vehicular, identificadores, estado y documentacion asociada."
         breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Retenciones / actas" }]}
+      />
+
+      <ListToolbar
         actions={
-          <AppModal title="Nueva retencion" trigger={<><Plus className="h-4 w-4" />Nueva retencion</>} size="xl" triggerVariant="success">
+          <AppModal title="Nueva retencion" trigger={<><Plus className="h-4 w-4" />Nueva retencion</>} size="xl">
             {({ close }) => (
               <RetentionForm submitLabel="Crear retencion" onCancel={close} onSave={(input) => addRetention(input, close)} />
             )}
           </AppModal>
         }
-      />
-
-      <div key={filterRenderKey}>
-        <FilterBar resetHref="/retenciones" onSubmit={applyFilters} onClear={clearFilters}>
-          <FilterInput label="Desde" name="from" type="date" defaultValue={filters.from} />
-          <FilterInput label="Hasta" name="to" type="date" defaultValue={filters.to} />
-          <FilterInput label="Nro de acta" name="actNumber" defaultValue={filters.actNumber} />
-          <FilterSelect label="Tipo de acta" name="actType" defaultValue={filters.actType} options={ACT_TYPES.map(([value, label]) => [value, label])} />
-          <FilterInput label="Legajo" name="recordNumber" defaultValue={filters.recordNumber} />
-          <FilterInput label="Dominio" name="domain" defaultValue={filters.domain} />
-          <FilterInput label="Nro de motor" name="engineNumber" defaultValue={filters.engineNumber} />
-          <FilterInput label="Nro de chasis" name="chassisNumber" defaultValue={filters.chassisNumber} />
-          <FilterSelect label="Vehiculo" name="vehicleType" defaultValue={filters.vehicleType} options={VEHICLE_TYPES.map(([value, label]) => [value, label])} />
-          <FilterSelect label="Marca" name="brand" defaultValue={filters.brand} options={[...BRANDS]} />
-          <FilterSelect label="Color" name="color" defaultValue={filters.color} options={[...COLORS]} />
-          <FilterSelect label="Estado" name="status" defaultValue={filters.status} options={RETENTION_STATUSES.map(([value, label]) => [value, label])} />
-        </FilterBar>
-      </div>
+      >
+        <div key={filterRenderKey}>
+          <FilterBar resetHref="/retenciones" label="Buscar retencion" onSubmit={applyFilters} onClear={clearFilters}>
+            <FilterInput label="Desde" name="from" type="date" defaultValue={filters.from} />
+            <FilterInput label="Hasta" name="to" type="date" defaultValue={filters.to} />
+            <FilterInput label="Nro de acta" name="actNumber" defaultValue={filters.actNumber} />
+            <FilterSelect label="Tipo de acta" name="actType" defaultValue={filters.actType} options={ACT_TYPES.map(([value, label]) => [value, label])} />
+            <FilterInput label="Legajo" name="recordNumber" defaultValue={filters.recordNumber} />
+            <FilterInput label="Dominio" name="domain" defaultValue={filters.domain} />
+            <FilterInput label="Nro de motor" name="engineNumber" defaultValue={filters.engineNumber} />
+            <FilterInput label="Nro de chasis" name="chassisNumber" defaultValue={filters.chassisNumber} />
+            <FilterSelect label="Vehiculo" name="vehicleType" defaultValue={filters.vehicleType} options={VEHICLE_TYPES.map(([value, label]) => [value, label])} />
+            <FilterSelect label="Marca" name="brand" defaultValue={filters.brand} options={[...BRANDS]} />
+            <FilterSelect label="Color" name="color" defaultValue={filters.color} options={[...COLORS]} />
+            <FilterSelect label="Estado" name="status" defaultValue={filters.status} options={RETENTION_STATUSES.map(([value, label]) => [value, label])} />
+          </FilterBar>
+        </div>
+      </ListToolbar>
 
       <p className="mb-2 text-sm font-medium text-[#495057]">Fecha de inicio: 11 de Octubre de 2024</p>
 

@@ -214,7 +214,7 @@ export function Table({
             <RefreshCw className="h-4 w-4" />
           </button>
 
-          <h2 className="text-center text-base font-semibold tracking-normal text-[#263544]">
+          <h2 className="text-center text-base md:text-lg font-semibold tracking-normal text-[#263544] p-2">
             {title}
           </h2>
         </div>

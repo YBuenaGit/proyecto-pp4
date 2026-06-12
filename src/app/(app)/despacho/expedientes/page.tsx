@@ -139,7 +139,7 @@ export default async function ExpedientsListPage({ searchParams }: { searchParam
           </AppModal>
         </div>
 
-        <FilterBar resetHref="/despacho/expedientes">
+        <FilterBar resetHref="/despacho/expedientes" label="Buscar expediente">
           <FilterInput label="Desde" name="from" type="date" defaultValue={from} />
           <FilterInput label="Hasta" name="to" type="date" defaultValue={to} />
           <FilterSelect label="Categoría" name="category" defaultValue={category} options={categories.map((item) => [item.value, item.label])} />

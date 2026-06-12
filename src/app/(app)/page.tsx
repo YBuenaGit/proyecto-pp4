@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BriefcaseBusiness, CalendarCheck, CalendarDays, ClipboardList, Eye, Newspaper, Scale, TimerReset, Users } from "lucide-react";
+import { BriefcaseBusiness, CalendarCheck, ClipboardList, Eye, Newspaper, Scale, TimerReset, Users } from "lucide-react";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -23,7 +23,7 @@ const openJuridicalStatuses = ["RECIBIDO", "EN_ORIENTACION", "PENDIENTE_DOCUMENT
 const activeExpedientStatuses = ["INICIADO", "EN_TRAMITE", "OBSERVADO", "EN_APROBACION", "APROBADO"];
 
 type DashboardPanel = "dispatch" | "juridical" | "followups" | "expedients";
-type DayPanel = "news" | "agenda" | "myAgenda" | "groupAgenda";
+type DayPanel = "news" | "myAgenda" | "groupAgenda";
 
 type DashboardRow = {
   id: string;
@@ -75,11 +75,6 @@ const dayPanelCopy: Record<DayPanel, { label: string; title: string; empty: stri
     label: "Novedades del día",
     title: "Novedades del día",
     empty: "No hay novedades cargadas para hoy.",
-  },
-  agenda: {
-    label: "Agenda",
-    title: "Agenda del día",
-    empty: "No hay compromisos agendados para hoy.",
   },
   myAgenda: {
     label: "Mi agenda",
@@ -371,9 +366,10 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
   const selectedPanel = normalizePanel(param(params, "panel"), availablePanels, defaultPanel(availablePanels));
   const availableDayPanels: DayPanel[] = [
     ...(canDashboardDispatch ? (["news"] as const) : []),
-    ...(canDashboardAgenda ? (["agenda", "myAgenda", "groupAgenda"] as const) : []),
+    ...(canDashboardAgenda ? (["myAgenda", "groupAgenda"] as const) : []),
   ];
-  const selectedDayPanel = normalizeDayPanel(param(params, "dayPanel"), availableDayPanels);
+  const selectedDayPanelParam = param(params, "dayPanel");
+  const selectedDayPanel = selectedDayPanelParam ? normalizeDayPanel(selectedDayPanelParam, availableDayPanels) : undefined;
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -387,7 +383,6 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
     todayJuridicalActions,
     activeExpedients,
     todayNewsRows,
-    todayAgendaRows,
     todayMyAgendaRows,
     todayGroupAgendaRows,
     dayRows,
@@ -406,12 +401,13 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
       ? countByStatuses("InternalExpedient", activeExpedientStatuses)
       : 0,
     getTodayNews(today, tomorrow, canDashboardDispatch),
-    getTodayAppointments({ panel: "agenda", dateKey: todayKey, userId: user.id, canDashboardAgenda }),
     getTodayAppointments({ panel: "myAgenda", dateKey: todayKey, userId: user.id, canDashboardAgenda }),
     getTodayAppointments({ panel: "groupAgenda", dateKey: todayKey, userId: user.id, canDashboardAgenda }),
-    selectedDayPanel === "news"
-      ? getTodayNews(today, tomorrow, canDashboardDispatch)
-      : getTodayAppointments({ panel: selectedDayPanel, dateKey: todayKey, userId: user.id, canDashboardAgenda }),
+    selectedDayPanel
+      ? selectedDayPanel === "news"
+        ? getTodayNews(today, tomorrow, canDashboardDispatch)
+        : getTodayAppointments({ panel: selectedDayPanel, dateKey: todayKey, userId: user.id, canDashboardAgenda })
+      : [],
     getRowsForPanel({
       panel: selectedPanel,
       canDashboardDispatch,
@@ -430,14 +426,6 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
       value: todayNewsRows.length,
       icon: <Newspaper className="h-5 w-5" />,
       hint: "Cargadas hoy",
-    },
-    {
-      panel: "agenda" as const,
-      visible: canDashboardAgenda,
-      label: dayPanelCopy.agenda.label,
-      value: todayAgendaRows.length,
-      icon: <CalendarDays className="h-5 w-5" />,
-      hint: "Compromisos de hoy",
     },
     {
       panel: "myAgenda" as const,
@@ -496,13 +484,11 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
     <>
       <PageHeader
         title="Inicio"
-        description="Panel operativo con indicadores del día y tablas dinámicas según el rol."
         breadcrumbs={[{ label: "Inicio" }]}
       />
 
       {dayCards.length ? (
-        <>
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {dayCards.map((card) => (
               <KpiCard
                 key={card.panel}
@@ -514,13 +500,10 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
                 active={selectedDayPanel === card.panel}
               />
             ))}
-          </div>
-
-          <DaySummaryTable panel={selectedDayPanel} rows={dayRows} />
-        </>
+        </div>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {cards.map((card) => (
           <KpiCard
             key={card.panel}
@@ -529,12 +512,12 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
             icon={card.icon}
             hint={card.hint}
             href={dashboardHref(card.panel)}
-            active={selectedPanel === card.panel}
+            active={!selectedDayPanel && selectedPanel === card.panel}
           />
         ))}
       </div>
 
-      <DashboardTable panel={selectedPanel} rows={rows} />
+      {selectedDayPanel ? <DaySummaryTable panel={selectedDayPanel} rows={dayRows} /> : <DashboardTable panel={selectedPanel} rows={rows} />}
     </>
   );
 }
@@ -574,104 +557,46 @@ function DaySummaryTable({ panel, rows }: { panel: DayPanel; rows: DayRow[] }) {
 
 function DashboardTable({ panel, rows }: { panel: DashboardPanel; rows: DashboardRow[] }) {
   const copy = panelCopy[panel];
-  const empty = rows.length === 0;
 
   return (
-    <section className="mt-4 overflow-hidden rounded-sm border border-[#dee2e6] bg-white shadow-sm">
-      <div className="flex flex-col gap-3 border-b border-[#dee2e6] bg-[#e9ecef] px-3 py-2.5 sm:flex-row sm:items-start sm:justify-between">
-        <div>
-          <h2 className="text-lg font-semibold tracking-normal text-[#212529]">{copy.title}</h2>
-          <p className="mt-1 text-sm leading-6 text-[#6c757d]">{copy.description}</p>
-        </div>
-        <span className="inline-flex w-fit items-center rounded-sm border border-[#dee2e6] bg-white px-2.5 py-1 text-xs font-semibold text-[#495057]">
-          {rows.length} registros
-        </span>
-      </div>
-
-      {empty ? (
-        <div className="px-5 py-10 text-center text-sm font-medium text-[#6c757d]">{copy.empty}</div>
-      ) : (
-        <>
-          <div className="hidden overflow-hidden md:block">
-            <table className="w-full table-fixed border-collapse text-sm">
-              <thead className="bg-[#e9ecef]">
-                <tr>
-                  <DashboardTh>Número</DashboardTh>
-                  <DashboardTh>Fecha y hora / Reportado por</DashboardTh>
-                  <DashboardTh>Solicitante</DashboardTh>
-                  <DashboardTh>Categoría</DashboardTh>
-                  <DashboardTh>Prioridad / Estado</DashboardTh>
-                </tr>
-              </thead>
-              <tbody className="bg-white [&_tr:hover]:bg-[#c4e7f3]/65">
-                {rows.map((row) => (
-                  <tr key={row.id}>
-                    <td className="border border-[#dee2e6] px-2.5 py-2 align-top">
-                      <Link href={row.href} className="inline-flex whitespace-nowrap items-center gap-2 font-semibold text-[#0667b0] hover:text-[#0a61b9] hover:underline">
-                        {row.number}
-                        <Eye className="h-3.5 w-3.5" />
-                      </Link>
-                    </td>
-                    <td className="border border-[#dee2e6] px-2.5 py-2 align-top text-[#212529]">
-                      <p className="font-semibold text-[#212529]">{formatDateTime(row.dateTime)}</p>
-                      <p className="mt-1 text-xs font-medium text-[#6c757d]">Reportado por: {row.reportedBy}</p>
-                    </td>
-                    <td className="border border-[#dee2e6] px-2.5 py-2 align-top text-[#212529]">
-                      <p className="whitespace-normal break-words [overflow-wrap:anywhere]">{row.requester}</p>
-                    </td>
-                    <td className="border border-[#dee2e6] px-2.5 py-2 align-top text-[#212529]">
-                      <p className="whitespace-normal break-words [overflow-wrap:anywhere]">{row.category}</p>
-                    </td>
-                    <td className="border border-[#dee2e6] px-2.5 py-2 align-top">
-                      <div className="space-y-2">
-                        <div className="grid grid-cols-[minmax(54px,64px)_minmax(0,110px)] items-center gap-2">
-                          <span className="text-xs font-medium text-[#6c757d]">Prioridad:</span>
-                          <StatusBadge value={row.priority} />
-                        </div>
-                        <div className="grid grid-cols-[minmax(54px,64px)_minmax(0,110px)] items-center gap-2">
-                          <span className="text-xs font-medium text-[#6c757d]">Estado:</span>
-                          <StatusBadge value={row.status} />
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="grid gap-3 p-4 md:hidden">
-            {rows.map((row) => (
-              <Link key={row.id} href={row.href} className="rounded-sm border border-[#dee2e6] bg-white p-3 shadow-sm transition duration-150 active:translate-y-px">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="whitespace-nowrap font-semibold text-[#0667b0]">{row.number}</p>
-                    <p className="mt-1 text-xs font-medium text-[#6c757d]">{formatDateTime(row.dateTime)}</p>
-                    <p className="mt-1 text-xs font-medium text-[#6c757d]">Reportado por: {row.reportedBy}</p>
-                  </div>
-                  <Eye className="h-4 w-4 shrink-0 text-[#0667b0]" />
-                </div>
-                <div className="mt-3 grid gap-2 text-sm text-[#212529]">
-                  <p className="break-words [overflow-wrap:anywhere]"><span className="font-semibold text-[#212529]">Solicitante:</span> {row.requester}</p>
-                  <p className="break-words [overflow-wrap:anywhere]"><span className="font-semibold text-[#212529]">Categoría:</span> {row.category}</p>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
+    <div className="mt-4">
+      <Table
+        title={copy.title}
+        itemLabel="registros"
+        total={rows.length}
+        showPagination={false}
+        headers={["Numero", "Fecha y hora / Reportado por", "Solicitante", "Categoria", "Prioridad / Estado"]}
+        empty={!rows.length}
+      >
+        {rows.map((row) => (
+          <tr key={row.id}>
+            <Td>
+              <Link href={row.href} className="inline-flex whitespace-nowrap items-center gap-2 font-semibold text-[#0667b0] hover:text-[#0a61b9] hover:underline">
+                {row.number}
+                <Eye className="h-3.5 w-3.5" />
+              </Link>
+            </Td>
+            <Td>
+              <p className="font-semibold text-[#212529]">{formatDateTime(row.dateTime)}</p>
+              <p className="mt-1 text-xs font-medium text-[#6c757d]">Reportado por: {row.reportedBy}</p>
+            </Td>
+            <Td>{row.requester}</Td>
+            <Td>{row.category}</Td>
+            <Td>
+              <div className="space-y-2">
+                <div className="grid grid-cols-[minmax(54px,64px)_minmax(0,110px)] items-center justify-center gap-2">
+                  <span className="text-xs font-medium text-[#6c757d]">Prioridad:</span>
                   <StatusBadge value={row.priority} />
+                </div>
+                <div className="grid grid-cols-[minmax(54px,64px)_minmax(0,110px)] items-center justify-center gap-2">
+                  <span className="text-xs font-medium text-[#6c757d]">Estado:</span>
                   <StatusBadge value={row.status} />
                 </div>
-              </Link>
-            ))}
-          </div>
-        </>
-      )}
-    </section>
-  );
-}
-
-function DashboardTh({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <th className={`border border-[#dee2e6] px-2.5 py-2 text-left text-xs font-semibold uppercase tracking-normal text-[#495057] ${className ?? ""}`}>
-      {children}
-    </th>
+              </div>
+            </Td>
+          </tr>
+        ))}
+      </Table>
+    </div>
   );
 }

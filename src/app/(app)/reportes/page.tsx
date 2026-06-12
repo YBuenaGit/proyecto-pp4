@@ -1,5 +1,6 @@
 import { FilterBar, FilterInput } from "@/components/ui/filter-bar";
 import { DetailSection } from "@/components/ui/detail-section";
+import { ListToolbar } from "@/components/ui/list-toolbar";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Table, Td } from "@/components/ui/table";
@@ -79,14 +80,15 @@ export default async function ReportsPage({ searchParams }: { searchParams?: Pro
     <>
       <PageHeader
         title="Reportes"
-        description="Contadores simples por periodo. Para el MVP se priorizan vistas filtrables y exportables manualmente desde tablas."
         breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Reportes" }]}
       />
 
-      <FilterBar resetHref="/reportes">
-        <FilterInput label="Desde" name="from" type="date" defaultValue={from} />
-        <FilterInput label="Hasta" name="to" type="date" defaultValue={to} />
-      </FilterBar>
+      <ListToolbar>
+        <FilterBar resetHref="/reportes" label="Buscar reporte">
+          <FilterInput label="Desde" name="from" type="date" defaultValue={from} />
+          <FilterInput label="Hasta" name="to" type="date" defaultValue={to} />
+        </FilterBar>
+      </ListToolbar>
 
       <div className="grid gap-5 xl:grid-cols-2">
         {canDispatch ? (

@@ -21,7 +21,7 @@ export function AgendaScopeTabs({
           className={cn(
             "inline-flex h-9 items-center rounded-md border px-4 text-xs font-semibold transition",
             activeScope === scope
-              ? "border-[#0667b0] bg-[#0667b0] text-white shadow-sm"
+              ? "border-[#3b64bb] bg-[#4d4fce] text-white shadow-sm"
               : "border-[#c7d2de] bg-white text-[#14213d] hover:bg-[#e8f2ff]",
           )}
         >

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { FilterBar, FilterInput } from "@/components/ui/filter-bar";
+import { ListToolbar } from "@/components/ui/list-toolbar";
 import { PageHeader } from "@/components/ui/page-header";
 import { Table, Td } from "@/components/ui/table";
 import { requireUser } from "@/lib/auth";
@@ -32,17 +33,18 @@ export default async function PeoplePage({ searchParams }: { searchParams?: Prom
     <>
       <PageHeader
         title="Personas"
-        description="Indice unificado de denunciantes y personas denunciadas o vinculadas. El historial visible depende de los permisos del usuario."
         breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Personas" }]}
       />
 
-      <FilterBar resetHref="/personas">
-        <FilterInput label="DNI" name="dni" defaultValue={dni} />
-        <FilterInput label="Nombre" name="firstName" defaultValue={firstName} />
-        <FilterInput label="Apellido" name="lastName" defaultValue={lastName} />
-        <FilterInput label="Nombre completo" name="name" defaultValue={name} />
-        <FilterInput label="Caso" name="case" defaultValue={caseQuery} />
-      </FilterBar>
+      <ListToolbar>
+        <FilterBar resetHref="/personas" label="Buscar persona">
+          <FilterInput label="DNI" name="dni" defaultValue={dni} />
+          <FilterInput label="Nombre" name="firstName" defaultValue={firstName} />
+          <FilterInput label="Apellido" name="lastName" defaultValue={lastName} />
+          <FilterInput label="Nombre completo" name="name" defaultValue={name} />
+          <FilterInput label="Caso" name="case" defaultValue={caseQuery} />
+        </FilterBar>
+      </ListToolbar>
 
       <Table
         title="Personas"

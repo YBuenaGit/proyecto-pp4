@@ -112,7 +112,6 @@ export default async function AgendaPage({ searchParams }: { searchParams?: Prom
     <div className="space-y-4">
       <PageHeader
         title="Agenda"
-        description="Gestioná tus citas, reuniones, vencimientos y tareas."
         breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Agenda" }]}
         actions={
           <div className="flex flex-wrap items-center gap-2 rounded-sm border border-[#dee2e6] bg-white p-2 shadow-sm">
@@ -128,7 +127,6 @@ export default async function AgendaPage({ searchParams }: { searchParams?: Prom
             />
             <AppModal
               title="Nueva cita"
-              description="La agenda destino define quien puede ver la cita."
               trigger={<><Plus className="h-4 w-4" />Nueva cita</>}
               size="xl"
             >
