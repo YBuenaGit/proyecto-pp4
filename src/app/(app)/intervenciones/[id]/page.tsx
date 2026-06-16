@@ -25,6 +25,7 @@ import {
 } from "../actions";
 import { InterventionForm } from "../intervention-form";
 import { AddJuridicalActionForm } from "./add-juridical-action-form";
+import { LegajoInterventionRow } from "./legajo-intervention-row";
 import { AttachmentPreviewButton } from "./attachment-preview-button";
 import { LegajoBookViewer, type LegajoBookItem } from "./legajo-book-viewer";
 
@@ -300,8 +301,7 @@ function LegajoAttachmentSheet({ attachments, pageNumber, pageCount }: { attachm
   );
 }
 
-function InterventionReadModal({
-  title,
+function InterventionReadContent({
   date,
   actor,
   role,
@@ -314,7 +314,6 @@ function InterventionReadModal({
   confidentialNotes,
   attachments,
 }: {
-  title: string;
   date: Date;
   actor: string;
   role: string;
@@ -328,32 +327,30 @@ function InterventionReadModal({
   attachments: LegajoAttachment[];
 }) {
   return (
-    <AppModal title={title} trigger={<><FileText className="h-3.5 w-3.5" />Leer contenido</>} triggerVariant="subtle" size="lg" triggerClassName="min-h-8 px-2.5 py-1 text-xs">
-      <div className="space-y-4">
-        <div className="grid gap-3 rounded-sm border border-[#b7dfee] bg-[#eefaff] p-3 sm:grid-cols-2">
-          <CoverField label="Fecha y hora" value={formatDateTime(date)} />
-          <CoverField label="Quien cargo" value={`${actor} (${labelFromValue(role)})`} />
-          <CoverField label="Tipo de actuacion" value={actionType ? labelFromValue(actionType) : "-"} />
-          <CoverField label="Estado / seguimiento" value={statusText ?? (nextStepDate ? `Seguimiento: ${formatDate(nextStepDate)}` : "-")} />
-        </div>
-
-        <SheetText label="Descripcion del relato">{description}</SheetText>
-        <SheetText label="Lo que se instruyo">{guidance}</SheetText>
-        <SheetText label="Proxima accion">{nextStepDescription}</SheetText>
-        <SheetText label="Notas internas confidenciales">{confidentialNotes}</SheetText>
-
-        {attachments.length ? (
-          <div className="rounded-sm border border-[#dee2e6] bg-[#f8f9fa] p-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Archivos vinculados</p>
-            <div className="flex flex-wrap gap-2">
-              {attachments.map((attachment) => (
-                <AttachmentPreviewButton key={attachment.id} href={`/adjuntos/${attachment.id}`} name={attachment.originalName} mimeType={attachment.mimeType} compact />
-              ))}
-            </div>
-          </div>
-        ) : null}
+    <div className="space-y-4">
+      <div className="grid gap-3 rounded-sm border border-[#b7dfee] bg-[#eefaff] p-3 sm:grid-cols-2">
+        <CoverField label="Fecha y hora" value={formatDateTime(date)} />
+        <CoverField label="Quien cargo" value={`${actor} (${labelFromValue(role)})`} />
+        <CoverField label="Tipo de actuacion" value={actionType ? labelFromValue(actionType) : "-"} />
+        <CoverField label="Estado / seguimiento" value={statusText ?? (nextStepDate ? `Seguimiento: ${formatDate(nextStepDate)}` : "-")} />
       </div>
-    </AppModal>
+
+      <SheetText label="Descripcion del relato">{description}</SheetText>
+      <SheetText label="Lo que se instruyo">{guidance}</SheetText>
+      <SheetText label="Proxima accion">{nextStepDescription}</SheetText>
+      <SheetText label="Notas internas confidenciales">{confidentialNotes}</SheetText>
+
+      {attachments.length ? (
+        <div className="rounded-sm border border-[#dee2e6] bg-[#f8f9fa] p-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Archivos vinculados</p>
+          <div className="flex flex-wrap gap-2">
+            {attachments.map((attachment) => (
+              <AttachmentPreviewButton key={attachment.id} href={`/adjuntos/${attachment.id}`} name={attachment.originalName} mimeType={attachment.mimeType} compact />
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -767,7 +764,7 @@ export default async function InterventionDetailPage({ params }: { params: Promi
               />
             </AppModal>
             <AppModal title="Nuevo registro de intervencion" description="Crea una nueva intervencion documental dentro de este legajo." trigger={<><Plus className="h-4 w-4" />Nueva intervencion</>} size="md">
-              <AddJuridicalActionForm action={addJuridicalAction.bind(null, intervention.id)} submitLabel="Crear intervencion" />
+              <AddJuridicalActionForm action={addJuridicalAction.bind(null, intervention.id)} submitLabel="Crear intervencion" showFollowUp={false} />
             </AppModal>
             <AppModal title="Derivar a Despacho" trigger={<><Send className="h-4 w-4" />Derivar</>} triggerVariant="secondary" size="md">
               <form action={deriveJuridicalToDispatch.bind(null, intervention.id)} className="space-y-4">
@@ -840,7 +837,7 @@ export default async function InterventionDetailPage({ params }: { params: Promi
                 triggerVariant="secondary"
                 size="md"
               >
-                <AddJuridicalActionForm action={addJuridicalAction.bind(null, intervention.id)} submitLabel="Crear intervencion" />
+                <AddJuridicalActionForm action={addJuridicalAction.bind(null, intervention.id)} submitLabel="Crear intervencion" showFollowUp={false} />
               </AppModal>
             }
           >
@@ -860,7 +857,24 @@ export default async function InterventionDetailPage({ params }: { params: Promi
           {displayActionSheets.map(({ action, sheetNumber, parsed, statusText }) => {
             const rowAttachments = attachmentsByActionId.get(action.id) ?? [];
             return (
-              <tr key={action.id}>
+              <LegajoInterventionRow
+                key={action.id}
+                modalTitle={`Intervencion NÂ° ${sheetNumber}`}
+                modalContent={
+                  <InterventionReadContent
+                    date={action.createdAt}
+                    actor={action.createdBy.name}
+                    role={action.createdBy.role}
+                    actionType={action.actionType}
+                    statusText={statusText}
+                    description={parsed.description}
+                    guidance={parsed.guidanceProvided}
+                    nextStepDescription={parsed.nextStepDescription}
+                    nextStepDate={action.nextStepDate}
+                    attachments={rowAttachments}
+                  />
+                }
+              >
                 <Td className="w-[150px]">
                   <span className="block font-semibold text-[#0667b0]">Intervencion NÂ° {sheetNumber}</span>
                   <span className="mt-0.5 block text-xs text-[#6c757d]">Registro agregado</span>
@@ -871,22 +885,7 @@ export default async function InterventionDetailPage({ params }: { params: Promi
                 </Td>
                 <Td>
                   <span className="block font-semibold">{labelFromValue(action.actionType)}</span>
-                  {parsed.description ? <p className="mt-1 max-w-2xl whitespace-pre-wrap text-xs leading-5 text-[#495057]">{parsed.description}</p> : null}
-                  <div className="mt-2">
-                    <InterventionReadModal
-                      title={`Intervencion NÂ° ${sheetNumber}`}
-                      date={action.createdAt}
-                      actor={action.createdBy.name}
-                      role={action.createdBy.role}
-                      actionType={action.actionType}
-                      statusText={statusText}
-                      description={parsed.description}
-                      guidance={parsed.guidanceProvided}
-                      nextStepDescription={parsed.nextStepDescription}
-                      nextStepDate={action.nextStepDate}
-                      attachments={rowAttachments}
-                    />
-                  </div>
+                  <span className="mt-1 block text-xs font-medium text-[#0667b0]">Clic para ver el detalle</span>
                 </Td>
                 <Td className="w-[230px]">
                   <div className="flex flex-wrap gap-1.5">
@@ -910,11 +909,28 @@ export default async function InterventionDetailPage({ params }: { params: Promi
                     ))}
                   </div>
                 </Td>
-              </tr>
+              </LegajoInterventionRow>
             );
           })}
 
-          <tr>
+          <LegajoInterventionRow
+            modalTitle="Intervencion NÂ° 1"
+            modalContent={
+              <InterventionReadContent
+                date={intervention.attendedAt}
+                actor={intervention.createdBy.name}
+                role={intervention.createdBy.role}
+                actionType={intervention.type}
+                statusText={initialStatusText}
+                description={intervention.description}
+                guidance={intervention.guidanceProvided}
+                nextStepDescription={null}
+                nextStepDate={null}
+                confidentialNotes={intervention.confidentialNotes}
+                attachments={generalAttachments}
+              />
+            }
+          >
             <Td className="w-[150px]">
               <span className="block font-semibold text-[#0667b0]">Intervencion NÂ° 1</span>
               <span className="mt-0.5 block text-xs text-[#6c757d]">Primera atencion</span>
@@ -925,23 +941,7 @@ export default async function InterventionDetailPage({ params }: { params: Promi
             </Td>
             <Td>
               <span className="block font-semibold">{labelFromValue(intervention.type)}</span>
-              {intervention.description ? <p className="mt-1 max-w-2xl whitespace-pre-wrap text-xs leading-5 text-[#495057]">{intervention.description}</p> : null}
-              <div className="mt-2">
-                <InterventionReadModal
-                  title="Intervencion NÂ° 1"
-                  date={intervention.attendedAt}
-                  actor={intervention.createdBy.name}
-                  role={intervention.createdBy.role}
-                  actionType={intervention.type}
-                  statusText={initialStatusText}
-                  description={intervention.description}
-                  guidance={intervention.guidanceProvided}
-                  nextStepDescription={null}
-                  nextStepDate={null}
-                  confidentialNotes={intervention.confidentialNotes}
-                  attachments={generalAttachments}
-                />
-              </div>
+              <span className="mt-1 block text-xs font-medium text-[#0667b0]">Clic para ver el detalle</span>
             </Td>
             <Td className="w-[230px]">
               <span className="rounded-sm border border-[#c3e6cb] bg-[#d4edda] px-2 py-0.5 text-xs font-semibold text-[#155724]">{initialStatusText}</span>
@@ -957,7 +957,7 @@ export default async function InterventionDetailPage({ params }: { params: Promi
                 ))}
               </div>
             </Td>
-          </tr>
+          </LegajoInterventionRow>
         </Table>
       </DetailSection>
     </main>

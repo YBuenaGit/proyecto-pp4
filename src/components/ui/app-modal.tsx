@@ -33,20 +33,33 @@ export function AppModal({
   triggerClassName,
   size = "lg",
   defaultOpen = false,
+  open: controlledOpen,
+  onOpenChange,
   children,
 }: {
   title: string;
   description?: string;
-  trigger: ReactNode;
+  trigger?: ReactNode;
   triggerVariant?: keyof typeof triggerVariants;
   triggerClassName?: string;
   size?: keyof typeof modalSizes;
   defaultOpen?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
   children: ModalChildren;
 }) {
-  const [open, setOpen] = useState(defaultOpen);
+  const [internalOpen, setInternalOpen] = useState(defaultOpen);
+  const isControlled = controlledOpen !== undefined;
+  const open = isControlled ? controlledOpen : internalOpen;
+  const setOpen = useCallback(
+    (value: boolean) => {
+      if (!isControlled) setInternalOpen(value);
+      onOpenChange?.(value);
+    },
+    [isControlled, onOpenChange],
+  );
   const titleId = useId();
-  const close = useCallback(() => setOpen(false), []);
+  const close = useCallback(() => setOpen(false), [setOpen]);
 
   useEffect(() => {
     if (!open) return;
@@ -66,17 +79,19 @@ export function AppModal({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className={cn(
-          "inline-flex min-h-9 max-w-full items-center justify-center gap-1.5 rounded-sm border px-3 py-1.5 text-center text-sm font-semibold leading-tight shadow-sm transition duration-150 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff] focus-visible:ring-offset-2 focus-visible:ring-offset-white",
-          triggerVariants[triggerVariant],
-          triggerClassName,
-        )}
-      >
-        {trigger}
-      </button>
+      {trigger !== undefined ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className={cn(
+            "inline-flex min-h-9 max-w-full items-center justify-center gap-1.5 rounded-sm border px-3 py-1.5 text-center text-sm font-semibold leading-tight shadow-sm transition duration-150 active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff] focus-visible:ring-offset-2 focus-visible:ring-offset-white",
+            triggerVariants[triggerVariant],
+            triggerClassName,
+          )}
+        >
+          {trigger}
+        </button>
+      ) : null}
 
       {open ? (
         <div

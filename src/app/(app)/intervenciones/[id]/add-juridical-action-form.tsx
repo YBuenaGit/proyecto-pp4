@@ -38,10 +38,12 @@ export function AddJuridicalActionForm({
   action,
   initialValues,
   submitLabel = "Guardar",
+  showFollowUp = true,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   initialValues?: Partial<ActionSheetFormValues>;
   submitLabel?: string;
+  showFollowUp?: boolean;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -119,9 +121,11 @@ export function AddJuridicalActionForm({
             ))}
           </select>
         </FormField>
-        <FormField label="Fecha de seguimiento">
-          <input name="nextStepDate" type="date" className={inputClass} defaultValue={initialValues?.nextStepDate ? toDateInputValue(initialValues.nextStepDate).slice(0, 10) : ""} />
-        </FormField>
+        {showFollowUp ? (
+          <FormField label="Fecha de seguimiento">
+            <input name="nextStepDate" type="date" className={inputClass} defaultValue={initialValues?.nextStepDate ? toDateInputValue(initialValues.nextStepDate).slice(0, 10) : ""} />
+          </FormField>
+        ) : null}
       </div>
       <FormField label="Descripcion / relato">
         <textarea
@@ -142,15 +146,17 @@ export function AddJuridicalActionForm({
           onInput={handleTextareaInput}
         />
       </FormField>
-      <FormField label="Proxima accion">
-        <textarea
-          name="nextStepDescription"
-          className={autosizeTextareaClass}
-          defaultValue={initialValues?.nextStepDescription ?? ""}
-          data-autosize="true"
-          onInput={handleTextareaInput}
-        />
-      </FormField>
+      {showFollowUp ? (
+        <FormField label="Proxima accion">
+          <textarea
+            name="nextStepDescription"
+            className={autosizeTextareaClass}
+            defaultValue={initialValues?.nextStepDescription ?? ""}
+            data-autosize="true"
+            onInput={handleTextareaInput}
+          />
+        </FormField>
+      ) : null}
       <FormField label="Adjuntos de esta hoja">
         <div className="space-y-2 rounded-lg border border-dashed border-[#9bb8ca] bg-[#f3f8fb] p-3">
           <input
@@ -183,11 +189,11 @@ export function AddJuridicalActionForm({
           ) : null}
         </div>
       </FormField>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button type="submit">{submitLabel}</Button>
+      <div className="flex flex-wrap items-center justify-end gap-2">
         <Button type="button" variant="secondary" data-modal-close>
           Cancelar
         </Button>
+        <Button type="submit">{submitLabel}</Button>
       </div>
     </form>
   );
