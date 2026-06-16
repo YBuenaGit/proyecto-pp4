@@ -10,8 +10,8 @@ import {
   EXPEDIENT_CATEGORY_LABELS,
   JURIDICAL_TYPE_LABELS,
 } from "@/lib/constants";
-import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_TYPE_LABELS } from "@/lib/appointment-constants";
-import { canAccessAgenda } from "@/lib/appointment-permissions";
+import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_TYPE_LABELS, type CalendarScope } from "@/lib/appointment-constants";
+import { canAccessAgenda, getAllowedCalendarScopes } from "@/lib/appointment-permissions";
 import { formatDateTime, labelFromValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { canAccessDispatch, canAccessExpedients, canAccessJuridical, isAdmin, isDirectivo } from "@/lib/rbac";
@@ -181,19 +181,22 @@ async function getTodayAppointments({
   dateKey,
   userId,
   canDashboardAgenda,
+  groupScopes,
 }: {
   panel: DayPanel;
   dateKey: string;
   userId: string;
   canDashboardAgenda: boolean;
+  groupScopes: CalendarScope[];
 }): Promise<DayRow[]> {
   if (!canDashboardAgenda || panel === "news") return [];
+  if (panel === "groupAgenda" && groupScopes.length === 0) return [];
 
   const appointments = await prisma.appointment.findMany({
     where: {
       date: dateKey,
       ...(panel === "myAgenda" ? { OR: [{ ownerUserId: userId }, { assignedUserId: userId }, { assignedLawyerId: userId }] } : {}),
-      ...(panel === "groupAgenda" ? { calendarScope: { in: ["lawyers", "dispatch"] } } : {}),
+      ...(panel === "groupAgenda" ? { calendarScope: { in: groupScopes } } : {}),
     },
     include: {
       owner: { select: { name: true } },
@@ -355,6 +358,9 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
   const canDashboardExpedients = canAccessExpedients(user) || hasDashboardOverview;
   const canDashboardAgenda = canAccessAgenda(user) || hasDashboardOverview;
   const canDashboardFollowUps = canDashboardDispatch || canDashboardJuridical || canDashboardExpedients;
+  const dashboardGroupScopes: CalendarScope[] = hasDashboardOverview
+    ? ["lawyers", "dispatch"]
+    : getAllowedCalendarScopes(user).filter((scope) => scope === "lawyers" || scope === "dispatch");
 
   const availablePanels: DashboardPanel[] = [
     ...(canDashboardDispatch ? (["dispatch"] as const) : []),
@@ -401,12 +407,12 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
       ? countByStatuses("InternalExpedient", activeExpedientStatuses)
       : 0,
     getTodayNews(today, tomorrow, canDashboardDispatch),
-    getTodayAppointments({ panel: "myAgenda", dateKey: todayKey, userId: user.id, canDashboardAgenda }),
-    getTodayAppointments({ panel: "groupAgenda", dateKey: todayKey, userId: user.id, canDashboardAgenda }),
+    getTodayAppointments({ panel: "myAgenda", dateKey: todayKey, userId: user.id, canDashboardAgenda, groupScopes: dashboardGroupScopes }),
+    getTodayAppointments({ panel: "groupAgenda", dateKey: todayKey, userId: user.id, canDashboardAgenda, groupScopes: dashboardGroupScopes }),
     selectedDayPanel
       ? selectedDayPanel === "news"
         ? getTodayNews(today, tomorrow, canDashboardDispatch)
-        : getTodayAppointments({ panel: selectedDayPanel, dateKey: todayKey, userId: user.id, canDashboardAgenda })
+        : getTodayAppointments({ panel: selectedDayPanel, dateKey: todayKey, userId: user.id, canDashboardAgenda, groupScopes: dashboardGroupScopes })
       : [],
     getRowsForPanel({
       panel: selectedPanel,

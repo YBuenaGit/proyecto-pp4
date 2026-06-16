@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { Children, useEffect, useMemo, useState, type ReactNode } from "react";
@@ -18,11 +18,15 @@ export function LegajoBookViewer({
   children,
   downloadHref,
   headerAction,
+  title = "Expediente virtual Â· Legajo de intervencion",
+  itemLabel = "Intervencion",
 }: {
   items: LegajoBookItem[];
   children: ReactNode;
-  downloadHref: string;
+  downloadHref?: string;
   headerAction?: ReactNode;
+  title?: string;
+  itemLabel?: string;
 }) {
   const pages = Children.toArray(children);
   const [open, setOpen] = useState(false);
@@ -55,7 +59,7 @@ export function LegajoBookViewer({
 
   const currentItem = indexedItems[safeCurrent];
   const nextItem = indexedItems[safeCurrent + 1];
-  const currentLabel = currentItem?.label ?? (currentItem ? `Intervencion N° ${currentItem.sheetNumber}` : "Sin resultados");
+  const currentLabel = currentItem?.label ?? (currentItem ? `${itemLabel} N° ${currentItem.sheetNumber}` : "Sin resultados");
 
   return (
     <>
@@ -70,27 +74,29 @@ export function LegajoBookViewer({
 
       {open ? (
         <section
-          className="fixed inset-0 z-[60] flex flex-col bg-[#6a3c1c] bg-[repeating-linear-gradient(90deg,rgba(46,20,7,0.45)_0px,rgba(46,20,7,0.45)_3px,transparent_3px,transparent_18px),repeating-linear-gradient(0deg,rgba(255,255,255,0.08)_0px,rgba(255,255,255,0.08)_2px,transparent_2px,transparent_14px),linear-gradient(90deg,#321607_0%,#71411f_14%,#9f6634_29%,#6d3919_50%,#a96f3a_72%,#4b230d_100%)]"
+          className="fixed inset-0 z-[60] flex flex-col bg-[#6a3c1c] bg-[url('/mesa.webp')] bg-cover bg-center"
           role="dialog"
           aria-modal="true"
           aria-label="Modo libro del legajo"
         >
           <div className="flex flex-wrap items-center justify-between gap-3 bg-[#17a2b8] px-3 py-2 text-white shadow">
             <div className="min-w-0">
-              <h2 className="truncate text-base font-semibold">Expediente virtual · Legajo de intervencion</h2>
+              <h2 className="truncate text-base font-semibold">{title}</h2>
               <p className="text-xs text-white/85">{currentLabel}</p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               {headerAction}
-              <Link
-                href={downloadHref}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-sm border border-white/45 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
-              >
-                <Download className="h-3.5 w-3.5" />
-                Descargar
-              </Link>
+              {downloadHref ? (
+                <Link
+                  href={downloadHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-sm border border-white/45 px-2.5 py-1 text-xs font-semibold text-white transition hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Descargar
+                </Link>
+              ) : null}
               <button
                 type="button"
                 onClick={() => setOpen(false)}
@@ -113,7 +119,7 @@ export function LegajoBookViewer({
             >
               {indexedItems.map((item) => (
                 <option key={`${item.sheetNumber}-${item.index}`} value={item.index}>
-                  {item.label ?? `Intervencion N° ${item.sheetNumber}`} · {item.title}
+                  {item.label ?? `${itemLabel} N° ${item.sheetNumber}`} · {item.title}
                 </option>
               ))}
             </select>

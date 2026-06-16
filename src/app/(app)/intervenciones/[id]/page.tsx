@@ -1,11 +1,10 @@
-import Image from "next/image";
+﻿import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { Clock, Download, Edit, FileText, Plus, Send } from "lucide-react";
 import { AppModal } from "@/components/ui/app-modal";
 import { AuditTimeline } from "@/components/ui/audit-timeline";
-import { Breadcrumbs } from "@/components/ui/breadcrumbs";
 import { Button, LinkButton } from "@/components/ui/button";
 import { DetailField, DetailSection, FieldGrid } from "@/components/ui/detail-section";
 import { FormField, inputClass, textareaClass } from "@/components/ui/form-controls";
@@ -182,7 +181,7 @@ function SheetAttachments({ attachments }: { attachments: LegajoAttachment[] }) 
             <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[#0667b0]" />
             <span className="min-w-0 flex-1">
               <span className="block truncate font-semibold">{attachment.originalName}</span>
-              <span className="block text-xs text-[#6c757d]">{Math.ceil(attachment.size / 1024)} KB · {attachment.uploadedBy.name}</span>
+              <span className="block text-xs text-[#6c757d]">{Math.ceil(attachment.size / 1024)} KB Â· {attachment.uploadedBy.name}</span>
               <span className="mt-2 block">
                 <AttachmentPreviewButton href={`/adjuntos/${attachment.id}`} name={attachment.originalName} mimeType={attachment.mimeType} compact />
               </span>
@@ -245,7 +244,7 @@ function LegajoCoverSheet({
             </div>
           </div>
           <div className="rounded-sm border border-[#86cfdf] bg-white px-3 py-2 text-right">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#0c5460]">N° de legajo</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#0c5460]">NÂ° de legajo</p>
             <p className="mt-1 text-base font-semibold text-[#212529]">{internalNumber}</p>
           </div>
         </div>
@@ -253,7 +252,7 @@ function LegajoCoverSheet({
 
       <div className="space-y-5 px-5 py-5">
         <div className="rounded-sm border border-[#b7dfee] bg-white/80 px-4 py-3">
-          <CoverField label="Tipo / contexto" value={`${type} · ${context}`} />
+          <CoverField label="Tipo / contexto" value={`${type} Â· ${context}`} />
           <CoverField label="Fecha de apertura" value={formatDateTime(attendedAt)} />
           <CoverField label="Usuario que inicio" value={createdBy} />
         </div>
@@ -287,7 +286,7 @@ function LegajoAttachmentSheet({ attachments }: { attachments: LegajoAttachment[
               <FileText className="mt-1 h-4 w-4 shrink-0 text-[#0667b0]" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-[#212529]">{attachment.originalName}</p>
-                <p className="text-xs text-[#6c757d]">{Math.ceil(attachment.size / 1024)} KB · {attachment.uploadedBy.name}</p>
+                <p className="text-xs text-[#6c757d]">{Math.ceil(attachment.size / 1024)} KB Â· {attachment.uploadedBy.name}</p>
                 <div className="mt-3">
                   <AttachmentPreviewButton href={`/adjuntos/${attachment.id}`} name={attachment.originalName} mimeType={attachment.mimeType} />
                 </div>
@@ -395,7 +394,7 @@ function LegajoSheet({
       <div className="border-b border-[#b7dfee] bg-[#dff3fb] px-4 py-4 sm:px-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Intervencion N° {sheetNumber}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Intervencion NÂ° {sheetNumber}</p>
             <h3 className="mt-1 text-lg font-semibold text-[#212529]">{title}</h3>
             <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-[#6c757d]">
               <span>{formatDateTime(date)}</span>
@@ -607,17 +606,18 @@ export default async function InterventionDetailPage({ params }: { params: Promi
 
   return (
     <main className="space-y-5">
-      <Breadcrumbs items={[{ label: "Inicio", href: "/" }, { label: "Intervenciones", href: "/intervenciones" }, { label: intervention.internalNumber }]} />
-      <section className="rounded-sm border border-[#dee2e6] bg-white p-3 shadow-sm sm:p-4">
+      <section
+        className="relative overflow-hidden rounded-sm border border-[#b7dfee] bg-[#dff3fb] p-3 text-[#212529] shadow-sm sm:p-4"
+      >
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Sistema interno</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Expediente virtual Â· Legajo de intervencion</p>
             <h1 className="mt-1 text-2xl font-semibold text-[#212529] sm:text-3xl">Legajo de la intervencion {intervention.internalNumber}</h1>
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className="rounded-sm border border-[#dee2e6] bg-[#f8f9fa] px-2.5 py-1 text-sm font-semibold text-[#495057]">{labelFromValue(intervention.type)}</span>
+              <span className="rounded-sm border border-[#b7dfee] bg-white px-2.5 py-1 text-sm font-semibold text-[#0c5460]">{labelFromValue(intervention.type)}</span>
               <StatusBadge value={intervention.status} className="w-auto max-w-none" />
               <StatusBadge value={intervention.urgency} className="w-auto max-w-none" />
-              <span className="rounded-sm border border-[#dee2e6] bg-[#f8f9fa] px-2.5 py-1 text-sm font-semibold text-[#6c757d]">
+              <span className="rounded-sm border border-[#b7dfee] bg-white px-2.5 py-1 text-sm font-semibold text-[#0c5460]">
                 Apertura: {formatDateTime(intervention.attendedAt)}
               </span>
             </div>
@@ -744,7 +744,7 @@ export default async function InterventionDetailPage({ params }: { params: Promi
                 attachments={attachmentsByActionId.get(action.id) ?? []}
                 pdfHref={`/intervenciones/${intervention.id}/legajo.pdf?hoja=${sheetNumber}`}
                 editAction={
-                  <AppModal title={`Editar intervencion N° ${sheetNumber}`} trigger={<><Edit className="h-3.5 w-3.5" />Editar</>} triggerVariant="secondary" size="md" triggerClassName="min-h-9 px-3 py-1.5 text-xs">
+                  <AppModal title={`Editar intervencion NÂ° ${sheetNumber}`} trigger={<><Edit className="h-3.5 w-3.5" />Editar</>} triggerVariant="secondary" size="md" triggerClassName="min-h-9 px-3 py-1.5 text-xs">
                     <AddJuridicalActionForm
                       action={updateJuridicalAction.bind(null, action.id)}
                       initialValues={{
@@ -797,19 +797,19 @@ export default async function InterventionDetailPage({ params }: { params: Promi
             return (
               <tr key={action.id}>
                 <Td className="w-[150px]">
-                  <span className="block font-semibold text-[#0667b0]">Intervencion N° {sheetNumber}</span>
+                  <span className="block font-semibold text-[#0667b0]">Intervencion NÂ° {sheetNumber}</span>
                   <span className="mt-0.5 block text-xs text-[#6c757d]">Registro agregado</span>
                 </Td>
                 <Td className="w-[210px]">
                   <span className="block font-semibold">{formatDateTime(action.createdAt)}</span>
-                  <span className="mt-0.5 block text-xs text-[#6c757d]">{action.createdBy.name} · {labelFromValue(action.createdBy.role)}</span>
+                  <span className="mt-0.5 block text-xs text-[#6c757d]">{action.createdBy.name} Â· {labelFromValue(action.createdBy.role)}</span>
                 </Td>
                 <Td>
                   <span className="block font-semibold">{labelFromValue(action.actionType)}</span>
                   {parsed.description ? <p className="mt-1 max-w-2xl whitespace-pre-wrap text-xs leading-5 text-[#495057]">{parsed.description}</p> : null}
                   <div className="mt-2">
                     <InterventionReadModal
-                      title={`Intervencion N° ${sheetNumber}`}
+                      title={`Intervencion NÂ° ${sheetNumber}`}
                       date={action.createdAt}
                       actor={action.createdBy.name}
                       role={action.createdBy.role}
@@ -851,19 +851,19 @@ export default async function InterventionDetailPage({ params }: { params: Promi
 
           <tr>
             <Td className="w-[150px]">
-              <span className="block font-semibold text-[#0667b0]">Intervencion N° 1</span>
+              <span className="block font-semibold text-[#0667b0]">Intervencion NÂ° 1</span>
               <span className="mt-0.5 block text-xs text-[#6c757d]">Primera atencion</span>
             </Td>
             <Td className="w-[210px]">
               <span className="block font-semibold">{formatDateTime(intervention.attendedAt)}</span>
-              <span className="mt-0.5 block text-xs text-[#6c757d]">{intervention.createdBy.name} · {labelFromValue(intervention.createdBy.role)}</span>
+              <span className="mt-0.5 block text-xs text-[#6c757d]">{intervention.createdBy.name} Â· {labelFromValue(intervention.createdBy.role)}</span>
             </Td>
             <Td>
               <span className="block font-semibold">{labelFromValue(intervention.type)}</span>
               {intervention.description ? <p className="mt-1 max-w-2xl whitespace-pre-wrap text-xs leading-5 text-[#495057]">{intervention.description}</p> : null}
               <div className="mt-2">
                 <InterventionReadModal
-                  title="Intervencion N° 1"
+                  title="Intervencion NÂ° 1"
                   date={intervention.attendedAt}
                   actor={intervention.createdBy.name}
                   role={intervention.createdBy.role}

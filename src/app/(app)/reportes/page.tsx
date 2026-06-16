@@ -1,6 +1,8 @@
-import { FilterBar, FilterInput } from "@/components/ui/filter-bar";
+import { CalendarRange, RefreshCw } from "lucide-react";
+import { AppModal } from "@/components/ui/app-modal";
+import { Button, LinkButton } from "@/components/ui/button";
 import { DetailSection } from "@/components/ui/detail-section";
-import { ListToolbar } from "@/components/ui/list-toolbar";
+import { FormField, inputClass } from "@/components/ui/form-controls";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Table, Td } from "@/components/ui/table";
@@ -10,6 +12,30 @@ import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessDispatch, canAccessExpedients, canAccessJuridical, canAccessReports } from "@/lib/rbac";
 import { dateRangeWhere, param } from "@/lib/search";
 import type { SearchParams } from "@/lib/types";
+
+function dateKey(value: Date) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function currentMonthRange() {
+  const now = new Date();
+  const first = new Date(now.getFullYear(), now.getMonth(), 1);
+  const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  return { from: dateKey(first), to: dateKey(last) };
+}
+
+function reportRangeLabel(from: string, to: string) {
+  return `Desde ${formatDateKey(from)} hasta ${formatDateKey(to)}`;
+}
+
+function formatDateKey(value: string) {
+  const [year, month, day] = value.split("-");
+  if (!year || !month || !day) return value;
+  return `${day}/${month}/${year}`;
+}
 
 function CountTable({ title, rows, badgeValues }: { title: string; rows: Array<{ key: string | null; count: number }>; badgeValues?: boolean }) {
   return (
@@ -33,9 +59,11 @@ export default async function ReportsPage({ searchParams }: { searchParams?: Pro
   const user = await requireUser();
   assertAccess(canAccessReports(user));
   const params = searchParams ? await searchParams : {};
-  const from = param(params, "from");
-  const to = param(params, "to");
-  const createdAt = dateRangeWhere(from, to);
+  const currentRange = currentMonthRange();
+  const from = param(params, "from") ?? currentRange.from;
+  const to = param(params, "to") ?? currentRange.to;
+  const reportRange = dateRangeWhere(from, to);
+  const currentMonthHref = `/reportes?from=${currentRange.from}&to=${currentRange.to}`;
   const canDispatch = canAccessDispatch(user);
   const canJuridical = canAccessJuridical(user);
   const canExpedients = canAccessExpedients(user);
@@ -50,25 +78,25 @@ export default async function ReportsPage({ searchParams }: { searchParams?: Pro
     expedientByCategory,
   ] = await Promise.all([
     canDispatch
-      ? prisma.dispatchRecord.groupBy({ by: ["category"], where: createdAt ? { createdAt } : undefined, _count: true })
+      ? prisma.dispatchRecord.groupBy({ by: ["category"], where: reportRange ? { attendedAt: reportRange } : undefined, _count: true })
       : [],
     canDispatch
-      ? prisma.dispatchRecord.groupBy({ by: ["status"], where: createdAt ? { createdAt } : undefined, _count: true })
+      ? prisma.dispatchRecord.groupBy({ by: ["status"], where: reportRange ? { attendedAt: reportRange } : undefined, _count: true })
       : [],
     canJuridical
-      ? prisma.juridicalIntervention.groupBy({ by: ["type"], where: createdAt ? { createdAt } : undefined, _count: true })
+      ? prisma.juridicalIntervention.groupBy({ by: ["type"], where: reportRange ? { attendedAt: reportRange } : undefined, _count: true })
       : [],
     canJuridical
-      ? prisma.juridicalIntervention.groupBy({ by: ["status"], where: createdAt ? { createdAt } : undefined, _count: true })
+      ? prisma.juridicalIntervention.groupBy({ by: ["status"], where: reportRange ? { attendedAt: reportRange } : undefined, _count: true })
       : [],
     canJuridical
-      ? prisma.juridicalIntervention.groupBy({ by: ["createdById"], where: createdAt ? { createdAt } : undefined, _count: true })
+      ? prisma.juridicalIntervention.groupBy({ by: ["createdById"], where: reportRange ? { attendedAt: reportRange } : undefined, _count: true })
       : [],
     canExpedients
-      ? prisma.internalExpedient.groupBy({ by: ["status"], where: createdAt ? { createdAt } : undefined, _count: true })
+      ? prisma.internalExpedient.groupBy({ by: ["status"], where: reportRange ? { createdAt: reportRange } : undefined, _count: true })
       : [],
     canExpedients
-      ? prisma.internalExpedient.groupBy({ by: ["category"], where: createdAt ? { createdAt } : undefined, _count: true })
+      ? prisma.internalExpedient.groupBy({ by: ["category"], where: reportRange ? { createdAt: reportRange } : undefined, _count: true })
       : [],
   ]);
 
@@ -83,12 +111,36 @@ export default async function ReportsPage({ searchParams }: { searchParams?: Pro
         breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Reportes" }]}
       />
 
-      <ListToolbar>
-        <FilterBar resetHref="/reportes" label="Buscar reporte">
-          <FilterInput label="Desde" name="from" type="date" defaultValue={from} />
-          <FilterInput label="Hasta" name="to" type="date" defaultValue={to} />
-        </FilterBar>
-      </ListToolbar>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div className="rounded-sm border border-[#c7d2de] bg-white px-3 py-2 text-sm font-semibold text-[#263544] shadow-sm">
+          {reportRangeLabel(from, to)}
+        </div>
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <LinkButton href={currentMonthHref} variant="secondary">
+            <RefreshCw className="h-4 w-4" />
+            Mes actual
+          </LinkButton>
+          <AppModal title="Filtrar reporte" trigger={<><CalendarRange className="h-4 w-4" />Filtrar reporte</>} size="md">
+            <form className="space-y-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <FormField label="Desde">
+                  <input className={inputClass} type="date" name="from" defaultValue={from} />
+                </FormField>
+                <FormField label="Hasta">
+                  <input className={inputClass} type="date" name="to" defaultValue={to} />
+                </FormField>
+              </div>
+              <div className="flex flex-wrap justify-end gap-2 border-t border-[#dee2e6] pt-3">
+                <Button type="button" variant="secondary" data-modal-close>Cancelar</Button>
+                <Button type="submit">
+                  <CalendarRange className="h-4 w-4" />
+                  Filtrar reporte
+                </Button>
+              </div>
+            </form>
+          </AppModal>
+        </div>
+      </div>
 
       <div className="grid gap-5 xl:grid-cols-2">
         {canDispatch ? (
