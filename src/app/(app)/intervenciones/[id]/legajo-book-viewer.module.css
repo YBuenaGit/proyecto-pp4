@@ -1,0 +1,189 @@
+.spread {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  max-width: min(100%, 32rem);
+  perspective: 1800px;
+}
+
+.pageSlot {
+  position: relative;
+  aspect-ratio: 210 / 297;
+  min-height: 0;
+  transform-style: preserve-3d;
+}
+
+.pageSlot > *,
+.turnSheet > * {
+  height: 100%;
+  min-height: 0;
+}
+
+.pageUnderNext {
+  animation: page-under-next 560ms cubic-bezier(0.2, 0.65, 0.2, 1) both;
+}
+
+.pageUnderPrev {
+  animation: page-under-prev 560ms cubic-bezier(0.2, 0.65, 0.2, 1) both;
+}
+
+.turnSheet {
+  position: absolute;
+  top: 0;
+  z-index: 20;
+  height: 100%;
+  width: calc((100% - 1.25rem) / 2);
+  max-width: calc((100% - 1.25rem) / 2);
+  backface-visibility: hidden;
+  filter: drop-shadow(0 22px 30px rgba(0, 0, 0, 0.32));
+  pointer-events: none;
+  transform-style: preserve-3d;
+}
+
+.turnSheet::after {
+  position: absolute;
+  inset: 0;
+  border-radius: 0.125rem;
+  background: linear-gradient(90deg, rgba(0, 0, 0, 0.2), transparent 18%, rgba(255, 255, 255, 0.18) 52%, rgba(0, 0, 0, 0.1));
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+}
+
+.turnSheetNext {
+  right: 0;
+  animation: turn-next 560ms cubic-bezier(0.2, 0.65, 0.2, 1) forwards;
+  transform-origin: left center;
+}
+
+.turnSheetNext::after {
+  animation: turn-shine 560ms cubic-bezier(0.2, 0.65, 0.2, 1) forwards;
+}
+
+.turnSheetPrev {
+  left: 0;
+  animation: turn-prev 560ms cubic-bezier(0.2, 0.65, 0.2, 1) forwards;
+  transform-origin: right center;
+}
+
+.turnSheetPrev::after {
+  animation: turn-shine 560ms cubic-bezier(0.2, 0.65, 0.2, 1) forwards;
+}
+
+:global(.book-leaf) {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+:global(.book-leaf-body) {
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+
+:global(.book-leaf-text) {
+  overflow-wrap: anywhere;
+}
+
+@keyframes turn-next {
+  0% {
+    opacity: 1;
+    transform: translateX(0) rotateY(0deg) skewY(0deg);
+  }
+  45% {
+    opacity: 0.98;
+    transform: translateX(-45%) rotateY(-72deg) skewY(-1deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-100%) rotateY(-168deg) skewY(-2deg);
+  }
+}
+
+@keyframes turn-prev {
+  0% {
+    opacity: 1;
+    transform: translateX(0) rotateY(0deg) skewY(0deg);
+  }
+  45% {
+    opacity: 0.98;
+    transform: translateX(45%) rotateY(72deg) skewY(1deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(100%) rotateY(168deg) skewY(2deg);
+  }
+}
+
+@keyframes turn-shine {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  45% {
+    opacity: 1;
+  }
+}
+
+@keyframes page-under-next {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-0.35rem);
+  }
+}
+
+@keyframes page-under-prev {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(0.35rem);
+  }
+}
+
+@keyframes turn-mobile {
+  0% {
+    opacity: 1;
+    transform: translateX(0) rotateY(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-110%) rotateY(-18deg);
+  }
+}
+
+@media (min-width: 1280px) {
+  .spread {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: min(100%, 60rem);
+  }
+}
+
+@media (max-width: 1279px) {
+  .turnSheet {
+    right: auto;
+    left: 0;
+    width: 100%;
+    max-width: 100%;
+    transform-origin: right center;
+  }
+
+  .turnSheetNext,
+  .turnSheetPrev {
+    animation-name: turn-mobile;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pageUnderNext,
+  .pageUnderPrev,
+  .turnSheet,
+  .turnSheet::after {
+    animation-duration: 1ms !important;
+  }
+}

@@ -1,8 +1,9 @@
 ﻿"use client";
 
 import Link from "next/link";
-import { Children, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Children, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { BookOpen, ChevronLeft, ChevronRight, Download, X } from "lucide-react";
+import styles from "./legajo-book-viewer.module.css";
 
 export type LegajoBookItem = {
   sheetNumber: number;
@@ -31,10 +32,34 @@ export function LegajoBookViewer({
   const pages = Children.toArray(children);
   const [open, setOpen] = useState(false);
   const [current, setCurrent] = useState(0);
+  const [turn, setTurn] = useState<{ from: number; to: number; direction: "next" | "prev" } | null>(null);
+  const turnTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const indexedItems = useMemo(() => items.map((item, index) => ({ ...item, index })), [items]);
 
   const safeCurrent = Math.min(current, Math.max(indexedItems.length - 1, 0));
+  const goToPage = useCallback(
+    (nextIndex: number) => {
+      const normalized = Math.min(Math.max(nextIndex, 0), Math.max(indexedItems.length - 1, 0));
+      if (!indexedItems.length || normalized === safeCurrent || turn) return;
+
+      if (turnTimeoutRef.current) {
+        clearTimeout(turnTimeoutRef.current);
+      }
+
+      setTurn({
+        from: safeCurrent,
+        to: normalized,
+        direction: normalized > safeCurrent ? "next" : "prev",
+      });
+      turnTimeoutRef.current = setTimeout(() => {
+        setCurrent(normalized);
+        setTurn(null);
+        turnTimeoutRef.current = null;
+      }, 560);
+    },
+    [indexedItems.length, safeCurrent, turn],
+  );
 
   useEffect(() => {
     if (!open) return;
@@ -44,8 +69,8 @@ export function LegajoBookViewer({
         return;
       }
       if (event.key === "Escape") setOpen(false);
-      if (event.key === "ArrowLeft") setCurrent(Math.max(0, safeCurrent - 1));
-      if (event.key === "ArrowRight") setCurrent(Math.min(indexedItems.length - 1, safeCurrent + 1));
+      if (event.key === "ArrowLeft") goToPage(safeCurrent - 1);
+      if (event.key === "ArrowRight") goToPage(safeCurrent + 1);
     }
 
     const originalOverflow = document.body.style.overflow;
@@ -55,11 +80,27 @@ export function LegajoBookViewer({
       document.body.style.overflow = originalOverflow;
       window.removeEventListener("keydown", onKeyDown);
     };
-  }, [indexedItems.length, open, safeCurrent]);
+  }, [goToPage, open, safeCurrent]);
+
+  useEffect(() => {
+    return () => {
+      if (turnTimeoutRef.current) {
+        clearTimeout(turnTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const currentItem = indexedItems[safeCurrent];
-  const nextItem = indexedItems[safeCurrent + 1];
   const currentLabel = currentItem?.label ?? (currentItem ? `${itemLabel} N° ${currentItem.sheetNumber}` : "Sin resultados");
+  const visibleIndex = turn?.from ?? safeCurrent;
+  const visibleItem = indexedItems[visibleIndex];
+  const visibleNextItem = indexedItems[visibleIndex + 1];
+  const turningPage = turn
+    ? turn.direction === "next"
+      ? indexedItems[turn.from + 1] ?? indexedItems[turn.from]
+      : indexedItems[turn.from]
+    : null;
+  const turningPageNode = turningPage ? pages[turningPage.index] : null;
 
   return (
     <>
@@ -113,7 +154,7 @@ export function LegajoBookViewer({
               value={currentItem?.index ?? ""}
               onChange={(event) => {
                 const nextIndex = indexedItems.findIndex((item) => item.index === Number(event.target.value));
-                if (nextIndex >= 0) setCurrent(nextIndex);
+                if (nextIndex >= 0) goToPage(nextIndex);
               }}
               className="h-10 min-w-[260px] rounded-sm border border-white/40 bg-white px-2 text-sm font-semibold text-[#212529] outline-none"
             >
@@ -127,8 +168,8 @@ export function LegajoBookViewer({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setCurrent(Math.max(0, safeCurrent - 1))}
-                disabled={!indexedItems.length || safeCurrent === 0}
+                onClick={() => goToPage(safeCurrent - 1)}
+                disabled={!indexedItems.length || safeCurrent === 0 || Boolean(turn)}
                 className="inline-flex min-h-9 items-center gap-1 rounded-sm border border-white/40 bg-black/20 px-3 py-1.5 text-sm font-semibold transition hover:bg-black/30 disabled:cursor-not-allowed disabled:opacity-45"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -136,8 +177,8 @@ export function LegajoBookViewer({
               </button>
               <button
                 type="button"
-                onClick={() => setCurrent(Math.min(indexedItems.length - 1, safeCurrent + 1))}
-                disabled={!indexedItems.length || safeCurrent >= indexedItems.length - 1}
+                onClick={() => goToPage(safeCurrent + 1)}
+                disabled={!indexedItems.length || safeCurrent >= indexedItems.length - 1 || Boolean(turn)}
                 className="inline-flex min-h-9 items-center gap-1 rounded-sm border border-white/40 bg-black/20 px-3 py-1.5 text-sm font-semibold transition hover:bg-black/30 disabled:cursor-not-allowed disabled:opacity-45"
               >
                 Siguiente
@@ -147,12 +188,23 @@ export function LegajoBookViewer({
           </div>
 
           <div className="min-h-0 flex-1 overflow-auto px-3 py-4 sm:px-5 sm:py-6">
-            {currentItem ? (
-              <div className="mx-auto grid w-full max-w-[1560px] gap-5 xl:grid-cols-2">
-                <div className="min-w-0">{pages[currentItem.index]}</div>
-                <div className="hidden min-w-0 xl:block">
-                  {nextItem ? pages[nextItem.index] : <div className="min-h-[720px] rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_16px_38px_rgba(0,0,0,0.30)]" />}
+            {visibleItem ? (
+              <div className={`${styles.spread} mx-auto w-full gap-5`}>
+                <div className={turn?.direction === "prev" ? `${styles.pageSlot} ${styles.pageUnderPrev} min-w-0` : `${styles.pageSlot} min-w-0`}>
+                  {pages[visibleItem.index]}
                 </div>
+                <div className={turn?.direction === "next" ? `${styles.pageSlot} ${styles.pageUnderNext} hidden min-w-0 xl:block` : `${styles.pageSlot} hidden min-w-0 xl:block`}>
+                  {visibleNextItem ? pages[visibleNextItem.index] : <article className="book-leaf rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_16px_38px_rgba(0,0,0,0.30)]" />}
+                </div>
+                {turn && turningPageNode ? (
+                  <div
+                    key={`${turn.from}-${turn.to}-${turn.direction}`}
+                    className={turn.direction === "next" ? `${styles.turnSheet} ${styles.turnSheetNext}` : `${styles.turnSheet} ${styles.turnSheetPrev}`}
+                    aria-hidden="true"
+                  >
+                    {turningPageNode}
+                  </div>
+                ) : null}
               </div>
             ) : (
               <div className="mx-auto max-w-2xl rounded-sm border border-[#b7dfee] bg-[#eefaff] px-4 py-16 text-center text-sm font-medium text-[#6c757d]">

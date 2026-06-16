@@ -11,8 +11,8 @@ export function DetailSection({
 }) {
   return (
     <section className="overflow-hidden rounded-sm border border-[#dee2e6] bg-white shadow-sm">
-      <div className="flex min-h-10 items-center justify-between gap-3 border-b border-[#dee2e6] bg-[#e9ecef] px-3 py-2">
-        <h2 className="text-base font-semibold tracking-normal text-[#212529]">{title}</h2>
+      <div className="flex min-h-10 items-center justify-between gap-3 border-b border-[#c7d2de] bg-[#a1bbcf] px-3 py-2">
+        <h2 className="text-base font-semibold tracking-normal text-[#263544]">{title}</h2>
         {action}
       </div>
       <div className="p-3 sm:p-4">{children}</div>

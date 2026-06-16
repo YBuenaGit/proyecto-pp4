@@ -13,6 +13,7 @@ import { Table, Td } from "@/components/ui/table";
 import { JURIDICAL_CONTEXT_LABELS } from "@/lib/constants";
 import { requireUser } from "@/lib/auth";
 import { formatDate, formatDateTime, labelFromValue } from "@/lib/format";
+import { chunkForBookPages, paginateBookTextSections, type BookTextBlock } from "@/lib/book-pagination";
 import { parseJuridicalActionContent } from "@/lib/juridical-action-content";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessJuridical } from "@/lib/rbac";
@@ -162,7 +163,7 @@ function SheetText({ label, children }: { label: string; children: string | null
   return (
     <div className="rounded-sm border border-[#b7dfee] bg-[#f6fcff] px-3 py-2.5">
       <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">{label}</p>
-      <p className="mt-1 whitespace-pre-wrap text-[15px] leading-7 text-[#212529]">{children}</p>
+      <p className="book-leaf-text mt-1 whitespace-pre-wrap text-[15px] leading-7 text-[#212529]">{children}</p>
     </div>
   );
 }
@@ -230,7 +231,7 @@ function LegajoCoverSheet({
   attachments: LegajoAttachment[];
 }) {
   return (
-    <article className="min-h-[720px] rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_16px_38px_rgba(0,0,0,0.30)]">
+    <article className="book-leaf rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_16px_38px_rgba(0,0,0,0.30)]">
       <div className="border-b border-[#b7dfee] bg-[#dff3fb] px-5 py-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -250,7 +251,7 @@ function LegajoCoverSheet({
         </div>
       </div>
 
-      <div className="space-y-5 px-5 py-5">
+      <div className="book-leaf-body space-y-5 px-5 py-5">
         <div className="rounded-sm border border-[#b7dfee] bg-white/80 px-4 py-3">
           <CoverField label="Tipo / contexto" value={`${type} Â· ${context}`} />
           <CoverField label="Fecha de apertura" value={formatDateTime(attendedAt)} />
@@ -271,15 +272,15 @@ function LegajoCoverSheet({
   );
 }
 
-function LegajoAttachmentSheet({ attachments }: { attachments: LegajoAttachment[] }) {
+function LegajoAttachmentSheet({ attachments, pageNumber, pageCount }: { attachments: LegajoAttachment[]; pageNumber?: number; pageCount?: number }) {
   return (
-    <article className="min-h-[680px] rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_12px_34px_rgba(0,0,0,0.22)]">
+    <article className="book-leaf rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_12px_34px_rgba(0,0,0,0.22)]">
       <div className="border-b border-[#b7dfee] bg-[#dff3fb] px-4 py-4 sm:px-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Archivos</p>
-        <h3 className="mt-1 text-lg font-semibold text-[#212529]">Archivos generales del legajo</h3>
+        <h3 className="mt-1 text-lg font-semibold text-[#212529]">Archivos generales del legajo{pageCount && pageCount > 1 ? ` · hoja ${pageNumber} de ${pageCount}` : ""}</h3>
         <p className="mt-1 text-sm text-[#6c757d]">Documentacion adjunta disponible para abrir o descargar.</p>
       </div>
-      <div className="grid gap-3 px-4 py-4 sm:grid-cols-2 sm:px-5">
+      <div className="book-leaf-body grid gap-3 px-4 py-4 sm:grid-cols-2 sm:px-5">
         {attachments.map((attachment) => (
           <div key={attachment.id} className="rounded-sm border border-[#dee2e6] bg-white px-3 py-3 shadow-sm">
             <div className="flex min-w-0 items-start gap-2">
@@ -362,13 +363,12 @@ function LegajoSheet({
   date,
   actor,
   role,
-  description,
-  guidance,
   actionType,
   statusText,
-  nextStepDescription,
   nextStepDate,
-  confidentialNotes,
+  textBlocks,
+  pageNumber = 1,
+  pageCount = 1,
   attachments,
   pdfHref,
   editAction,
@@ -378,23 +378,26 @@ function LegajoSheet({
   date: Date;
   actor: string;
   role: string;
-  description: string;
-  guidance?: string | null;
   actionType?: string | null;
   statusText?: string | null;
-  nextStepDescription?: string | null;
   nextStepDate?: Date | null;
-  confidentialNotes?: string | null;
+  textBlocks: BookTextBlock[];
+  pageNumber?: number;
+  pageCount?: number;
   attachments: LegajoAttachment[];
   pdfHref: string;
   editAction?: ReactNode;
 }) {
+  const isContinuation = pageNumber > 1;
+
   return (
-    <article className="min-h-[680px] rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_12px_34px_rgba(0,0,0,0.22)]">
+    <article className="book-leaf rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_12px_34px_rgba(0,0,0,0.22)]">
       <div className="border-b border-[#b7dfee] bg-[#dff3fb] px-4 py-4 sm:px-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Intervencion NÂ° {sheetNumber}</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">
+              Intervencion NÂ° {sheetNumber}{pageCount > 1 ? ` · hoja ${pageNumber} de ${pageCount}` : ""}
+            </p>
             <h3 className="mt-1 text-lg font-semibold text-[#212529]">{title}</h3>
             <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-[#6c757d]">
               <span>{formatDateTime(date)}</span>
@@ -410,25 +413,32 @@ function LegajoSheet({
           </div>
         </div>
       </div>
-      <div className="space-y-4 px-4 py-4 sm:px-5">
-        <div className="grid gap-3 rounded-sm border border-[#b7dfee] bg-white/80 p-3 sm:grid-cols-2">
-          <CoverField label="Fecha y hora" value={formatDateTime(date)} />
-          <CoverField label="Quien cargo" value={`${actor} (${labelFromValue(role)})`} />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {actionType ? <span className="rounded-sm border border-[#bee5eb] bg-[#d1ecf1] px-2.5 py-1 text-xs font-semibold text-[#0c5460]">{labelFromValue(actionType)}</span> : null}
-          {statusText ? <span className="rounded-sm border border-[#c3e6cb] bg-[#d4edda] px-2.5 py-1 text-xs font-semibold text-[#155724]">{statusText}</span> : null}
-          {nextStepDate ? (
-            <span className="inline-flex items-center gap-1 rounded-sm border border-[#ffeeba] bg-[#fff3cd] px-2.5 py-1 text-xs font-semibold text-[#856404]">
-              <Clock className="h-3.5 w-3.5" />
-              Seguimiento: {formatDate(nextStepDate)}
-            </span>
-          ) : null}
-        </div>
-        <SheetText label="Descripcion del relato">{description}</SheetText>
-        <SheetText label="Lo que se instruyo">{guidance}</SheetText>
-        <SheetText label="Proxima accion">{nextStepDescription}</SheetText>
-        <SheetText label="Notas internas confidenciales">{confidentialNotes}</SheetText>
+      <div className="book-leaf-body space-y-3 px-4 py-4 sm:px-5">
+        {!isContinuation ? (
+          <>
+            <div className="grid gap-3 rounded-sm border border-[#b7dfee] bg-white/80 p-3 sm:grid-cols-2">
+              <CoverField label="Fecha y hora" value={formatDateTime(date)} />
+              <CoverField label="Quien cargo" value={`${actor} (${labelFromValue(role)})`} />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {actionType ? <span className="rounded-sm border border-[#bee5eb] bg-[#d1ecf1] px-2.5 py-1 text-xs font-semibold text-[#0c5460]">{labelFromValue(actionType)}</span> : null}
+              {statusText ? <span className="rounded-sm border border-[#c3e6cb] bg-[#d4edda] px-2.5 py-1 text-xs font-semibold text-[#155724]">{statusText}</span> : null}
+              {nextStepDate ? (
+                <span className="inline-flex items-center gap-1 rounded-sm border border-[#ffeeba] bg-[#fff3cd] px-2.5 py-1 text-xs font-semibold text-[#856404]">
+                  <Clock className="h-3.5 w-3.5" />
+                  Seguimiento: {formatDate(nextStepDate)}
+                </span>
+              ) : null}
+            </div>
+          </>
+        ) : (
+          <div className="rounded-sm border border-[#b7dfee] bg-white/80 px-3 py-2 text-sm font-semibold text-[#0c5460]">
+            Continuacion de {title}
+          </div>
+        )}
+        {textBlocks.length ? textBlocks.map((block, index) => <SheetText key={`${block.label}-${index}`} label={block.label}>{block.text}</SheetText>) : (
+          <p className="rounded-sm border border-[#b7dfee] bg-white/70 px-3 py-3 text-sm font-medium text-[#6c757d]">Sin contenido textual cargado.</p>
+        )}
         <SheetAttachments attachments={attachments} />
       </div>
     </article>
@@ -546,68 +556,190 @@ export default async function InterventionDetailPage({ params }: { params: Promi
   });
   const displayActionSheets = [...actionSheets].sort((a, b) => b.action.createdAt.getTime() - a.action.createdAt.getTime());
   const initialStatusText = `Estado inicial: ${labelFromValue(initialStatusFromAudit(auditLogs, intervention.status))}`;
-  const bookItems: LegajoBookItem[] = [
+  const bookEntries: Array<{ item: LegajoBookItem; node: ReactNode }> = [
     {
-      sheetNumber: 0,
-      label: "Caratula",
-      title: "Datos principales",
-      dateText: formatDateTime(intervention.attendedAt),
-      statusText: labelFromValue(intervention.status),
-      searchText: [
-        intervention.internalNumber,
-        labelFromValue(intervention.type),
-        contextLabel(intervention.interventionContext),
-        intervention.oficioNumber,
-        intervention.expedienteNumber,
-        primaryLinkedName,
-        primaryLinkedPerson?.dni,
-        intervention.description,
-      ].filter(Boolean).join(" "),
+      item: {
+        sheetNumber: 0,
+        label: "Caratula",
+        title: "Datos principales",
+        dateText: formatDateTime(intervention.attendedAt),
+        statusText: labelFromValue(intervention.status),
+        searchText: [
+          intervention.internalNumber,
+          labelFromValue(intervention.type),
+          contextLabel(intervention.interventionContext),
+          intervention.oficioNumber,
+          intervention.expedienteNumber,
+          primaryLinkedName,
+          primaryLinkedPerson?.dni,
+          intervention.description,
+        ].filter(Boolean).join(" "),
+      },
+      node: (
+        <LegajoCoverSheet
+          key="cover"
+          internalNumber={intervention.internalNumber}
+          type={labelFromValue(intervention.type)}
+          context={contextLabel(intervention.interventionContext)}
+          status={intervention.status}
+          urgency={intervention.urgency}
+          attendedAt={intervention.attendedAt}
+          createdBy={intervention.createdBy.name}
+          oficioNumber={intervention.oficioNumber}
+          expedienteNumber={intervention.expedienteNumber}
+          personName={primaryLinkedName}
+          personDni={primaryLinkedPerson?.dni}
+          attachments={generalAttachments}
+        />
+      ),
     },
-    ...displayActionSheets.map(({ action, sheetNumber, parsed, statusText }) => ({
-      sheetNumber,
-      title: labelFromValue(action.actionType),
-      dateText: formatDateTime(action.createdAt),
-      statusText,
-      searchText: [
-        parsed.description,
-        parsed.guidanceProvided,
-        parsed.nextStepDescription,
-        action.createdBy.name,
-        labelFromValue(action.actionType),
-      ].filter(Boolean).join(" "),
-    })),
-    {
-      sheetNumber: 1,
-      title: "Primera atencion",
-      dateText: formatDateTime(intervention.attendedAt),
-      statusText: initialStatusText,
-      searchText: [
-        intervention.description,
-        intervention.guidanceProvided,
-        intervention.confidentialNotes,
-        intervention.createdBy.name,
-        labelFromValue(intervention.type),
-      ].filter(Boolean).join(" "),
-    },
-    ...(generalAttachments.length
-      ? [
-          {
-            sheetNumber: displayActionSheets.length + 2,
-            label: "Archivos",
-            title: "Archivos del legajo",
-            dateText: formatDateTime(generalAttachments[0]?.createdAt ?? intervention.createdAt),
-            statusText: `${generalAttachments.length} archivo${generalAttachments.length === 1 ? "" : "s"}`,
-            searchText: generalAttachments.map((attachment) => attachment.originalName).join(" "),
-          },
-        ]
-      : []),
   ];
+
+  displayActionSheets.forEach(({ action, sheetNumber, parsed, statusText }) => {
+    const textPages = paginateBookTextSections(
+      [
+        { label: "Descripcion del relato", text: parsed.description },
+        { label: "Lo que se instruyo", text: parsed.guidanceProvided },
+        { label: "Proxima accion", text: parsed.nextStepDescription },
+      ],
+      { firstPageLines: 10, continuationPageLines: 17 },
+    );
+    const rowAttachments = attachmentsByActionId.get(action.id) ?? [];
+    const actionTitle = labelFromValue(action.actionType);
+
+    textPages.forEach((textPage, pageIndex) => {
+      bookEntries.push({
+        item: {
+          sheetNumber,
+          label: pageIndex > 0 ? `Intervencion NÂ° ${sheetNumber} · cont. ${pageIndex + 1}` : undefined,
+          title: actionTitle,
+          dateText: formatDateTime(action.createdAt),
+          statusText,
+          searchText: [
+            parsed.description,
+            parsed.guidanceProvided,
+            parsed.nextStepDescription,
+            action.createdBy.name,
+            actionTitle,
+          ].filter(Boolean).join(" "),
+        },
+        node: (
+          <LegajoSheet
+            key={`action-${action.id}-${pageIndex}`}
+            sheetNumber={sheetNumber}
+            title={actionTitle}
+            date={action.createdAt}
+            actor={action.createdBy.name}
+            role={action.createdBy.role}
+            actionType={action.actionType}
+            statusText={statusText}
+            nextStepDate={action.nextStepDate}
+            textBlocks={textPage.blocks}
+            pageNumber={pageIndex + 1}
+            pageCount={textPages.length}
+            attachments={pageIndex === textPages.length - 1 ? rowAttachments : []}
+            pdfHref={`/intervenciones/${intervention.id}/legajo.pdf?hoja=${sheetNumber}`}
+            editAction={
+              pageIndex === 0 ? (
+                <AppModal title={`Editar intervencion NÂ° ${sheetNumber}`} trigger={<><Edit className="h-3.5 w-3.5" />Editar</>} triggerVariant="secondary" size="md" triggerClassName="min-h-9 px-3 py-1.5 text-xs">
+                  <AddJuridicalActionForm
+                    action={updateJuridicalAction.bind(null, action.id)}
+                    initialValues={{
+                      actionType: action.actionType,
+                      createdAt: action.createdAt,
+                      description: parsed.description,
+                      guidanceProvided: parsed.guidanceProvided,
+                      nextStepDescription: parsed.nextStepDescription,
+                      nextStepDate: action.nextStepDate,
+                    }}
+                    submitLabel="Guardar intervencion"
+                  />
+                </AppModal>
+              ) : null
+            }
+          />
+        ),
+      });
+    });
+  });
+
+  const firstAttentionPages = paginateBookTextSections(
+    [
+      { label: "Descripcion del relato", text: intervention.description },
+      { label: "Lo que se instruyo", text: intervention.guidanceProvided },
+      { label: "Notas internas confidenciales", text: intervention.confidentialNotes },
+    ],
+    { firstPageLines: 10, continuationPageLines: 17 },
+  );
+
+  firstAttentionPages.forEach((textPage, pageIndex) => {
+    bookEntries.push({
+      item: {
+        sheetNumber: 1,
+        label: pageIndex > 0 ? `Primera atencion · cont. ${pageIndex + 1}` : undefined,
+        title: "Primera atencion",
+        dateText: formatDateTime(intervention.attendedAt),
+        statusText: initialStatusText,
+        searchText: [
+          intervention.description,
+          intervention.guidanceProvided,
+          intervention.confidentialNotes,
+          intervention.createdBy.name,
+          labelFromValue(intervention.type),
+        ].filter(Boolean).join(" "),
+      },
+      node: (
+        <LegajoSheet
+          key={`first-attention-${pageIndex}`}
+          sheetNumber={1}
+          title="Primera atencion"
+          date={intervention.attendedAt}
+          actor={intervention.createdBy.name}
+          role={intervention.createdBy.role}
+          actionType={intervention.type}
+          statusText={initialStatusText}
+          nextStepDate={null}
+          textBlocks={textPage.blocks}
+          pageNumber={pageIndex + 1}
+          pageCount={firstAttentionPages.length}
+          attachments={[]}
+          pdfHref={`/intervenciones/${intervention.id}/legajo.pdf?hoja=1`}
+        />
+      ),
+    });
+  });
+
+  if (generalAttachments.length) {
+    const attachmentPages = chunkForBookPages(generalAttachments, 8);
+
+    attachmentPages.forEach((attachmentPage, pageIndex) => {
+      bookEntries.push({
+        item: {
+          sheetNumber: displayActionSheets.length + 2,
+          label: attachmentPages.length > 1 ? `Archivos · hoja ${pageIndex + 1}` : "Archivos",
+          title: "Archivos del legajo",
+          dateText: formatDateTime(generalAttachments[0]?.createdAt ?? intervention.createdAt),
+          statusText: `${generalAttachments.length} archivo${generalAttachments.length === 1 ? "" : "s"}`,
+          searchText: generalAttachments.map((attachment) => attachment.originalName).join(" "),
+        },
+        node: (
+          <LegajoAttachmentSheet
+            key={`attachments-${pageIndex}`}
+            attachments={attachmentPage}
+            pageNumber={pageIndex + 1}
+            pageCount={attachmentPages.length}
+          />
+        ),
+      });
+    });
+  }
+
+  const bookItems = bookEntries.map((entry) => entry.item);
 
   return (
     <main className="space-y-5">
       <section
-        className="relative overflow-hidden rounded-sm border border-[#b7dfee] bg-[#dff3fb] p-3 text-[#212529] shadow-sm sm:p-4"
+        className="relative overflow-hidden rounded-sm border border-[#b7dfee] bg-[#a1bbcf] p-3 text-[#212529] shadow-sm sm:p-4"
       >
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -712,74 +844,7 @@ export default async function InterventionDetailPage({ params }: { params: Promi
               </AppModal>
             }
           >
-            <LegajoCoverSheet
-              internalNumber={intervention.internalNumber}
-              type={labelFromValue(intervention.type)}
-              context={contextLabel(intervention.interventionContext)}
-              status={intervention.status}
-              urgency={intervention.urgency}
-              attendedAt={intervention.attendedAt}
-              createdBy={intervention.createdBy.name}
-              oficioNumber={intervention.oficioNumber}
-              expedienteNumber={intervention.expedienteNumber}
-              personName={primaryLinkedName}
-              personDni={primaryLinkedPerson?.dni}
-              attachments={generalAttachments}
-            />
-
-            {displayActionSheets.map(({ action, sheetNumber, parsed, statusText }) => (
-              <LegajoSheet
-                key={action.id}
-                sheetNumber={sheetNumber}
-                title={labelFromValue(action.actionType)}
-                date={action.createdAt}
-                actor={action.createdBy.name}
-                role={action.createdBy.role}
-                description={parsed.description}
-                guidance={parsed.guidanceProvided}
-                actionType={action.actionType}
-                statusText={statusText}
-                nextStepDescription={parsed.nextStepDescription}
-                nextStepDate={action.nextStepDate}
-                attachments={attachmentsByActionId.get(action.id) ?? []}
-                pdfHref={`/intervenciones/${intervention.id}/legajo.pdf?hoja=${sheetNumber}`}
-                editAction={
-                  <AppModal title={`Editar intervencion NÂ° ${sheetNumber}`} trigger={<><Edit className="h-3.5 w-3.5" />Editar</>} triggerVariant="secondary" size="md" triggerClassName="min-h-9 px-3 py-1.5 text-xs">
-                    <AddJuridicalActionForm
-                      action={updateJuridicalAction.bind(null, action.id)}
-                      initialValues={{
-                        actionType: action.actionType,
-                        createdAt: action.createdAt,
-                        description: parsed.description,
-                        guidanceProvided: parsed.guidanceProvided,
-                        nextStepDescription: parsed.nextStepDescription,
-                        nextStepDate: action.nextStepDate,
-                      }}
-                      submitLabel="Guardar intervencion"
-                    />
-                  </AppModal>
-                }
-              />
-            ))}
-
-            <LegajoSheet
-              sheetNumber={1}
-              title="Primera atencion"
-              date={intervention.attendedAt}
-              actor={intervention.createdBy.name}
-              role={intervention.createdBy.role}
-              description={intervention.description}
-              guidance={intervention.guidanceProvided}
-              actionType={intervention.type}
-              statusText={initialStatusText}
-              nextStepDescription={null}
-              nextStepDate={null}
-              confidentialNotes={intervention.confidentialNotes}
-              attachments={[]}
-              pdfHref={`/intervenciones/${intervention.id}/legajo.pdf?hoja=1`}
-            />
-
-            {generalAttachments.length ? <LegajoAttachmentSheet attachments={generalAttachments} /> : null}
+            {bookEntries.map((entry) => entry.node)}
           </LegajoBookViewer>
         }
       >

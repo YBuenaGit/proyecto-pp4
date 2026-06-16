@@ -38,41 +38,49 @@ export function SidebarNav({ items }: { items: NavItem[] }) {
   const pathname = usePathname();
 
   return (
-    <nav className="flex gap-1 overflow-x-auto px-2 py-2 lg:block lg:space-y-1 lg:overflow-visible lg:px-2 lg:py-3">
+    <nav className="flex gap-1.5 overflow-x-auto px-2 py-2 lg:block lg:space-y-1.5 lg:overflow-visible lg:px-2 lg:py-3">
       {items.map((item) => {
         const Icon = iconMap[item.icon];
-        const childActive = item.children?.some((child) => pathname === child.href || pathname.startsWith(`${child.href}/`)) ?? false;
+        const isChildActive = (childHref: string) =>
+          pathname === childHref || (childHref !== item.href && pathname.startsWith(`${childHref}/`));
+        const childActive = item.children?.some((child) => isChildActive(child.href)) ?? false;
         const active = pathname === item.href || pathname.startsWith(`${item.href}/`) || childActive;
         return (
           <div key={item.href} className="shrink-0 lg:shrink">
             <Link
               href={item.href}
+              style={{ color: active ? "#ffffff" : "#17a2b8" }}
               className={cn(
-                "flex items-center gap-2 rounded-sm px-3 py-2 text-sm font-semibold transition duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff] lg:w-full",
+                "flex min-h-10 items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff] lg:w-full",
                 active
-                  ? "bg-[#0667b0] text-white shadow-sm"
-                  : "text-[#495057] hover:bg-[#e8f2ff] hover:text-[#0667b0]",
+                  ? "!bg-[#17a2b8] !text-white shadow-sm [&_svg]:!text-white"
+                  : "!bg-white !text-[#17a2b8] hover:!bg-[#e8f7fa] hover:!text-[#17a2b8] [&_svg]:!text-[#17a2b8]",
               )}
             >
-              <Icon className="h-4 w-4 shrink-0" />
-              {item.label}
+              <Icon className="h-4 w-4 shrink-0 !text-current" />
+              <span className="text-current">{item.label}</span>
             </Link>
             {item.children && active ? (
-              <div className="mt-1 flex gap-1 lg:block lg:space-y-1 lg:pl-6">
-                {item.children.map((child) => (
-                  <Link
-                    key={child.href}
-                    href={child.href}
-                    className={cn(
-                      "block whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff]",
-                      pathname === child.href || pathname.startsWith(`${child.href}/`)
-                        ? "bg-[#0667b0] text-white ring-1 ring-[#9cc7ff]"
-                        : "text-[#6c757d] hover:bg-[#e8f2ff] hover:text-[#0667b0]",
-                    )}
-                  >
-                    {child.label}
-                  </Link>
-                ))}
+              <div className="mt-1 flex gap-1.5 lg:block lg:space-y-1.5 lg:pl-6">
+                {item.children.map((child) => {
+                  const childIsActive = isChildActive(child.href);
+
+                  return (
+                    <Link
+                      key={child.href}
+                      href={child.href}
+                      style={{ color: childIsActive ? "#ffffff" : "#17a2b8" }}
+                      className={cn(
+                        "block min-h-9 whitespace-nowrap rounded-md px-3 py-2 text-sm font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff]",
+                        childIsActive
+                          ? "!bg-[#17a2b8] !text-white shadow-sm ring-1 ring-[#9fdbe5]"
+                          : "!bg-white !text-[#17a2b8] hover:!bg-[#e8f7fa] hover:!text-[#17a2b8]",
+                      )}
+                    >
+                      <span className="text-current">{child.label}</span>
+                    </Link>
+                  );
+                })}
               </div>
             ) : null}
           </div>

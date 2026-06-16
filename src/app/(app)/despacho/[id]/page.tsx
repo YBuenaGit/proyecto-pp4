@@ -1,9 +1,8 @@
 ﻿import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { Download, Edit, FileText, Plus, Send, Upload } from "lucide-react";
+import { Download, Edit, FileText, Plus, Send } from "lucide-react";
 import { AppModal } from "@/components/ui/app-modal";
-import { AttachmentList, UploadForm } from "@/components/ui/attachments";
 import { AuditTimeline } from "@/components/ui/audit-timeline";
 import { Button, LinkButton } from "@/components/ui/button";
 import { DetailField, DetailSection, FieldGrid } from "@/components/ui/detail-section";
@@ -12,15 +11,14 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Table, Td } from "@/components/ui/table";
 import { DISPATCH_STATUSES } from "@/lib/constants";
 import { requireUser } from "@/lib/auth";
+import { chunkForBookPages, paginateBookTextSections, type BookTextBlock } from "@/lib/book-pagination";
 import { formatDateTime, labelFromValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
-import { assertAccess, canAccessDispatch, canAccessJuridical } from "@/lib/rbac";
+import { assertAccess, canAccessDispatch } from "@/lib/rbac";
 import {
   addDispatchFollowUp,
   deriveDispatchToJuridical,
-  referDispatchToArea,
   updateDispatchRecord,
-  uploadDispatchAttachment,
 } from "../actions";
 import { DispatchForm } from "../dispatch-form";
 import { LegajoBookViewer, type LegajoBookItem } from "../../intervenciones/[id]/legajo-book-viewer";
@@ -66,7 +64,7 @@ function BookText({ label, children }: { label: string; children: string | null 
   return (
     <div className="rounded-sm border border-[#b7dfee] bg-[#f6fcff] px-3 py-2.5">
       <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">{label}</p>
-      <p className="mt-1 whitespace-pre-wrap text-[15px] leading-7 text-[#212529]">{children}</p>
+      <p className="book-leaf-text mt-1 whitespace-pre-wrap text-[15px] leading-7 text-[#212529]">{children}</p>
     </div>
   );
 }
@@ -100,7 +98,9 @@ function DispatchBookAttachments({ attachments }: { attachments: DispatchAttachm
 function DispatchCoverSheet({
   record,
   category,
-  attachments,
+  textBlocks,
+  pageNumber = 1,
+  pageCount = 1,
 }: {
   record: {
     internalNumber: string;
@@ -112,19 +112,20 @@ function DispatchCoverSheet({
     createdBy: { name: string };
     origin: string;
     referredArea: string | null;
-    description: string;
-    initialGuidance: string | null;
-    confidentialNotes: string | null;
   };
   category: string;
-  attachments: DispatchAttachment[];
+  textBlocks: BookTextBlock[];
+  pageNumber?: number;
+  pageCount?: number;
 }) {
+  const isContinuation = pageNumber > 1;
+
   return (
-    <article className="min-h-[680px] rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_12px_34px_rgba(0,0,0,0.22)]">
+    <article className="book-leaf rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_12px_34px_rgba(0,0,0,0.22)]">
       <div className="border-b border-[#b7dfee] bg-[#dff3fb] px-4 py-4 sm:px-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Caratula</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Caratula{pageCount > 1 ? ` · hoja ${pageNumber} de ${pageCount}` : ""}</p>
             <h3 className="mt-1 text-lg font-semibold text-[#212529]">Atencion / reclamo</h3>
             <p className="mt-2 text-sm font-semibold text-[#0c5460]">Secretaria de Seguridad Municipal</p>
           </div>
@@ -134,20 +135,42 @@ function DispatchCoverSheet({
           </div>
         </div>
       </div>
-      <div className="space-y-4 px-4 py-4 sm:px-5">
-        <div className="grid gap-3 rounded-sm border border-[#b7dfee] bg-white/80 p-3 sm:grid-cols-2">
-          <BookField label="Categoria" value={category} />
-          <BookField label="Fecha de atencion" value={formatDateTime(record.attendedAt)} />
-          <BookField label="Usuario que atendio" value={record.createdBy.name} />
-          <BookField label="Origen / area" value={`${labelFromValue(record.origin)} Â· ${record.referredArea ?? "-"}`} />
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <StatusBadge value={record.status} />
-          <StatusBadge value={record.priority} />
-        </div>
-        <BookText label="Descripcion del reclamo">{record.description}</BookText>
-        <BookText label="Orientacion brindada">{record.initialGuidance}</BookText>
-        <BookText label="Notas internas confidenciales">{record.confidentialNotes}</BookText>
+      <div className="book-leaf-body space-y-3 px-4 py-4 sm:px-5">
+        {!isContinuation ? (
+          <>
+            <div className="grid gap-3 rounded-sm border border-[#b7dfee] bg-white/80 p-3 sm:grid-cols-2">
+              <BookField label="Categoria" value={category} />
+              <BookField label="Fecha de atencion" value={formatDateTime(record.attendedAt)} />
+              <BookField label="Usuario que atendio" value={record.createdBy.name} />
+              <BookField label="Origen / area" value={`${labelFromValue(record.origin)} Â· ${record.referredArea ?? "-"}`} />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <StatusBadge value={record.status} />
+              <StatusBadge value={record.priority} />
+            </div>
+          </>
+        ) : (
+          <div className="rounded-sm border border-[#b7dfee] bg-white/80 px-3 py-2 text-sm font-semibold text-[#0c5460]">
+            Continuacion de atencion / reclamo
+          </div>
+        )}
+        {textBlocks.length ? textBlocks.map((block, index) => <BookText key={`${block.label}-${index}`} label={block.label}>{block.text}</BookText>) : (
+          <p className="rounded-sm border border-[#b7dfee] bg-white/70 px-3 py-3 text-sm font-medium text-[#6c757d]">Sin contenido textual cargado.</p>
+        )}
+      </div>
+    </article>
+  );
+}
+
+function DispatchAttachmentSheet({ attachments, pageNumber, pageCount }: { attachments: DispatchAttachment[]; pageNumber?: number; pageCount?: number }) {
+  return (
+    <article className="book-leaf rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_12px_34px_rgba(0,0,0,0.22)]">
+      <div className="border-b border-[#b7dfee] bg-[#dff3fb] px-4 py-4 sm:px-5">
+        <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Archivos</p>
+        <h3 className="mt-1 text-lg font-semibold text-[#212529]">Archivos del legajo{pageCount && pageCount > 1 ? ` · hoja ${pageNumber} de ${pageCount}` : ""}</h3>
+        <p className="mt-1 text-sm text-[#6c757d]">Documentacion adjunta disponible para abrir o descargar.</p>
+      </div>
+      <div className="book-leaf-body px-4 py-4 sm:px-5">
         <DispatchBookAttachments attachments={attachments} />
       </div>
     </article>
@@ -156,22 +179,30 @@ function DispatchCoverSheet({
 
 function DispatchFollowUpSheet({
   sheetNumber,
-  content,
   statusAfter,
   createdAt,
   createdBy,
+  textBlocks,
+  pageNumber = 1,
+  pageCount = 1,
 }: {
   sheetNumber: number;
-  content: string;
   statusAfter: string | null;
   createdAt: Date;
   createdBy: { name: string };
+  textBlocks: BookTextBlock[];
+  pageNumber?: number;
+  pageCount?: number;
 }) {
+  const isContinuation = pageNumber > 1;
+
   return (
-    <article className="min-h-[680px] rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_12px_34px_rgba(0,0,0,0.22)]">
+    <article className="book-leaf rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_12px_34px_rgba(0,0,0,0.22)]">
       <div className="border-b border-[#b7dfee] bg-[#dff3fb] px-4 py-4 sm:px-5">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Seguimiento NÂ° {sheetNumber}</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">
+            Seguimiento NÂ° {sheetNumber}{pageCount > 1 ? ` · hoja ${pageNumber} de ${pageCount}` : ""}
+          </p>
           <h3 className="mt-1 text-lg font-semibold text-[#212529]">Seguimiento de atencion</h3>
           <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-[#6c757d]">
             <span>{formatDateTime(createdAt)}</span>
@@ -179,13 +210,23 @@ function DispatchFollowUpSheet({
           </div>
         </div>
       </div>
-      <div className="space-y-4 px-4 py-4 sm:px-5">
-        <div className="grid gap-3 rounded-sm border border-[#b7dfee] bg-white/80 p-3 sm:grid-cols-2">
-          <BookField label="Fecha y hora" value={formatDateTime(createdAt)} />
-          <BookField label="Quien cargo" value={createdBy.name} />
-        </div>
-        {statusAfter ? <StatusBadge value={statusAfter} /> : null}
-        <BookText label="Contenido del seguimiento">{content}</BookText>
+      <div className="book-leaf-body space-y-3 px-4 py-4 sm:px-5">
+        {!isContinuation ? (
+          <>
+            <div className="grid gap-3 rounded-sm border border-[#b7dfee] bg-white/80 p-3 sm:grid-cols-2">
+              <BookField label="Fecha y hora" value={formatDateTime(createdAt)} />
+              <BookField label="Quien cargo" value={createdBy.name} />
+            </div>
+            {statusAfter ? <StatusBadge value={statusAfter} /> : null}
+          </>
+        ) : (
+          <div className="rounded-sm border border-[#b7dfee] bg-white/80 px-3 py-2 text-sm font-semibold text-[#0c5460]">
+            Continuacion del seguimiento
+          </div>
+        )}
+        {textBlocks.length ? textBlocks.map((block, index) => <BookText key={`${block.label}-${index}`} label={block.label}>{block.text}</BookText>) : (
+          <p className="rounded-sm border border-[#b7dfee] bg-white/70 px-3 py-3 text-sm font-medium text-[#6c757d]">Sin contenido textual cargado.</p>
+        )}
       </div>
     </article>
   );
@@ -258,7 +299,6 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
   ]);
 
   if (!record) notFound();
-  const directivoCanSeeJuridical = canAccessJuridical(user);
   const complainants = record.complainants;
   const linkedPersons = record.linkedPersons.length
     ? record.linkedPersons
@@ -274,28 +314,103 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
       ].filter(hasLinkedPersonData);
   const categoryLabel = categories.find((item) => item.value === record.category)?.label ?? labelFromValue(record.category);
   const followUpsForLegajo = [...record.followUps].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
-  const bookItems: LegajoBookItem[] = [
-    {
-      sheetNumber: 1,
-      label: "Caratula",
-      title: "Datos principales",
-      dateText: formatDateTime(record.attendedAt),
-      statusText: record.status,
-      searchText: [record.description, record.initialGuidance, record.confidentialNotes, record.createdBy.name, categoryLabel].filter(Boolean).join(" "),
-    },
-    ...followUpsForLegajo.map((followUp, index) => ({
-      sheetNumber: index + 2,
-      title: "Seguimiento de atencion",
-      dateText: formatDateTime(followUp.createdAt),
-      statusText: followUp.statusAfter,
-      searchText: [followUp.content, followUp.createdBy.name, followUp.statusAfter].filter(Boolean).join(" "),
-    })),
-  ];
+  const bookEntries: Array<{ item: LegajoBookItem; node: ReactNode }> = [];
+  const coverPages = paginateBookTextSections(
+    [
+      { label: "Descripcion del reclamo", text: record.description },
+      { label: "Orientacion brindada", text: record.initialGuidance },
+      { label: "Notas internas confidenciales", text: record.confidentialNotes },
+    ],
+    { firstPageLines: 10, continuationPageLines: 17 },
+  );
+
+  coverPages.forEach((textPage, pageIndex) => {
+    bookEntries.push({
+      item: {
+        sheetNumber: 1,
+        label: pageIndex > 0 ? `Caratula · cont. ${pageIndex + 1}` : "Caratula",
+        title: "Datos principales",
+        dateText: formatDateTime(record.attendedAt),
+        statusText: record.status,
+        searchText: [record.description, record.initialGuidance, record.confidentialNotes, record.createdBy.name, categoryLabel].filter(Boolean).join(" "),
+      },
+      node: (
+        <DispatchCoverSheet
+          key={`cover-${pageIndex}`}
+          record={record}
+          category={categoryLabel}
+          textBlocks={textPage.blocks}
+          pageNumber={pageIndex + 1}
+          pageCount={coverPages.length}
+        />
+      ),
+    });
+  });
+
+  if (attachments.length) {
+    const attachmentPages = chunkForBookPages(attachments, 8);
+
+    attachmentPages.forEach((attachmentPage, pageIndex) => {
+      bookEntries.push({
+        item: {
+          sheetNumber: 1,
+          label: attachmentPages.length > 1 ? `Archivos · hoja ${pageIndex + 1}` : "Archivos",
+          title: "Archivos del legajo",
+          dateText: formatDateTime(attachments[0]?.createdAt ?? record.createdAt),
+          statusText: `${attachments.length} archivo${attachments.length === 1 ? "" : "s"}`,
+          searchText: attachments.map((attachment) => attachment.originalName).join(" "),
+        },
+        node: (
+          <DispatchAttachmentSheet
+            key={`attachments-${pageIndex}`}
+            attachments={attachmentPage}
+            pageNumber={pageIndex + 1}
+            pageCount={attachmentPages.length}
+          />
+        ),
+      });
+    });
+  }
+
+  followUpsForLegajo.forEach((followUp, index) => {
+    const sheetNumber = index + 2;
+    const followUpPages = paginateBookTextSections(
+      [{ label: "Contenido del seguimiento", text: followUp.content }],
+      { firstPageLines: 13, continuationPageLines: 19 },
+    );
+
+    followUpPages.forEach((textPage, pageIndex) => {
+      bookEntries.push({
+        item: {
+          sheetNumber,
+          label: pageIndex > 0 ? `Seguimiento NÂ° ${sheetNumber} · cont. ${pageIndex + 1}` : undefined,
+          title: "Seguimiento de atencion",
+          dateText: formatDateTime(followUp.createdAt),
+          statusText: followUp.statusAfter,
+          searchText: [followUp.content, followUp.createdBy.name, followUp.statusAfter].filter(Boolean).join(" "),
+        },
+        node: (
+          <DispatchFollowUpSheet
+            key={`follow-up-${followUp.id}-${pageIndex}`}
+            sheetNumber={sheetNumber}
+            statusAfter={followUp.statusAfter}
+            createdAt={followUp.createdAt}
+            createdBy={followUp.createdBy}
+            textBlocks={textPage.blocks}
+            pageNumber={pageIndex + 1}
+            pageCount={followUpPages.length}
+          />
+        ),
+      });
+    });
+  });
+
+  const bookItems = bookEntries.map((entry) => entry.item);
 
   return (
     <>
       <section
-        className="relative mb-5 overflow-hidden rounded-sm border border-[#b7dfee] bg-[#dff3fb] p-3 text-[#212529] shadow-sm sm:p-4"
+        className="relative mb-5 overflow-hidden rounded-sm border border-[#b7dfee] bg-[#a1bbcf] p-3 text-[#212529] shadow-sm sm:p-4"
       >
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
@@ -311,7 +426,7 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <AppModal title={`Editar ${record.internalNumber}`} trigger={<><Edit className="h-4 w-4" />Editar</>} triggerVariant="secondary" size="xl">
+            <AppModal title={`Editar datos generales ${record.internalNumber}`} trigger={<><Edit className="h-4 w-4" />Editar datos generales</>} triggerVariant="secondary" size="xl">
               <DispatchForm
                 action={updateDispatchRecord.bind(null, record.id)}
                 record={record}
@@ -322,6 +437,50 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
                 submitLabel="Guardar cambios"
               />
             </AppModal>
+            <AppModal title="Nuevo registro de atencion" trigger={<><Plus className="h-4 w-4" />Nueva intervencion</>} size="md">
+              <form action={addDispatchFollowUp.bind(null, record.id)} className="space-y-4">
+                <FormField label="Nuevo seguimiento">
+                  <textarea name="content" className={textareaClass} required />
+                </FormField>
+                <FormField label="Estado posterior">
+                  <select name="statusAfter" className={inputClass} defaultValue="">
+                    <option value="">Sin cambio</option>
+                    {DISPATCH_STATUSES.map((status) => (
+                      <option key={status} value={status}>{labelFromValue(status)}</option>
+                    ))}
+                  </select>
+                </FormField>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button type="submit">Guardar</Button>
+                  <Button type="button" variant="secondary" data-modal-close>Cancelar</Button>
+                </div>
+              </form>
+            </AppModal>
+            <AppModal title="Derivar a Intervenciones" trigger={<><Send className="h-4 w-4" />Derivar</>} triggerVariant="secondary" size="md">
+              <form action={deriveDispatchToJuridical.bind(null, record.id)} className="space-y-4">
+                <FormField label="Derivar a Intervenciones">
+                  <textarea name="summary" className={textareaClass} placeholder="Resumen necesario para continuar la intervencion" required />
+                </FormField>
+                <FormField label="Tipo sugerido">
+                  <select name="type" className={inputClass} defaultValue="PRIMERA_INTERVENCION">
+                    {juridicalTypes.map((item) => (
+                      <option key={item.value} value={item.value}>{item.label}</option>
+                    ))}
+                  </select>
+                </FormField>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button type="submit">Guardar</Button>
+                  <Button type="button" variant="secondary" data-modal-close>Cancelar</Button>
+                </div>
+              </form>
+            </AppModal>
+            <AppModal title="Historial completo de auditoria" trigger={<><FileText className="h-4 w-4" />Auditoria</>} triggerVariant="secondary" size="lg">
+              <AuditTimeline logs={auditLogs} />
+            </AppModal>
+            <LinkButton href={`/despacho/${record.id}/legajo.pdf`} variant="secondary" target="_blank" rel="noreferrer">
+              <Download className="h-4 w-4" />
+              Descargar legajo PDF
+            </LinkButton>
             <LinkButton href="/despacho" variant="secondary">Volver</LinkButton>
           </div>
         </div>
@@ -413,17 +572,7 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
               </AppModal>
             }
           >
-            <DispatchCoverSheet record={record} category={categoryLabel} attachments={attachments} />
-            {followUpsForLegajo.map((followUp, index) => (
-              <DispatchFollowUpSheet
-                key={followUp.id}
-                sheetNumber={index + 2}
-                content={followUp.content}
-                statusAfter={followUp.statusAfter}
-                createdAt={followUp.createdAt}
-                createdBy={followUp.createdBy}
-              />
-            ))}
+            {bookEntries.map((entry) => entry.node)}
           </LegajoBookViewer>
         }
       >
@@ -491,111 +640,6 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
           </tr>
         </Table>
       </DetailSection>
-
-      <section className="grid gap-5 xl:grid-cols-[1fr_360px]">
-        <div className="space-y-5">
-          <DetailSection title="Descripcion y notas">
-            <div className="space-y-4 text-sm leading-6 text-[#212529]">
-              <div>
-                <p className="mb-1 text-xs font-medium uppercase tracking-wide text-[#6c757d]">Descripcion</p>
-                <p className="whitespace-pre-wrap">{record.description}</p>
-              </div>
-              {record.initialGuidance ? (
-                <div>
-                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-[#6c757d]">Orientacion brindada / intervencion inicial</p>
-                  <p className="whitespace-pre-wrap">{record.initialGuidance}</p>
-                </div>
-              ) : null}
-              {record.confidentialNotes ? (
-                <div>
-                  <p className="mb-1 text-xs font-medium uppercase tracking-wide text-[#6c757d]">Notas internas confidenciales</p>
-                  <p className="whitespace-pre-wrap">{record.confidentialNotes}</p>
-                </div>
-              ) : null}
-            </div>
-          </DetailSection>
-
-          <DetailSection title="Derivaciones">
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-2">
-                <AppModal title="Derivar a Intervenciones" trigger={<><Send className="h-4 w-4" />Derivar a Intervenciones</>} triggerVariant="secondary" size="md">
-                  <form action={deriveDispatchToJuridical.bind(null, record.id)} className="space-y-4">
-                    <FormField label="Derivar a Intervenciones">
-                      <textarea name="summary" className={textareaClass} placeholder="Resumen necesario para continuar la intervencion" required />
-                    </FormField>
-                    <FormField label="Tipo sugerido">
-                      <select name="type" className={inputClass} defaultValue="PRIMERA_INTERVENCION">
-                        {juridicalTypes.map((item) => (
-                          <option key={item.value} value={item.value}>{item.label}</option>
-                        ))}
-                      </select>
-                    </FormField>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button type="submit">Guardar</Button>
-                      <Button type="button" variant="secondary" data-modal-close>Cancelar</Button>
-                    </div>
-                  </form>
-                </AppModal>
-                <AppModal title="Derivar a otra area" trigger="Derivar a area" triggerVariant="secondary" size="md">
-                  <form action={referDispatchToArea.bind(null, record.id)} className="space-y-4">
-                    <FormField label="Derivar a otra area">
-                      <select name="area" className={inputClass} defaultValue="" required>
-                        <option value="">Seleccionar area</option>
-                        {areas.map((item) => (
-                          <option key={item.value} value={item.label}>{item.label}</option>
-                        ))}
-                      </select>
-                    </FormField>
-                    <FormField label="Resumen">
-                      <textarea name="summary" className={textareaClass} required />
-                    </FormField>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Button type="submit">Guardar</Button>
-                      <Button type="button" variant="secondary" data-modal-close>Cancelar</Button>
-                    </div>
-                  </form>
-                </AppModal>
-              </div>
-
-              <div className="border-t border-[#dee2e6] pt-4">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Historial de derivaciones</p>
-                <div className="space-y-2">
-                  {[...record.originReferrals, ...record.destinationReferrals].map((referral) => (
-                    <div key={referral.id} className="rounded-md bg-[#f8f9fa] p-3 text-sm">
-                      <p className="font-medium text-[#212529]">{referral.originModule} ? {referral.destinationModule}</p>
-                      <p className="mt-1 text-[#6c757d]">{referral.visibleStatusForOrigin}</p>
-                      <p className="mt-1 text-xs text-[#6c757d]">{formatDateTime(referral.referredAt)}</p>
-                      {directivoCanSeeJuridical && referral.destinationJuridicalInterventionId ? (
-                        <Link className="mt-2 inline-block text-xs font-medium text-[#0667b0] hover:underline" href={`/intervenciones/${referral.destinationJuridicalInterventionId}`}>
-                          Ver intervencion vinculada
-                        </Link>
-                      ) : null}
-                    </div>
-                  ))}
-                  {!record.originReferrals.length && !record.destinationReferrals.length ? (
-                    <p className="text-sm text-[#6c757d]">Sin derivaciones.</p>
-                  ) : null}
-                </div>
-              </div>
-            </div>
-          </DetailSection>
-        </div>
-
-        <aside className="space-y-5">
-          <DetailSection title="Adjuntos">
-            <div className="space-y-4">
-              <AttachmentList attachments={attachments} />
-              <AppModal title="Adjuntar archivo" trigger={<><Upload className="h-4 w-4" />Adjuntar archivo</>} triggerVariant="secondary" size="md">
-                <UploadForm action={uploadDispatchAttachment.bind(null, record.id)} modal />
-              </AppModal>
-            </div>
-          </DetailSection>
-
-          <DetailSection title="Auditoria">
-            <AuditTimeline logs={auditLogs} />
-          </DetailSection>
-        </aside>
-      </section>
     </>
   );
 }
