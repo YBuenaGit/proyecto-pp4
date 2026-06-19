@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { Clock, Download, Edit, FileText, Plus, Send } from "lucide-react";
+import { Download, Edit, FileText, Plus, Send } from "lucide-react";
 import { AppModal } from "@/components/ui/app-modal";
 import { AuditTimeline } from "@/components/ui/audit-timeline";
 import { Button, LinkButton } from "@/components/ui/button";
@@ -13,7 +13,7 @@ import { Table, Td } from "@/components/ui/table";
 import { JURIDICAL_CONTEXT_LABELS } from "@/lib/constants";
 import { requireUser } from "@/lib/auth";
 import { formatDate, formatDateTime, labelFromValue } from "@/lib/format";
-import { chunkForBookPages, paginateBookTextSections, type BookTextBlock } from "@/lib/book-pagination";
+import { chunkForBookPages, paginateBookTextSections } from "@/lib/book-pagination";
 import { parseJuridicalActionContent } from "@/lib/juridical-action-content";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessJuridical } from "@/lib/rbac";
@@ -28,6 +28,8 @@ import { AddJuridicalActionForm } from "./add-juridical-action-form";
 import { LegajoInterventionRow } from "./legajo-intervention-row";
 import { AttachmentPreviewButton } from "./attachment-preview-button";
 import { LegajoBookViewer, type LegajoBookItem } from "./legajo-book-viewer";
+import { LegajoActionEditButton } from "./legajo-action-edit-button";
+import { BookSectionCover, BookContentSheet } from "./legajo-book-sheets";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -361,96 +363,6 @@ function attentionLabel(position: number) {
   return word ? `${word} atencion` : `Atencion ${position}`;
 }
 
-function LegajoSheet({
-  ordinalLabel,
-  title,
-  date,
-  actor,
-  role,
-  actionType,
-  statusText,
-  nextStepDate,
-  textBlocks,
-  pageNumber = 1,
-  pageCount = 1,
-  attachments,
-  pdfHref,
-  editAction,
-}: {
-  ordinalLabel: string;
-  sheetNumber: number;
-  title: string;
-  date: Date;
-  actor: string;
-  role: string;
-  actionType?: string | null;
-  statusText?: string | null;
-  nextStepDate?: Date | null;
-  textBlocks: BookTextBlock[];
-  pageNumber?: number;
-  pageCount?: number;
-  attachments: LegajoAttachment[];
-  pdfHref: string;
-  editAction?: ReactNode;
-}) {
-  const isContinuation = pageNumber > 1;
-
-  return (
-    <article className="book-leaf rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_12px_34px_rgba(0,0,0,0.22)]">
-      <div className="border-b border-[#9cc7e0] bg-gradient-to-r from-[#0b2a55] to-[#17688f] px-4 py-4 text-white sm:px-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/75">
-              Seccion del legajo{pageCount > 1 ? ` · hoja ${pageNumber} de ${pageCount}` : ""}
-            </p>
-            <h3 className="mt-1 text-2xl font-bold uppercase tracking-wide">{ordinalLabel}</h3>
-            <p className="mt-1 text-sm font-semibold text-white/90">{title}</p>
-            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-white/80">
-              <span>{formatDateTime(date)}</span>
-              <span>Registrado por: {actor} ({labelFromValue(role)})</span>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {editAction}
-            <LinkButton href={pdfHref} variant="secondary" target="_blank" rel="noreferrer" className="min-h-9 border-white/45 bg-white/10 px-3 py-1.5 text-xs text-white hover:bg-white/20">
-              <Download className="h-3.5 w-3.5" />
-              PDF intervencion
-            </LinkButton>
-          </div>
-        </div>
-      </div>
-      <div className="book-leaf-body space-y-3 px-4 py-4 sm:px-5">
-        {!isContinuation ? (
-          <>
-            <div className="grid gap-3 rounded-sm border border-[#b7dfee] bg-white/80 p-3 sm:grid-cols-2">
-              <CoverField label="Fecha y hora" value={formatDateTime(date)} />
-              <CoverField label="Quien cargo" value={`${actor} (${labelFromValue(role)})`} />
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {actionType ? <span className="rounded-sm border border-[#bee5eb] bg-[#d1ecf1] px-2.5 py-1 text-xs font-semibold text-[#0c5460]">{labelFromValue(actionType)}</span> : null}
-              {statusText ? <span className="rounded-sm border border-[#c3e6cb] bg-[#d4edda] px-2.5 py-1 text-xs font-semibold text-[#155724]">{statusText}</span> : null}
-              {nextStepDate ? (
-                <span className="inline-flex items-center gap-1 rounded-sm border border-[#ffeeba] bg-[#fff3cd] px-2.5 py-1 text-xs font-semibold text-[#856404]">
-                  <Clock className="h-3.5 w-3.5" />
-                  Seguimiento: {formatDate(nextStepDate)}
-                </span>
-              ) : null}
-            </div>
-          </>
-        ) : (
-          <div className="rounded-sm border border-[#b7dfee] bg-white/80 px-3 py-2 text-sm font-semibold text-[#0c5460]">
-            Continuacion de {title}
-          </div>
-        )}
-        {textBlocks.length ? textBlocks.map((block, index) => <SheetText key={`${block.label}-${index}`} label={block.label}>{block.text}</SheetText>) : (
-          <p className="rounded-sm border border-[#b7dfee] bg-white/70 px-3 py-3 text-sm font-medium text-[#6c757d]">Sin contenido textual cargado.</p>
-        )}
-        <SheetAttachments attachments={attachments} />
-      </div>
-    </article>
-  );
-}
-
 export default async function InterventionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
@@ -601,48 +513,60 @@ export default async function InterventionDetailPage({ params }: { params: Promi
     },
   ];
 
+  const interventionEyebrow = `Legajo ${intervention.internalNumber}`;
+  const firstAttentionType = labelFromValue(intervention.type);
+
+  bookEntries.push({
+    item: {
+      sheetNumber: 1,
+      label: "Primera atencion",
+      title: firstAttentionType,
+      dateText: formatDateTime(intervention.attendedAt),
+      statusText: initialStatusText,
+      searchText: [firstAttentionType, intervention.createdBy.name].filter(Boolean).join(" "),
+    },
+    node: (
+      <BookSectionCover
+        key="cover-primera-atencion"
+        eyebrow={interventionEyebrow}
+        ordinal="Primera atencion"
+        subtitle={firstAttentionType}
+        meta={[
+          { label: "Fecha", value: formatDateTime(intervention.attendedAt) },
+          { label: "Registrado por", value: `${intervention.createdBy.name} (${labelFromValue(intervention.createdBy.role)})` },
+          { label: "Estado inicial", value: labelFromValue(initialStatusFromAudit(auditLogs, intervention.status)) },
+          { label: "Contexto", value: contextLabel(intervention.interventionContext) },
+        ]}
+      />
+    ),
+  });
+
   const firstAttentionPages = paginateBookTextSections(
     [
       { label: "Descripcion del relato", text: intervention.description },
       { label: "Lo que se instruyo", text: intervention.guidanceProvided },
       { label: "Notas internas confidenciales", text: intervention.confidentialNotes },
     ],
-    { firstPageLines: 10, continuationPageLines: 17 },
+    { firstPageLines: 24, continuationPageLines: 28 },
   );
 
   firstAttentionPages.forEach((textPage, pageIndex) => {
     bookEntries.push({
       item: {
         sheetNumber: 1,
-        label: pageIndex > 0 ? `Primera atencion · cont. ${pageIndex + 1}` : "Primera atencion",
-        title: "Primera atencion",
+        label: pageIndex > 0 ? `Primera atencion · cont. ${pageIndex + 1}` : "Primera atencion · contenido",
+        title: firstAttentionType,
         dateText: formatDateTime(intervention.attendedAt),
         statusText: initialStatusText,
-        searchText: [
-          intervention.description,
-          intervention.guidanceProvided,
-          intervention.confidentialNotes,
-          intervention.createdBy.name,
-          labelFromValue(intervention.type),
-        ].filter(Boolean).join(" "),
+        searchText: [intervention.description, intervention.guidanceProvided, intervention.confidentialNotes].filter(Boolean).join(" "),
       },
       node: (
-        <LegajoSheet
+        <BookContentSheet
           key={`first-attention-${pageIndex}`}
-          ordinalLabel="Primera atencion"
-          sheetNumber={1}
-          title={labelFromValue(intervention.type)}
-          date={intervention.attendedAt}
-          actor={intervention.createdBy.name}
-          role={intervention.createdBy.role}
-          actionType={intervention.type}
-          statusText={initialStatusText}
-          nextStepDate={null}
+          sectionLabel="Primera atencion"
           textBlocks={textPage.blocks}
           pageNumber={pageIndex + 1}
           pageCount={firstAttentionPages.length}
-          attachments={[]}
-          pdfHref={`/intervenciones/${intervention.id}/legajo.pdf?hoja=1`}
         />
       ),
     });
@@ -655,63 +579,55 @@ export default async function InterventionDetailPage({ params }: { params: Promi
         { label: "Lo que se instruyo", text: parsed.guidanceProvided },
         { label: "Proxima accion", text: parsed.nextStepDescription },
       ],
-      { firstPageLines: 10, continuationPageLines: 17 },
+      { firstPageLines: 24, continuationPageLines: 28 },
     );
     const rowAttachments = attachmentsByActionId.get(action.id) ?? [];
     const actionTitle = labelFromValue(action.actionType);
     const sectionLabel = attentionLabel(sheetNumber);
 
+    bookEntries.push({
+      item: {
+        sheetNumber,
+        label: sectionLabel,
+        title: actionTitle,
+        dateText: formatDateTime(action.createdAt),
+        statusText,
+        searchText: [actionTitle, action.createdBy.name].filter(Boolean).join(" "),
+      },
+      node: (
+        <BookSectionCover
+          key={`cover-${action.id}`}
+          eyebrow={interventionEyebrow}
+          ordinal={sectionLabel}
+          subtitle={actionTitle}
+          meta={[
+            { label: "Fecha", value: formatDateTime(action.createdAt) },
+            { label: "Registrado por", value: `${action.createdBy.name} (${labelFromValue(action.createdBy.role)})` },
+            ...(statusText ? [{ label: "Estado", value: statusText }] : []),
+            ...(action.nextStepDate ? [{ label: "Seguimiento", value: formatDate(action.nextStepDate) }] : []),
+          ]}
+        />
+      ),
+    });
+
     textPages.forEach((textPage, pageIndex) => {
       bookEntries.push({
         item: {
           sheetNumber,
-          label: pageIndex > 0 ? `${sectionLabel} · cont. ${pageIndex + 1}` : sectionLabel,
+          label: pageIndex > 0 ? `${sectionLabel} · cont. ${pageIndex + 1}` : `${sectionLabel} · contenido`,
           title: actionTitle,
           dateText: formatDateTime(action.createdAt),
           statusText,
-          searchText: [
-            parsed.description,
-            parsed.guidanceProvided,
-            parsed.nextStepDescription,
-            action.createdBy.name,
-            actionTitle,
-          ].filter(Boolean).join(" "),
+          searchText: [parsed.description, parsed.guidanceProvided, parsed.nextStepDescription].filter(Boolean).join(" "),
         },
         node: (
-          <LegajoSheet
+          <BookContentSheet
             key={`action-${action.id}-${pageIndex}`}
-            ordinalLabel={sectionLabel}
-            sheetNumber={sheetNumber}
-            title={actionTitle}
-            date={action.createdAt}
-            actor={action.createdBy.name}
-            role={action.createdBy.role}
-            actionType={action.actionType}
-            statusText={statusText}
-            nextStepDate={action.nextStepDate}
+            sectionLabel={sectionLabel}
             textBlocks={textPage.blocks}
             pageNumber={pageIndex + 1}
             pageCount={textPages.length}
-            attachments={pageIndex === textPages.length - 1 ? rowAttachments : []}
-            pdfHref={`/intervenciones/${intervention.id}/legajo.pdf?hoja=${sheetNumber}`}
-            editAction={
-              pageIndex === 0 ? (
-                <AppModal title={`Editar ${sectionLabel}`} trigger={<><Edit className="h-3.5 w-3.5" />Editar</>} triggerVariant="secondary" size="md" triggerClassName="min-h-9 px-3 py-1.5 text-xs">
-                  <AddJuridicalActionForm
-                    action={updateJuridicalAction.bind(null, action.id)}
-                    initialValues={{
-                      actionType: action.actionType,
-                      createdAt: action.createdAt,
-                      description: parsed.description,
-                      guidanceProvided: parsed.guidanceProvided,
-                      nextStepDescription: parsed.nextStepDescription,
-                      nextStepDate: action.nextStepDate,
-                    }}
-                    submitLabel="Guardar intervencion"
-                  />
-                </AppModal>
-              ) : null
-            }
+            footer={pageIndex === textPages.length - 1 ? <SheetAttachments attachments={rowAttachments} /> : undefined}
           />
         ),
       });
@@ -841,17 +757,6 @@ export default async function InterventionDetailPage({ params }: { params: Promi
           <LegajoBookViewer
             items={bookItems}
             downloadHref={`/intervenciones/${intervention.id}/legajo.pdf`}
-            headerAction={
-              <AppModal
-                title="Nuevo registro de intervencion"
-                description="Crea una nueva intervencion documental dentro de este legajo."
-                trigger={<><Plus className="h-4 w-4" />Nueva intervencion</>}
-                triggerVariant="secondary"
-                size="md"
-              >
-                <AddJuridicalActionForm action={addJuridicalAction.bind(null, intervention.id)} submitLabel="Crear intervencion" showFollowUp={false} />
-              </AppModal>
-            }
           >
             {bookEntries.map((entry) => entry.node)}
           </LegajoBookViewer>
@@ -898,6 +803,22 @@ export default async function InterventionDetailPage({ params }: { params: Promi
                 <Td>
                   <span className="block font-semibold">{labelFromValue(action.actionType)}</span>
                   <span className="mt-1 block text-xs font-medium text-[#0667b0]">Clic para ver el detalle</span>
+                  <div className="mt-2">
+                    <LegajoActionEditButton title={`Editar intervencion N° ${sheetNumber}`}>
+                      <AddJuridicalActionForm
+                        action={updateJuridicalAction.bind(null, action.id)}
+                        initialValues={{
+                          actionType: action.actionType,
+                          createdAt: action.createdAt,
+                          description: parsed.description,
+                          guidanceProvided: parsed.guidanceProvided,
+                          nextStepDescription: parsed.nextStepDescription,
+                          nextStepDate: action.nextStepDate,
+                        }}
+                        submitLabel="Guardar intervencion"
+                      />
+                    </LegajoActionEditButton>
+                  </div>
                 </Td>
                 <Td className="w-[230px]">
                   <div className="flex flex-wrap gap-1.5">

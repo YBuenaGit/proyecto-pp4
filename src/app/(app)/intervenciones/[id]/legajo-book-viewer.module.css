@@ -2,8 +2,8 @@
   position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  max-width: min(100%, 32rem);
-  perspective: 1800px;
+  max-width: min(100%, 40rem);
+  perspective: 2200px;
 }
 
 .pageSlot {
@@ -20,11 +20,11 @@
 }
 
 .pageUnderNext {
-  animation: page-under-next 760ms cubic-bezier(0.33, 0, 0.2, 1) both;
+  animation: page-under-next 720ms cubic-bezier(0.33, 0, 0.2, 1) both;
 }
 
 .pageUnderPrev {
-  animation: page-under-prev 760ms cubic-bezier(0.33, 0, 0.2, 1) both;
+  animation: page-under-prev 720ms cubic-bezier(0.33, 0, 0.2, 1) both;
 }
 
 .turnSheet {
@@ -32,8 +32,8 @@
   top: 0;
   z-index: 20;
   height: 100%;
-  width: calc((100% - 1.25rem) / 2);
-  max-width: calc((100% - 1.25rem) / 2);
+  width: calc((100% - 1rem) / 2);
+  max-width: calc((100% - 1rem) / 2);
   backface-visibility: hidden;
   filter: drop-shadow(0 22px 30px rgba(0, 0, 0, 0.32));
   pointer-events: none;
@@ -52,22 +52,22 @@
 
 .turnSheetNext {
   right: 0;
-  animation: turn-next 760ms cubic-bezier(0.33, 0, 0.2, 1) forwards;
+  animation: turn-next 720ms cubic-bezier(0.33, 0, 0.2, 1) forwards;
   transform-origin: left center;
 }
 
 .turnSheetNext::after {
-  animation: turn-shine 760ms cubic-bezier(0.33, 0, 0.2, 1) forwards;
+  animation: turn-shine 720ms cubic-bezier(0.33, 0, 0.2, 1) forwards;
 }
 
 .turnSheetPrev {
   left: 0;
-  animation: turn-prev 760ms cubic-bezier(0.33, 0, 0.2, 1) forwards;
+  animation: turn-prev 720ms cubic-bezier(0.33, 0, 0.2, 1) forwards;
   transform-origin: right center;
 }
 
 .turnSheetPrev::after {
-  animation: turn-shine 760ms cubic-bezier(0.33, 0, 0.2, 1) forwards;
+  animation: turn-shine 720ms cubic-bezier(0.33, 0, 0.2, 1) forwards;
 }
 
 :global(.book-leaf) {
@@ -145,7 +145,7 @@
     transform: translateX(0);
   }
   100% {
-    transform: translateX(-0.35rem);
+    transform: translateX(-0.3rem);
   }
 }
 
@@ -154,7 +154,7 @@
     transform: translateX(0);
   }
   100% {
-    transform: translateX(0.35rem);
+    transform: translateX(0.3rem);
   }
 }
 
@@ -169,14 +169,14 @@
   }
 }
 
-@media (min-width: 1280px) {
+@media (min-width: 1024px) {
   .spread {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    max-width: min(100%, 60rem);
+    max-width: min(100%, 72rem);
   }
 }
 
-@media (max-width: 1279px) {
+@media (max-width: 1023px) {
   .turnSheet {
     right: auto;
     left: 0;

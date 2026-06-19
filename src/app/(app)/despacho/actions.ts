@@ -6,6 +6,7 @@ import { z } from "zod";
 import { DISPATCH_STATUSES, EXPEDIENT_AREAS, EXPEDIENT_STATUSES, PRIORITIES } from "@/lib/constants";
 import { CODIGOS_EXPEDIENTES_SET } from "@/lib/constants/codigosExpedientes";
 import { checkbox, optionalDate, optionalText, text, nextInternalNumber } from "@/lib/form";
+import { buildJuridicalActionContent } from "@/lib/juridical-action-content";
 import { saveAttachments } from "@/lib/files";
 import { prisma } from "@/lib/prisma";
 import { canAccessDispatch, canAccessExpedients, assertAccess } from "@/lib/rbac";
@@ -293,9 +294,17 @@ export async function updateDispatchRecord(recordId: string, formData: FormData)
 export async function addDispatchFollowUp(recordId: string, formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessDispatch(user));
-  const content = text(formData, "content");
-  if (content.length < 3) return;
+  const description = text(formData, "description") || text(formData, "content");
+  if (description.length < 3) return;
+  const content = buildJuridicalActionContent({
+    description,
+    guidanceProvided: optionalText(formData, "guidanceProvided") ?? "",
+  });
   const statusAfter = optionalText(formData, "statusAfter");
+  const createdAt = optionalDate(formData, "createdAt") ?? new Date();
+  if (Number.isNaN(createdAt.getTime())) {
+    throw new Error("La fecha y hora no es válida.");
+  }
   const before = await prisma.dispatchRecord.findUniqueOrThrow({ where: { id: recordId } });
 
   const followUp = await prisma.dispatchFollowUp.create({
@@ -303,6 +312,7 @@ export async function addDispatchFollowUp(recordId: string, formData: FormData) 
       dispatchRecordId: recordId,
       content,
       statusAfter,
+      createdAt,
       createdById: user.id,
     },
   });
@@ -316,6 +326,14 @@ export async function addDispatchFollowUp(recordId: string, formData: FormData) 
     await syncDispatchReferralSummary(recordId, statusAfter);
   }
 
+  const savedAttachments = await saveAttachments({
+    files: formData.getAll("attachments"),
+    module: "DESPACHO",
+    entityType: "DispatchFollowUp",
+    entityId: followUp.id,
+    uploadedById: user.id,
+  });
+
   await writeAuditLog({
     module: "DESPACHO",
     entityType: "DispatchRecord",
@@ -323,7 +341,7 @@ export async function addDispatchFollowUp(recordId: string, formData: FormData) 
     action: statusAfter ? "STATUS_CHANGE" : "FOLLOW_UP",
     createdById: user.id,
     before,
-    after: { record: after, followUp },
+    after: { record: after, followUp, attachments: savedAttachments },
   });
   revalidatePath(`/despacho/${recordId}`);
   redirect(`/despacho/${recordId}`);

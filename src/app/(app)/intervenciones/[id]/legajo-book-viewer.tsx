@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import Link from "next/link";
 import { Children, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -19,7 +19,7 @@ export function LegajoBookViewer({
   children,
   downloadHref,
   headerAction,
-  title = "Expediente virtual Â· Legajo de intervencion",
+  title = "Expediente virtual · Legajo de intervencion",
   itemLabel = "Intervencion",
 }: {
   items: LegajoBookItem[];
@@ -56,7 +56,7 @@ export function LegajoBookViewer({
         setCurrent(normalized);
         setTurn(null);
         turnTimeoutRef.current = null;
-      }, 760);
+      }, 720);
     },
     [indexedItems.length, safeCurrent, turn],
   );
@@ -90,11 +90,13 @@ export function LegajoBookViewer({
     };
   }, []);
 
+  const total = indexedItems.length;
   const currentItem = indexedItems[safeCurrent];
   const currentLabel = currentItem?.label ?? (currentItem ? `${itemLabel} N° ${currentItem.sheetNumber}` : "Sin resultados");
   const visibleIndex = turn?.from ?? safeCurrent;
   const visibleItem = indexedItems[visibleIndex];
   const visibleNextItem = indexedItems[visibleIndex + 1];
+  const sheetRange = visibleItem ? `Hoja ${visibleIndex + 1}${visibleNextItem ? `-${visibleIndex + 2}` : ""} de ${total}` : "";
   const turningPage = turn
     ? turn.direction === "next"
       ? indexedItems[turn.from + 1] ?? indexedItems[turn.from]
@@ -120,12 +122,12 @@ export function LegajoBookViewer({
           aria-modal="true"
           aria-label="Modo libro del legajo"
         >
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-[#17a2b8] px-3 py-2 text-white shadow">
-            <div className="min-w-0">
-              <h2 className="truncate text-base font-semibold">{title}</h2>
-              <p className="text-xs text-white/85">{currentLabel}</p>
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 bg-[#17a2b8] px-3 py-1.5 text-white shadow">
+            <div className="flex min-w-0 items-baseline gap-2">
+              <h2 className="truncate text-sm font-semibold">{title}</h2>
+              {total ? <span className="shrink-0 text-[11px] font-medium text-white/80">{sheetRange}</span> : null}
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-1.5">
               {headerAction}
               {downloadHref ? (
                 <Link
@@ -149,14 +151,14 @@ export function LegajoBookViewer({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-3 bg-black/25 px-3 py-2 text-white">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 bg-black/25 px-3 py-1.5 text-white">
             <select
               value={currentItem?.index ?? ""}
               onChange={(event) => {
                 const nextIndex = indexedItems.findIndex((item) => item.index === Number(event.target.value));
                 if (nextIndex >= 0) goToPage(nextIndex);
               }}
-              className="h-10 min-w-[260px] rounded-sm border border-white/40 bg-white px-2 text-sm font-semibold text-[#212529] outline-none"
+              className="h-9 min-w-[220px] max-w-full rounded-sm border border-white/40 bg-white px-2 text-sm font-semibold text-[#212529] outline-none"
             >
               {indexedItems.map((item) => (
                 <option key={`${item.sheetNumber}-${item.index}`} value={item.index}>
@@ -166,11 +168,12 @@ export function LegajoBookViewer({
             </select>
 
             <div className="flex items-center gap-2">
+              <span className="hidden text-xs font-medium text-white/85 sm:block">{currentLabel}</span>
               <button
                 type="button"
                 onClick={() => goToPage(safeCurrent - 1)}
                 disabled={!indexedItems.length || safeCurrent === 0 || Boolean(turn)}
-                className="inline-flex min-h-9 items-center gap-1 rounded-sm border border-white/40 bg-black/20 px-3 py-1.5 text-sm font-semibold transition hover:bg-black/30 disabled:cursor-not-allowed disabled:opacity-45"
+                className="inline-flex min-h-8 items-center gap-1 rounded-sm border border-white/40 bg-black/20 px-2.5 py-1 text-xs font-semibold transition hover:bg-black/30 disabled:cursor-not-allowed disabled:opacity-45"
               >
                 <ChevronLeft className="h-4 w-4" />
                 Anterior
@@ -179,7 +182,7 @@ export function LegajoBookViewer({
                 type="button"
                 onClick={() => goToPage(safeCurrent + 1)}
                 disabled={!indexedItems.length || safeCurrent >= indexedItems.length - 1 || Boolean(turn)}
-                className="inline-flex min-h-9 items-center gap-1 rounded-sm border border-white/40 bg-black/20 px-3 py-1.5 text-sm font-semibold transition hover:bg-black/30 disabled:cursor-not-allowed disabled:opacity-45"
+                className="inline-flex min-h-8 items-center gap-1 rounded-sm border border-white/40 bg-black/20 px-2.5 py-1 text-xs font-semibold transition hover:bg-black/30 disabled:cursor-not-allowed disabled:opacity-45"
               >
                 Siguiente
                 <ChevronRight className="h-4 w-4" />
@@ -187,13 +190,13 @@ export function LegajoBookViewer({
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-auto px-3 py-4 sm:px-5 sm:py-6">
+          <div className="min-h-0 flex-1 overflow-auto px-3 py-3 sm:px-5 sm:py-4">
             {visibleItem ? (
-              <div className={`${styles.spread} mx-auto w-full gap-5`}>
+              <div className={`${styles.spread} mx-auto w-full gap-4`}>
                 <div className={turn?.direction === "prev" ? `${styles.pageSlot} ${styles.pageUnderPrev} min-w-0` : `${styles.pageSlot} min-w-0`}>
                   {pages[visibleItem.index]}
                 </div>
-                <div className={turn?.direction === "next" ? `${styles.pageSlot} ${styles.pageUnderNext} hidden min-w-0 xl:block` : `${styles.pageSlot} hidden min-w-0 xl:block`}>
+                <div className={turn?.direction === "next" ? `${styles.pageSlot} ${styles.pageUnderNext} hidden min-w-0 lg:block` : `${styles.pageSlot} hidden min-w-0 lg:block`}>
                   {visibleNextItem ? pages[visibleNextItem.index] : <article className="book-leaf rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_16px_38px_rgba(0,0,0,0.30)]" />}
                 </div>
                 {turn && turningPageNode ? (
@@ -207,7 +210,7 @@ export function LegajoBookViewer({
                 ) : null}
               </div>
             ) : (
-              <div className="mx-auto max-w-2xl rounded-sm border border-[#b7dfee] bg-[#eefaff] px-4 py-16 text-center text-sm font-medium text-[#6c757d]">
+              <div className="m-auto max-w-2xl rounded-sm border border-[#b7dfee] bg-[#eefaff] px-4 py-16 text-center text-sm font-medium text-[#6c757d]">
                 No hay intervenciones que coincidan.
               </div>
             )}

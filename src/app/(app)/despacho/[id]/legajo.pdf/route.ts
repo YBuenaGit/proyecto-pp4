@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { formatDateTime, labelFromValue } from "@/lib/format";
+import { parseJuridicalActionContent } from "@/lib/juridical-action-content";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessDispatch } from "@/lib/rbac";
 
@@ -164,9 +165,11 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 
   lines.push({ text: "Seguimientos", size: 13, bold: true, gapBefore: 16 });
   record.followUps.forEach((followUp, index) => {
+    const parsed = parseJuridicalActionContent(followUp.content);
     lines.push({ text: `Seguimiento ${index + 1} - ${formatDateTime(followUp.createdAt)} - ${followUp.createdBy.name}`, bold: true, gapBefore: 8 });
     pushField(lines, "Estado posterior", followUp.statusAfter ? labelFromValue(followUp.statusAfter) : "-");
-    pushField(lines, "Contenido", followUp.content);
+    pushField(lines, "Descripcion / relato", parsed.description || followUp.content);
+    if (parsed.guidanceProvided) pushField(lines, "Intervencion / orientacion", parsed.guidanceProvided);
   });
   if (!record.followUps.length) lines.push({ text: "Sin seguimientos cargados." });
 
