@@ -20,11 +20,11 @@
 }
 
 .pageUnderNext {
-  animation: page-under-next 560ms cubic-bezier(0.2, 0.65, 0.2, 1) both;
+  animation: page-under-next 760ms cubic-bezier(0.33, 0, 0.2, 1) both;
 }
 
 .pageUnderPrev {
-  animation: page-under-prev 560ms cubic-bezier(0.2, 0.65, 0.2, 1) both;
+  animation: page-under-prev 760ms cubic-bezier(0.33, 0, 0.2, 1) both;
 }
 
 .turnSheet {
@@ -52,22 +52,22 @@
 
 .turnSheetNext {
   right: 0;
-  animation: turn-next 560ms cubic-bezier(0.2, 0.65, 0.2, 1) forwards;
+  animation: turn-next 760ms cubic-bezier(0.33, 0, 0.2, 1) forwards;
   transform-origin: left center;
 }
 
 .turnSheetNext::after {
-  animation: turn-shine 560ms cubic-bezier(0.2, 0.65, 0.2, 1) forwards;
+  animation: turn-shine 760ms cubic-bezier(0.33, 0, 0.2, 1) forwards;
 }
 
 .turnSheetPrev {
   left: 0;
-  animation: turn-prev 560ms cubic-bezier(0.2, 0.65, 0.2, 1) forwards;
+  animation: turn-prev 760ms cubic-bezier(0.33, 0, 0.2, 1) forwards;
   transform-origin: right center;
 }
 
 .turnSheetPrev::after {
-  animation: turn-shine 560ms cubic-bezier(0.2, 0.65, 0.2, 1) forwards;
+  animation: turn-shine 760ms cubic-bezier(0.33, 0, 0.2, 1) forwards;
 }
 
 :global(.book-leaf) {
@@ -81,7 +81,19 @@
 :global(.book-leaf-body) {
   min-height: 0;
   flex: 1;
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #9cc7e0 transparent;
+}
+
+:global(.book-leaf-body)::-webkit-scrollbar {
+  width: 8px;
+}
+
+:global(.book-leaf-body)::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: #9cc7e0;
 }
 
 :global(.book-leaf-text) {
@@ -91,30 +103,30 @@
 @keyframes turn-next {
   0% {
     opacity: 1;
-    transform: translateX(0) rotateY(0deg) skewY(0deg);
+    transform: translateX(0) rotateY(0deg);
   }
-  45% {
-    opacity: 0.98;
-    transform: translateX(-45%) rotateY(-72deg) skewY(-1deg);
+  55% {
+    opacity: 0.97;
+    transform: translateX(-52%) rotateY(-92deg);
   }
   100% {
     opacity: 0;
-    transform: translateX(-100%) rotateY(-168deg) skewY(-2deg);
+    transform: translateX(-100%) rotateY(-176deg);
   }
 }
 
 @keyframes turn-prev {
   0% {
     opacity: 1;
-    transform: translateX(0) rotateY(0deg) skewY(0deg);
+    transform: translateX(0) rotateY(0deg);
   }
-  45% {
-    opacity: 0.98;
-    transform: translateX(45%) rotateY(72deg) skewY(1deg);
+  55% {
+    opacity: 0.97;
+    transform: translateX(52%) rotateY(92deg);
   }
   100% {
     opacity: 0;
-    transform: translateX(100%) rotateY(168deg) skewY(2deg);
+    transform: translateX(100%) rotateY(176deg);
   }
 }
 

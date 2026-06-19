@@ -354,8 +354,15 @@ function InterventionReadContent({
   );
 }
 
+const ORDINAL_WORDS = ["", "Primera", "Segunda", "Tercera", "Cuarta", "Quinta", "Sexta", "Septima", "Octava", "Novena", "Decima", "Undecima", "Duodecima"];
+
+function attentionLabel(position: number) {
+  const word = ORDINAL_WORDS[position];
+  return word ? `${word} atencion` : `Atencion ${position}`;
+}
+
 function LegajoSheet({
-  sheetNumber,
+  ordinalLabel,
   title,
   date,
   actor,
@@ -370,6 +377,7 @@ function LegajoSheet({
   pdfHref,
   editAction,
 }: {
+  ordinalLabel: string;
   sheetNumber: number;
   title: string;
   date: Date;
@@ -389,21 +397,22 @@ function LegajoSheet({
 
   return (
     <article className="book-leaf rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_12px_34px_rgba(0,0,0,0.22)]">
-      <div className="border-b border-[#b7dfee] bg-[#dff3fb] px-4 py-4 sm:px-5">
+      <div className="border-b border-[#9cc7e0] bg-gradient-to-r from-[#0b2a55] to-[#17688f] px-4 py-4 text-white sm:px-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">
-              Intervencion NÂ° {sheetNumber}{pageCount > 1 ? ` · hoja ${pageNumber} de ${pageCount}` : ""}
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/75">
+              Seccion del legajo{pageCount > 1 ? ` · hoja ${pageNumber} de ${pageCount}` : ""}
             </p>
-            <h3 className="mt-1 text-lg font-semibold text-[#212529]">{title}</h3>
-            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-[#6c757d]">
+            <h3 className="mt-1 text-2xl font-bold uppercase tracking-wide">{ordinalLabel}</h3>
+            <p className="mt-1 text-sm font-semibold text-white/90">{title}</p>
+            <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-white/80">
               <span>{formatDateTime(date)}</span>
               <span>Registrado por: {actor} ({labelFromValue(role)})</span>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
             {editAction}
-            <LinkButton href={pdfHref} variant="secondary" target="_blank" rel="noreferrer" className="min-h-9 px-3 py-1.5 text-xs">
+            <LinkButton href={pdfHref} variant="secondary" target="_blank" rel="noreferrer" className="min-h-9 border-white/45 bg-white/10 px-3 py-1.5 text-xs text-white hover:bg-white/20">
               <Download className="h-3.5 w-3.5" />
               PDF intervencion
             </LinkButton>
@@ -592,7 +601,54 @@ export default async function InterventionDetailPage({ params }: { params: Promi
     },
   ];
 
-  displayActionSheets.forEach(({ action, sheetNumber, parsed, statusText }) => {
+  const firstAttentionPages = paginateBookTextSections(
+    [
+      { label: "Descripcion del relato", text: intervention.description },
+      { label: "Lo que se instruyo", text: intervention.guidanceProvided },
+      { label: "Notas internas confidenciales", text: intervention.confidentialNotes },
+    ],
+    { firstPageLines: 10, continuationPageLines: 17 },
+  );
+
+  firstAttentionPages.forEach((textPage, pageIndex) => {
+    bookEntries.push({
+      item: {
+        sheetNumber: 1,
+        label: pageIndex > 0 ? `Primera atencion · cont. ${pageIndex + 1}` : "Primera atencion",
+        title: "Primera atencion",
+        dateText: formatDateTime(intervention.attendedAt),
+        statusText: initialStatusText,
+        searchText: [
+          intervention.description,
+          intervention.guidanceProvided,
+          intervention.confidentialNotes,
+          intervention.createdBy.name,
+          labelFromValue(intervention.type),
+        ].filter(Boolean).join(" "),
+      },
+      node: (
+        <LegajoSheet
+          key={`first-attention-${pageIndex}`}
+          ordinalLabel="Primera atencion"
+          sheetNumber={1}
+          title={labelFromValue(intervention.type)}
+          date={intervention.attendedAt}
+          actor={intervention.createdBy.name}
+          role={intervention.createdBy.role}
+          actionType={intervention.type}
+          statusText={initialStatusText}
+          nextStepDate={null}
+          textBlocks={textPage.blocks}
+          pageNumber={pageIndex + 1}
+          pageCount={firstAttentionPages.length}
+          attachments={[]}
+          pdfHref={`/intervenciones/${intervention.id}/legajo.pdf?hoja=1`}
+        />
+      ),
+    });
+  });
+
+  actionSheets.forEach(({ action, sheetNumber, parsed, statusText }) => {
     const textPages = paginateBookTextSections(
       [
         { label: "Descripcion del relato", text: parsed.description },
@@ -603,12 +659,13 @@ export default async function InterventionDetailPage({ params }: { params: Promi
     );
     const rowAttachments = attachmentsByActionId.get(action.id) ?? [];
     const actionTitle = labelFromValue(action.actionType);
+    const sectionLabel = attentionLabel(sheetNumber);
 
     textPages.forEach((textPage, pageIndex) => {
       bookEntries.push({
         item: {
           sheetNumber,
-          label: pageIndex > 0 ? `Intervencion NÂ° ${sheetNumber} · cont. ${pageIndex + 1}` : undefined,
+          label: pageIndex > 0 ? `${sectionLabel} · cont. ${pageIndex + 1}` : sectionLabel,
           title: actionTitle,
           dateText: formatDateTime(action.createdAt),
           statusText,
@@ -623,6 +680,7 @@ export default async function InterventionDetailPage({ params }: { params: Promi
         node: (
           <LegajoSheet
             key={`action-${action.id}-${pageIndex}`}
+            ordinalLabel={sectionLabel}
             sheetNumber={sheetNumber}
             title={actionTitle}
             date={action.createdAt}
@@ -638,7 +696,7 @@ export default async function InterventionDetailPage({ params }: { params: Promi
             pdfHref={`/intervenciones/${intervention.id}/legajo.pdf?hoja=${sheetNumber}`}
             editAction={
               pageIndex === 0 ? (
-                <AppModal title={`Editar intervencion NÂ° ${sheetNumber}`} trigger={<><Edit className="h-3.5 w-3.5" />Editar</>} triggerVariant="secondary" size="md" triggerClassName="min-h-9 px-3 py-1.5 text-xs">
+                <AppModal title={`Editar ${sectionLabel}`} trigger={<><Edit className="h-3.5 w-3.5" />Editar</>} triggerVariant="secondary" size="md" triggerClassName="min-h-9 px-3 py-1.5 text-xs">
                   <AddJuridicalActionForm
                     action={updateJuridicalAction.bind(null, action.id)}
                     initialValues={{
@@ -657,52 +715,6 @@ export default async function InterventionDetailPage({ params }: { params: Promi
           />
         ),
       });
-    });
-  });
-
-  const firstAttentionPages = paginateBookTextSections(
-    [
-      { label: "Descripcion del relato", text: intervention.description },
-      { label: "Lo que se instruyo", text: intervention.guidanceProvided },
-      { label: "Notas internas confidenciales", text: intervention.confidentialNotes },
-    ],
-    { firstPageLines: 10, continuationPageLines: 17 },
-  );
-
-  firstAttentionPages.forEach((textPage, pageIndex) => {
-    bookEntries.push({
-      item: {
-        sheetNumber: 1,
-        label: pageIndex > 0 ? `Primera atencion · cont. ${pageIndex + 1}` : undefined,
-        title: "Primera atencion",
-        dateText: formatDateTime(intervention.attendedAt),
-        statusText: initialStatusText,
-        searchText: [
-          intervention.description,
-          intervention.guidanceProvided,
-          intervention.confidentialNotes,
-          intervention.createdBy.name,
-          labelFromValue(intervention.type),
-        ].filter(Boolean).join(" "),
-      },
-      node: (
-        <LegajoSheet
-          key={`first-attention-${pageIndex}`}
-          sheetNumber={1}
-          title="Primera atencion"
-          date={intervention.attendedAt}
-          actor={intervention.createdBy.name}
-          role={intervention.createdBy.role}
-          actionType={intervention.type}
-          statusText={initialStatusText}
-          nextStepDate={null}
-          textBlocks={textPage.blocks}
-          pageNumber={pageIndex + 1}
-          pageCount={firstAttentionPages.length}
-          attachments={[]}
-          pdfHref={`/intervenciones/${intervention.id}/legajo.pdf?hoja=1`}
-        />
-      ),
     });
   });
 

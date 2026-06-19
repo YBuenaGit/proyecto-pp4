@@ -56,7 +56,7 @@ export function LegajoBookViewer({
         setCurrent(normalized);
         setTurn(null);
         turnTimeoutRef.current = null;
-      }, 560);
+      }, 760);
     },
     [indexedItems.length, safeCurrent, turn],
   );
