@@ -17,7 +17,7 @@ export type AppointmentPermissionShape = {
 };
 
 export function isAgendaManager(user: CurrentUser | null) {
-  return user?.role === ROLES.directivo;
+  return user?.role === ROLES.directivo || user?.role === ROLES.admin;
 }
 
 export function canAccessAgenda(user: CurrentUser | null) {

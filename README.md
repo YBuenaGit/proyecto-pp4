@@ -1,4 +1,4 @@
-# Secretaria de Seguridad Municipal - MVP local
+# Secretaria de Seguridad Municipal
 
 Aplicacion web interna para una Secretaria de Seguridad municipal. Implementa dos modulos separados por permisos y una base compartida:
 
@@ -17,9 +17,9 @@ No hay portal ciudadano, registro publico ni mesa de entrada comun. Los registro
 - TypeScript
 - Tailwind CSS
 - Prisma
-- SQLite local
+- PostgreSQL (Neon)
 - Autenticacion local con credenciales y sesiones en base
-- Adjuntos en disco local (`storage/uploads`)
+- Adjuntos cifrados en Cloudflare R2
 
 ## Puesta en marcha
 
@@ -31,9 +31,9 @@ npm install
 
 2. Verificar `.env`:
 
-```env
-DATABASE_URL="file:./dev.db"
-```
+Las variables requeridas estan documentadas en `.env.example`. La clave
+`R2_FILE_ENCRYPTION_KEY_V1` debe generarse una sola vez, guardarse como secreto y
+respaldarse: sin ella los adjuntos cifrados no se pueden recuperar.
 
 3. Crear/aplicar migraciones y generar Prisma Client:
 
@@ -76,7 +76,7 @@ Todos usan la contrasena `seguridad123`.
 
 - `despacho`: atenciones/reclamos, seguimientos, adjuntos, derivaciones, expedientes internos y busquedas de Despacho.
 - `juridico`: intervenciones, actuaciones, adjuntos privados, derivaciones recibidas y busquedas juridico-institucionales.
-- `directivo`: visibilidad completa de Despacho, Intervenciones, Expedientes, Personas y Reportes.
+- `directivo`: acceso completo a todos los modulos y acciones.
 - `admin`: administracion tecnica de usuarios, catalogos y auditoria. No se usa como rol operativo de detalle sensible.
 
 La privacidad entre modulos se resuelve con registros separados (`DispatchRecord` y `JuridicalIntervention`) unidos por `Referral`. Una derivacion comparte un resumen funcional, pero el detalle posterior del modulo destino no queda expuesto al modulo origen.
@@ -89,7 +89,7 @@ La privacidad entre modulos se resuelve con registros separados (`DispatchRecord
 - Listados con filtros por fecha, DNI, nombre, categoria/tipo, estado y usuario.
 - Formularios de alta y edicion.
 - Detalle con secciones, badges de estado, seguimientos/actuaciones y auditoria.
-- Adjuntos locales con descarga controlada por permisos.
+- Adjuntos cifrados en Cloudflare R2 con descarga autenticada y controlada por permisos.
 - Derivacion Despacho -> Intervenciones.
 - Derivacion Intervenciones -> Despacho preparada y funcional.
 - Expedientes internos administrativos.
@@ -113,6 +113,7 @@ src/
     (app)/reportes
     (app)/administracion
     adjuntos/[id]
+    api/retenciones/[id]/archivos
   components/
     layout/
     ui/
@@ -122,23 +123,22 @@ src/
     prisma.ts
     audit.ts
     files.ts
-storage/
-  uploads/
+    cloudflare-r2.ts
+    cloudflare-r2-core.ts
 ```
 
-## Migracion futura a PostgreSQL
+## Almacenamiento de archivos
 
-El modelo evita tipos especificos de SQLite y guarda estados/categorias como strings mas catalogos administrables. Para migrar:
-
-1. Cambiar el provider de Prisma a `postgresql`.
-2. Actualizar `DATABASE_URL`.
-3. Crear una nueva migracion contra PostgreSQL.
-4. Mantener los mismos modelos y relaciones principales.
+Todos los adjuntos persistentes se cifran con AES-256-GCM antes de subirlos al
+bucket configurado. La aplicacion solo crea y lee objetos bajo el prefijo
+`secretaria-de-seguridad/`; no lista ni elimina objetos del bucket. Los legajos
+PDF se generan bajo demanda y no se persisten.
 
 ## Comandos utiles
 
 ```bash
 npm run lint
+npm test
 npm run build
 npm run db:migrate
 npm run db:seed

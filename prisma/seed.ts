@@ -1,7 +1,6 @@
 import { PrismaClient, type JuridicalAction } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
+import { getCloudflareR2Storage, sanitizeFileName } from "../src/lib/cloudflare-r2-core";
 
 const prisma = new PrismaClient();
 
@@ -742,8 +741,6 @@ async function main() {
     },
   });
 
-  const uploadDir = path.join(process.cwd(), "storage", "uploads");
-  await mkdir(uploadDir, { recursive: true });
   const sampleFiles = [
     {
       name: "seed-despacho-luminaria.txt",
@@ -783,19 +780,21 @@ async function main() {
     },
   ];
 
+  const storage = getCloudflareR2Storage();
   for (const file of sampleFiles) {
-    const filePath = path.join("storage", "uploads", file.name);
-    await writeFile(path.join(process.cwd(), filePath), file.content, "utf8");
+    const content = Buffer.from(file.content, "utf8");
+    const stored = await storage.ensureSeedObject(content);
     await prisma.attachment.create({
       data: {
         module: file.module,
         entityType: file.entityType,
         entityId: file.entityId,
-        fileName: file.name,
+        fileName: sanitizeFileName(file.name),
         originalName: file.name,
-        filePath,
+        objectKey: stored.objectKey,
+        encryptionVersion: stored.encryptionVersion,
         mimeType: "text/plain",
-        size: Buffer.byteLength(file.content),
+        size: content.byteLength,
         uploadedById: file.uploadedById,
         isPrivate: file.isPrivate,
       },

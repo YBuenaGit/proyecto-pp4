@@ -1,17 +1,7 @@
 import "server-only";
 
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
+import { collectUploadFiles, getCloudflareR2Storage } from "./cloudflare-r2";
 import { prisma } from "./prisma";
-
-function sanitizeFileName(name: string) {
-  return name
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9._-]/g, "_")
-    .replace(/_+/g, "_")
-    .slice(0, 120);
-}
 
 export async function saveAttachments(input: {
   files: FormDataEntryValue[];
@@ -21,35 +11,23 @@ export async function saveAttachments(input: {
   uploadedById: string;
   isPrivate?: boolean;
 }) {
+  const files = collectUploadFiles(input.files);
+  const storage = getCloudflareR2Storage();
   const saved = [];
-  for (const entry of input.files) {
-    if (!(entry instanceof File) || entry.size === 0) continue;
-
-    const timestamp = Date.now();
-    const originalName = entry.name || "adjunto";
-    const fileName = `${timestamp}-${sanitizeFileName(originalName)}`;
-    const relativePath = path.join(
-      "storage",
-      "uploads",
-      input.module.toLowerCase(),
-      input.entityId,
-      fileName,
-    );
-    const absolutePath = path.join(process.cwd(), relativePath);
-    await mkdir(path.dirname(absolutePath), { recursive: true });
-    const buffer = Buffer.from(await entry.arrayBuffer());
-    await writeFile(absolutePath, buffer);
+  for (const file of files) {
+    const uploaded = await storage.uploadFile({ file });
 
     const attachment = await prisma.attachment.create({
       data: {
         module: input.module,
         entityType: input.entityType,
         entityId: input.entityId,
-        fileName,
-        originalName,
-        filePath: relativePath,
-        mimeType: entry.type || "application/octet-stream",
-        size: entry.size,
+        fileName: uploaded.fileName,
+        originalName: uploaded.originalName,
+        objectKey: uploaded.objectKey,
+        encryptionVersion: uploaded.encryptionVersion,
+        mimeType: uploaded.contentType,
+        size: uploaded.size,
         uploadedById: input.uploadedById,
         isPrivate: Boolean(input.isPrivate),
       },

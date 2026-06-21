@@ -382,18 +382,19 @@ model Appointment {
 }
 
 model Attachment {
-  id           String   @id @default(cuid())
-  module       String
-  entityType   String
-  entityId     String
-  fileName     String
-  originalName String
-  filePath     String
-  mimeType     String
-  size         Int
-  isPrivate    Boolean  @default(false)
-  uploadedById String
-  createdAt    DateTime @default(now())
+  id                String   @id @default(cuid())
+  module            String
+  entityType        String
+  entityId          String
+  fileName          String
+  originalName      String
+  objectKey         String   @unique
+  encryptionVersion Int      @default(1)
+  mimeType          String
+  size              Int
+  isPrivate         Boolean  @default(false)
+  uploadedById      String
+  createdAt         DateTime @default(now())
 
   uploadedBy User @relation("AttachmentUploadedBy", fields: [uploadedById], references: [id])
 
@@ -454,16 +455,16 @@ model RetentionHistory {
 }
 
 model RetentionAttachment {
-  id           String   @id @default(cuid())
-  retentionId  String
-  objectKey    String
-  publicUrl    String
-  fileName     String
-  originalName String
-  mimeType     String
-  size         Int
-  uploadedById String
-  createdAt    DateTime @default(now())
+  id                String   @id @default(cuid())
+  retentionId       String
+  objectKey         String   @unique
+  encryptionVersion Int      @default(1)
+  fileName          String
+  originalName      String
+  mimeType          String
+  size              Int
+  uploadedById      String
+  createdAt         DateTime @default(now())
 
   retention  Retention @relation(fields: [retentionId], references: [id], onDelete: Cascade)
   uploadedBy User      @relation("RetentionAttachmentUploadedBy", fields: [uploadedById], references: [id])

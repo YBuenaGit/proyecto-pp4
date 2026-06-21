@@ -1,6 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getCurrentUser } from "@/lib/auth";
-import { uploadFileToCloudflareR2 } from "@/lib/cloudflare-r2";
+import {
+  collectUploadFiles,
+  FileUploadValidationError,
+  getCloudflareR2Storage,
+} from "@/lib/cloudflare-r2";
 import { prisma } from "@/lib/prisma";
 import { canAccessRetentions } from "@/lib/rbac";
 import { getRetentionDetail } from "@/lib/retentions-service";
@@ -22,10 +26,6 @@ async function getRetentionsUser() {
   return { user };
 }
 
-function isUploadFile(entry: FormDataEntryValue): entry is File {
-  return typeof File !== "undefined" && entry instanceof File && entry.size > 0;
-}
-
 export async function POST(request: NextRequest, ctx: RouteContext<"/api/retenciones/[id]/archivos">) {
   const auth = await getRetentionsUser();
   if ("response" in auth) return auth.response;
@@ -38,22 +38,28 @@ export async function POST(request: NextRequest, ctx: RouteContext<"/api/retenci
   if (!exists) return notFoundResponse();
 
   const formData = await request.formData();
-  const files = formData.getAll("files").filter(isUploadFile);
+  let files: File[];
+  try {
+    files = collectUploadFiles(formData.getAll("files"));
+  } catch (error) {
+    if (error instanceof FileUploadValidationError) {
+      return NextResponse.json({ error: error.message }, { status: 400 });
+    }
+    throw error;
+  }
   if (!files.length) return NextResponse.json({ error: "No se recibieron archivos." }, { status: 400 });
 
+  const storage = getCloudflareR2Storage();
   for (const file of files) {
-    const uploaded = await uploadFileToCloudflareR2({
-      file,
-      folder: `retenciones/${id}`,
-    });
+    const uploaded = await storage.uploadFile({ file });
 
     await prisma.retentionAttachment.create({
       data: {
         retentionId: id,
         objectKey: uploaded.objectKey,
-        publicUrl: uploaded.publicUrl,
+        encryptionVersion: uploaded.encryptionVersion,
         fileName: uploaded.fileName,
-        originalName: file.name,
+        originalName: uploaded.originalName,
         mimeType: uploaded.contentType,
         size: uploaded.size,
         uploadedById: auth.user.id,

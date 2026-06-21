@@ -46,7 +46,7 @@ type RetentionHistory = {
 
 type RetentionAttachment = {
   id: string;
-  publicUrl: string;
+  downloadUrl: string;
   fileName: string;
   originalName: string;
   mimeType: string;
@@ -332,7 +332,7 @@ function AttachmentGrid({ attachments }: { attachments: RetentionAttachment[] })
       {attachments.map((file) => (
         <a
           key={file.id}
-          href={file.publicUrl}
+          href={file.downloadUrl}
           target="_blank"
           rel="noreferrer"
           className="rounded-sm border border-[#dee2e6] bg-[#f8f9fa] px-3 py-2 text-sm transition duration-150 hover:border-[#0667b0] hover:bg-white"

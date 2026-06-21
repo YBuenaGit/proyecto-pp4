@@ -12,11 +12,11 @@ export function isAdmin(user: CurrentUser | null) {
 }
 
 export function canAccessDispatch(user: CurrentUser | null) {
-  return user?.role === ROLES.despacho || user?.role === ROLES.directivo;
+  return user?.role === ROLES.despacho || isDirectivo(user) || isAdmin(user);
 }
 
 export function canAccessJuridical(user: CurrentUser | null) {
-  return user?.role === ROLES.juridico || user?.role === ROLES.directivo;
+  return user?.role === ROLES.juridico || isDirectivo(user) || isAdmin(user);
 }
 
 export function canAccessExpedients(user: CurrentUser | null) {
@@ -32,11 +32,11 @@ export function canAccessReports(user: CurrentUser | null) {
 }
 
 export function canAccessAdmin(user: CurrentUser | null) {
-  return user?.role === ROLES.admin;
+  return isAdmin(user);
 }
 
 export function canAccessRetentions(user: CurrentUser | null) {
-  return user?.role === ROLES.despacho || user?.role === ROLES.admin;
+  return user?.role === ROLES.despacho || user?.role === ROLES.admin || isDirectivo(user);
 }
 
 export function visibleModules(user: CurrentUser | null) {

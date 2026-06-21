@@ -161,11 +161,34 @@ export function AppointmentCard({
             </form>
           ) : null}
           {canDelete ? (
-            <form action={deleteAppointment.bind(null, appointment.id)}>
-              <Button type="submit" variant="danger" className="h-8 w-8 px-0 shadow-none" title="Eliminar cita">
-                <Trash2 className="h-3.5 w-3.5" />
-              </Button>
-            </form>
+            <AppModal
+              title="Eliminar cita"
+              description="Esta accion es irreversible."
+              trigger={
+                <>
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span className="sr-only">Eliminar cita</span>
+                </>
+              }
+              triggerVariant="danger"
+              triggerClassName="h-8 min-h-8 w-8 px-0 shadow-none"
+              size="md"
+            >
+              <p className="text-sm leading-6 text-[#495057]">
+                Se eliminara la cita <strong>{appointment.title}</strong> de forma permanente.
+              </p>
+              <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-[#dee2e6] pt-4">
+                <Button type="button" variant="secondary" data-modal-close>
+                  Cancelar
+                </Button>
+                <form action={deleteAppointment.bind(null, appointment.id)}>
+                  <Button type="submit" variant="danger">
+                    <Trash2 className="h-4 w-4" />
+                    Eliminar definitivamente
+                  </Button>
+                </form>
+              </div>
+            </AppModal>
           ) : null}
         </div>
       </div>

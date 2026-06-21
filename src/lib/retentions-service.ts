@@ -134,8 +134,7 @@ export function serializeRetentionDetail(record: RetentionDetailRecord) {
     })),
     attachments: record.attachments.map((attachment) => ({
       id: attachment.id,
-      objectKey: attachment.objectKey,
-      publicUrl: attachment.publicUrl,
+      downloadUrl: `/api/retenciones/${record.id}/archivos/${attachment.id}`,
       fileName: attachment.fileName,
       originalName: attachment.originalName,
       mimeType: attachment.mimeType,

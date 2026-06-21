@@ -1,7 +1,6 @@
 import { notFound } from "next/navigation";
-import { readFile } from "node:fs/promises";
-import path from "node:path";
 import { requireUser } from "@/lib/auth";
+import { getCloudflareR2Storage, isR2ObjectNotFoundError } from "@/lib/cloudflare-r2";
 import { prisma } from "@/lib/prisma";
 import { canAccessDispatch, canAccessExpedients, canAccessJuridical } from "@/lib/rbac";
 
@@ -20,19 +19,22 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
   if (!allowed) notFound();
 
-  const storageRoot = path.resolve(process.cwd(), "storage");
-  const relativeInsideStorage = attachment.filePath.replace(/^storage[\\/]/, "");
-  const absolutePath = path.resolve(storageRoot, relativeInsideStorage);
-  if (!absolutePath.startsWith(storageRoot)) notFound();
-
-  const file = await readFile(absolutePath);
+  let file: Buffer;
+  try {
+    file = await getCloudflareR2Storage().downloadFile(attachment.objectKey, attachment.encryptionVersion);
+  } catch (error) {
+    if (isR2ObjectNotFoundError(error)) notFound();
+    throw error;
+  }
   const encodedName = encodeURIComponent(attachment.originalName);
 
-  return new Response(file, {
+  return new Response(new Uint8Array(file), {
     headers: {
       "Content-Type": attachment.mimeType,
       "Content-Length": String(attachment.size),
       "Content-Disposition": `inline; filename*=UTF-8''${encodedName}`,
+      "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }
