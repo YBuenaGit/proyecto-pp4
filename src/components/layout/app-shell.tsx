@@ -86,12 +86,14 @@ export function AppShell({ user, children }: { user: CurrentUser; children: Reac
                 <p className="text-sm font-semibold text-[#212529]">{user.name}</p>
                 <p className="text-xs font-medium text-[#6c757d]">{ROLE_LABELS[user.role] ?? user.role}</p>
               </div>
-              <Link
-                href="/logout"
-                className="rounded-sm border border-[#6c757d] bg-white px-3 py-1.5 text-sm font-semibold text-[#495057] shadow-sm transition duration-150 hover:bg-[#e9ecef] active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff]"
-              >
-                Salir
-              </Link>
+              <form action="/logout" method="post">
+                <button
+                  type="submit"
+                  className="rounded-sm border border-[#6c757d] bg-white px-3 py-1.5 text-sm font-semibold text-[#495057] shadow-sm transition duration-150 hover:bg-[#e9ecef] active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff]"
+                >
+                  Salir
+                </button>
+              </form>
             </div>
           </div>
           <div className="border-t border-[#dee2e6] bg-[#f8f9fa] lg:hidden">
