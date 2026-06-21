@@ -1,5 +1,4 @@
 import Image from "next/image";
-import { loginAction } from "./actions";
 
 export default async function LoginPage({
   searchParams,
@@ -32,7 +31,7 @@ export default async function LoginPage({
           </div>
         ) : null}
 
-        <form action={loginAction} className="space-y-4">
+        <form action="/api/auth/session" method="post" className="space-y-4">
           <label className="block">
             <span className="mb-1 block text-sm font-semibold text-[#495057]">Usuario</span>
             <input
