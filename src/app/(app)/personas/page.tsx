@@ -37,11 +37,11 @@ export default async function PeoplePage({ searchParams }: { searchParams?: Prom
       />
 
       <ListToolbar>
-        <FilterBar resetHref="/personas" label="Buscar persona">
+        <FilterBar resetHref="/personas" label="Buscar persona" modal>
           <FilterInput label="DNI" name="dni" defaultValue={dni} />
-          <FilterInput label="Nombre" name="firstName" defaultValue={firstName} />
           <FilterInput label="Apellido" name="lastName" defaultValue={lastName} />
-          <FilterInput label="Nombre completo" name="name" defaultValue={name} />
+          <FilterInput label="Nombre" name="firstName" defaultValue={firstName} />
+          <FilterInput label="Apellido y nombre" name="name" defaultValue={name} />
           <FilterInput label="Caso" name="case" defaultValue={caseQuery} />
         </FilterBar>
       </ListToolbar>

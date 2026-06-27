@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BriefcaseBusiness, CalendarCheck, ClipboardList, Eye, Newspaper, Scale, TimerReset, Users } from "lucide-react";
+import { BriefcaseBusiness, CalendarCheck, ClipboardList, Eye, Newspaper, Scale, Users } from "lucide-react";
 import { KpiCard } from "@/components/ui/kpi-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -16,13 +16,14 @@ import { formatDateTime, labelFromValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { canAccessDispatch, canAccessExpedients, canAccessJuridical, isAdmin, isDirectivo } from "@/lib/rbac";
 import { param } from "@/lib/search";
+import { personDisplayName } from "@/lib/text";
 import type { SearchParams } from "@/lib/types";
 
 const pendingDispatchStatuses = ["RECIBIDO", "EN_ANALISIS", "EN_GESTION"];
 const openJuridicalStatuses = ["RECIBIDO", "EN_ORIENTACION", "PENDIENTE_DOCUMENTACION", "EN_SEGUIMIENTO"];
 const activeExpedientStatuses = ["INICIADO", "EN_TRAMITE", "OBSERVADO", "EN_APROBACION", "APROBADO"];
 
-type DashboardPanel = "dispatch" | "juridical" | "followups" | "expedients";
+type DashboardPanel = "dispatch" | "juridical" | "expedients";
 type DayPanel = "news" | "myAgenda" | "groupAgenda";
 
 type DashboardRow = {
@@ -58,11 +59,6 @@ const panelCopy: Record<DashboardPanel, { title: string; description: string; em
     description: "Intervenciones jurídico-institucionales abiertas, en orientación o seguimiento.",
     empty: "No hay intervenciones abiertas para mostrar.",
   },
-  followups: {
-    title: "Tabla de seguimientos de hoy",
-    description: "Acciones programadas para hoy sobre registros activos y visibles para el rol.",
-    empty: "No hay seguimientos programados para hoy.",
-  },
   expedients: {
     title: "Tabla de expedientes activos",
     description: "Expedientes internos iniciados o en trámite administrativo.",
@@ -72,9 +68,9 @@ const panelCopy: Record<DashboardPanel, { title: string; description: string; em
 
 const dayPanelCopy: Record<DayPanel, { label: string; title: string; empty: string }> = {
   news: {
-    label: "Novedades del día",
-    title: "Novedades del día",
-    empty: "No hay novedades cargadas para hoy.",
+    label: "Atenciones de hoy",
+    title: "Atenciones de Despacho cargadas hoy",
+    empty: "No hay atenciones de Despacho cargadas para hoy.",
   },
   myAgenda: {
     label: "Mi agenda",
@@ -109,8 +105,12 @@ function truncate(value: string | null | undefined, max = 86) {
   return value.length > max ? `${value.slice(0, max - 3)}...` : value;
 }
 
-function requesterFrom(record: { nameSnapshot?: string | null }) {
-  return record.nameSnapshot ?? "Sin datos";
+function requesterFrom(record: {
+  nameSnapshot?: string | null;
+  linkedPersons?: Array<{ firstName: string | null; apellidoApodoManual: string | null }>;
+}) {
+  const linkedPerson = record.linkedPersons?.[0];
+  return personDisplayName(linkedPerson?.apellidoApodoManual, linkedPerson?.firstName) || record.nameSnapshot || "Sin datos";
 }
 
 function categoryLabel(labels: Record<string, string>, value: string | null | undefined) {
@@ -147,20 +147,14 @@ async function countByStatuses(table: "DispatchRecord" | "JuridicalIntervention"
   return prisma.internalExpedient.count({ where: { status: { in: statuses } } });
 }
 
-async function countTodayJuridicalActions(today: Date, tomorrow: Date) {
-  return prisma.juridicalAction.count({
-    where: {
-      nextStepDate: { gte: today, lt: tomorrow },
-      juridicalIntervention: { status: { in: openJuridicalStatuses } },
-    },
-  });
-}
-
 async function getTodayNews(today: Date, tomorrow: Date, canDashboardDispatch: boolean): Promise<DayRow[]> {
   if (!canDashboardDispatch) return [];
   const records = await prisma.dispatchRecord.findMany({
     where: { attendedAt: { gte: today, lt: tomorrow } },
-    include: { createdBy: { select: { name: true } } },
+    include: {
+      createdBy: { select: { name: true } },
+      linkedPersons: { orderBy: { sortOrder: "asc" }, take: 1 },
+    },
     orderBy: { attendedAt: "desc" },
     take: 10,
   });
@@ -224,21 +218,20 @@ async function getRowsForPanel({
   canDashboardDispatch,
   canDashboardJuridical,
   canDashboardExpedients,
-  today,
-  tomorrow,
 }: {
   panel: DashboardPanel;
   canDashboardDispatch: boolean;
   canDashboardJuridical: boolean;
   canDashboardExpedients: boolean;
-  today: Date;
-  tomorrow: Date;
 }): Promise<DashboardRow[]> {
   if (panel === "dispatch" && canDashboardDispatch) {
     const priorityRank: Record<string, number> = { URGENTE: 4, ALTA: 3, MEDIA: 2, BAJA: 1 };
     const records = await prisma.dispatchRecord.findMany({
       where: { status: { in: pendingDispatchStatuses } },
-      include: { createdBy: { select: { name: true } } },
+      include: {
+        createdBy: { select: { name: true } },
+        linkedPersons: { orderBy: { sortOrder: "asc" }, take: 1 },
+      },
       orderBy: { attendedAt: "desc" },
       take: 100,
     });
@@ -266,7 +259,10 @@ async function getRowsForPanel({
     const urgencyRank: Record<string, number> = { URGENTE: 4, ALTA: 3, MEDIA: 2, BAJA: 1 };
     const interventions = await prisma.juridicalIntervention.findMany({
       where: { status: { in: openJuridicalStatuses } },
-      include: { createdBy: { select: { name: true } } },
+      include: {
+        createdBy: { select: { name: true } },
+        linkedPersons: { orderBy: { sortOrder: "asc" }, take: 1 },
+      },
       orderBy: { attendedAt: "desc" },
       take: 100,
     });
@@ -288,40 +284,6 @@ async function getRowsForPanel({
         priority: intervention.urgency,
         status: intervention.status,
       }));
-  }
-
-  if (panel === "followups" && canDashboardJuridical) {
-    const actions = await prisma.juridicalAction.findMany({
-      where: {
-        nextStepDate: { gte: today, lt: tomorrow },
-        juridicalIntervention: { status: { in: openJuridicalStatuses } },
-      },
-      include: {
-        createdBy: { select: { name: true } },
-        juridicalIntervention: {
-          select: {
-            internalNumber: true,
-            nameSnapshot: true,
-            urgency: true,
-            status: true,
-          },
-        },
-      },
-      orderBy: [{ nextStepDate: "asc" }, { createdAt: "desc" }],
-      take: 10,
-    });
-
-    return actions.map((action) => ({
-      id: action.id,
-      number: action.juridicalIntervention.internalNumber,
-      href: `/intervenciones/${action.juridicalInterventionId}`,
-      dateTime: dateValue(action.nextStepDate ?? action.createdAt),
-      reportedBy: reportedBy(action.createdBy.name),
-      requester: requesterFrom(action.juridicalIntervention),
-      category: `Intervenciones · ${labelFromValue(action.actionType)}`,
-      priority: action.juridicalIntervention.urgency,
-      status: action.juridicalIntervention.status,
-    }));
   }
 
   if (panel === "expedients" && canDashboardExpedients) {
@@ -357,7 +319,6 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
   const canDashboardJuridical = canAccessJuridical(user) || hasDashboardOverview;
   const canDashboardExpedients = canAccessExpedients(user) || hasDashboardOverview;
   const canDashboardAgenda = canAccessAgenda(user) || hasDashboardOverview;
-  const canDashboardFollowUps = canDashboardDispatch || canDashboardJuridical || canDashboardExpedients;
   const dashboardGroupScopes: CalendarScope[] = hasDashboardOverview
     ? ["lawyers", "dispatch"]
     : getAllowedCalendarScopes(user).filter((scope) => scope === "lawyers" || scope === "dispatch");
@@ -365,7 +326,6 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
   const availablePanels: DashboardPanel[] = [
     ...(canDashboardDispatch ? (["dispatch"] as const) : []),
     ...(canDashboardJuridical ? (["juridical"] as const) : []),
-    ...(canDashboardFollowUps ? (["followups"] as const) : []),
     ...(canDashboardExpedients ? (["expedients"] as const) : []),
   ];
 
@@ -386,7 +346,6 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
   const [
     pendingDispatch,
     openJuridical,
-    todayJuridicalActions,
     activeExpedients,
     todayNewsRows,
     todayMyAgendaRows,
@@ -399,9 +358,6 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
       : 0,
     canDashboardJuridical
       ? countByStatuses("JuridicalIntervention", openJuridicalStatuses)
-      : 0,
-    canDashboardJuridical
-      ? countTodayJuridicalActions(today, tomorrow)
       : 0,
     canDashboardExpedients
       ? countByStatuses("InternalExpedient", activeExpedientStatuses)
@@ -419,8 +375,6 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
       canDashboardDispatch,
       canDashboardJuridical,
       canDashboardExpedients,
-      today,
-      tomorrow,
     }),
   ]);
 
@@ -431,7 +385,7 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
       label: dayPanelCopy.news.label,
       value: todayNewsRows.length,
       icon: <Newspaper className="h-5 w-5" />,
-      hint: "Cargadas hoy",
+      hint: "Atenciones cargadas hoy",
     },
     {
       panel: "myAgenda" as const,
@@ -467,14 +421,6 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
       value: openJuridical,
       icon: <Scale className="h-5 w-5" />,
       hint: "Orientación o seguimiento",
-    },
-    {
-      panel: "followups" as const,
-      visible: canDashboardFollowUps,
-      label: "Seguimientos de hoy",
-      value: todayJuridicalActions,
-      icon: <TimerReset className="h-5 w-5" />,
-      hint: "Acciones programadas",
     },
     {
       panel: "expedients" as const,

@@ -15,6 +15,7 @@ import { formatDateTime, labelFromValue } from "@/lib/format";
 import { parseJuridicalActionContent } from "@/lib/juridical-action-content";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessDispatch } from "@/lib/rbac";
+import { personDisplayName, sortByLabel } from "@/lib/text";
 import {
   addDispatchFollowUp,
   deriveDispatchToJuridical,
@@ -421,7 +422,7 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
                 </FormField>
                 <FormField label="Tipo sugerido">
                   <select name="type" className={inputClass} defaultValue="PRIMERA_INTERVENCION">
-                    {juridicalTypes.map((item) => (
+                    {sortByLabel(juridicalTypes, (item) => item.label).map((item) => (
                       <option key={item.value} value={item.value}>{item.label}</option>
                     ))}
                   </select>
@@ -470,7 +471,7 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
                       <p className="font-semibold text-[#212529]">Denunciante anonimo</p>
                     ) : (
                       <>
-                        <p className="font-semibold text-[#212529]">{display([complainant.firstName, complainant.lastName].filter(Boolean).join(" "))}</p>
+                        <p className="font-semibold text-[#212529]">{display(personDisplayName(complainant.lastName, complainant.firstName))}</p>
                         <p className="text-[#607589]">DNI: {display(complainant.dni)}</p>
                         <p className="text-[#607589]">Telefono: {display([complainant.phone1, complainant.phone2].filter(Boolean).join(" / "))}</p>
                         <p className="text-[#607589]">Domicilio: {display(complainant.address)}</p>
@@ -486,7 +487,7 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
               <div className="mt-3 space-y-3">
                 {linkedPersons.length ? linkedPersons.map((person, index) => (
                   <div key={`linked-person-${index}`} className="rounded-lg bg-white px-3 py-2.5 text-sm leading-6 shadow-sm ring-1 ring-[#e4edf4]">
-                    <p className="font-semibold text-[#212529]">{display([person.firstName, person.apellidoApodoManual].filter(Boolean).join(" "))}</p>
+                    <p className="font-semibold text-[#212529]">{display(personDisplayName(person.apellidoApodoManual, person.firstName))}</p>
                     <p className="text-[#607589]">DNI: {display(person.dni)}</p>
                     <p className="text-[#607589]">Telefono: {display([person.phone1, person.phone2].filter(Boolean).join(" / "))}</p>
                     <p className="text-[#607589]">Domicilio: {display(person.address)}</p>

@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { cn } from "./cn";
 
-export function FormGrid({ children }: { children: ReactNode }) {
-  return <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{children}</div>;
+export function FormGrid({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn("grid gap-3 md:grid-cols-2 xl:grid-cols-3", className)}>{children}</div>;
 }
 
 export function FormField({

@@ -1,5 +1,6 @@
 import { JURIDICAL_CONTEXT_LABELS } from "@/lib/constants";
 import { formatDateTime, labelFromValue } from "@/lib/format";
+import { personDisplayName } from "@/lib/text";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -101,7 +102,7 @@ function changedFieldPhrase(before: JsonRecord, after: JsonRecord, key: string, 
 }
 
 function personName(person: JsonRecord, lastNameKey: "lastName" | "apellidoApodoManual") {
-  return [textValue(person.firstName), textValue(person[lastNameKey])].filter(Boolean).join(" ").trim();
+  return personDisplayName(textValue(person[lastNameKey]), textValue(person.firstName));
 }
 
 function personSummary(person: JsonRecord, lastNameKey: "lastName" | "apellidoApodoManual") {
@@ -125,7 +126,7 @@ function legacyComplainantSummary(record: JsonRecord | null) {
   if (!record) return "sin cargar";
   if (Array.isArray(record.complainants)) return collectionSummary(record.complainants, "lastName");
   if (record.complainantIsAnonymous === true) return "Denunciante anonimo";
-  const name = [textValue(record.complainantFirstName), textValue(record.complainantLastName)].filter(Boolean).join(" ");
+  const name = personDisplayName(textValue(record.complainantLastName), textValue(record.complainantFirstName));
   const dni = textValue(record.complainantDni);
   if (name && dni) return `${name} (${dni})`;
   return name || dni || "sin cargar";

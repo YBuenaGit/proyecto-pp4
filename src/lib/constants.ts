@@ -13,49 +13,49 @@ export const ROLE_LABELS: Record<string, string> = {
 };
 
 export const DISPATCH_STATUSES = [
-  "RECIBIDO",
-  "EN_ANALISIS",
-  "DERIVADO",
-  "EN_GESTION",
-  "RESUELTO",
-  "CERRADO",
   "ARCHIVADO",
+  "CERRADO",
+  "DERIVADO",
+  "EN_ANALISIS",
+  "EN_GESTION",
+  "RECIBIDO",
+  "RESUELTO",
 ];
 
 export const JURIDICAL_STATUSES = [
-  "RECIBIDO",
-  "EN_ORIENTACION",
-  "PENDIENTE_DOCUMENTACION",
-  "DERIVADO_EXTERNAMENTE",
-  "EN_SEGUIMIENTO",
-  "CONCLUIDO",
   "ARCHIVADO",
+  "CONCLUIDO",
+  "DERIVADO_EXTERNAMENTE",
+  "EN_ORIENTACION",
+  "EN_SEGUIMIENTO",
+  "PENDIENTE_DOCUMENTACION",
+  "RECIBIDO",
   "OTROS",
 ];
 
 export const EXPEDIENT_STATUSES = [
-  "INICIADO",
+  "APROBADO",
+  "ARCHIVADO",
+  "EN_APROBACION",
   "EN_TRAMITE",
+  "FINALIZADO",
+  "GUARDA_TEMPORAL",
+  "INICIADO",
   "OBSERVADO",
   "TRAMITACION",
-  "GUARDA_TEMPORAL",
-  "EN_APROBACION",
-  "APROBADO",
-  "FINALIZADO",
-  "ARCHIVADO",
 ];
 
 export const EXPEDIENT_AREAS = [
-  { value: "GUM", label: "GUM" },
-  { value: "SECRETARIA", label: "Secretaria" },
-  { value: "DIRECCION_DE_SEGURIDAD", label: "Direccion de Seguridad" },
-  { value: "DEFENSA_CIVIL", label: "Defensa Civil" },
-  { value: "SERENOS", label: "Serenos" },
   { value: "ATENCION_Y_CONTENCION_A_LA_VICTIMA", label: "Atencion y Contencion a la Victima" },
+  { value: "DEFENSA_CIVIL", label: "Defensa Civil" },
+  { value: "DIRECCION_DE_SEGURIDAD", label: "Direccion de Seguridad" },
+  { value: "GUM", label: "GUM" },
   { value: "PARTES_MEDICOS", label: "Partes Medicos" },
+  { value: "SECRETARIA", label: "Secretaria" },
+  { value: "SERENOS", label: "Serenos" },
 ];
 
-export const PRIORITIES = ["BAJA", "MEDIA", "ALTA", "URGENTE"];
+export const PRIORITIES = ["ALTA", "BAJA", "MEDIA", "URGENTE"];
 
 export const REFERRAL_STATUSES = ["PENDIENTE", "RECIBIDA", "EN_GESTION", "CERRADA"];
 
@@ -68,44 +68,45 @@ export const COUNTERPART_TYPES = [
 ] as const;
 
 export const ACTION_TYPES = [
-  "ORIENTACION",
-  "PRIMERA_INTERVENCION",
-  "CONTENCION",
-  "INFORME",
-  "OFICIO",
-  "DERIVACION",
-  "SEGUIMIENTO",
-  "NUEVA_PRESENTACION",
-  "ORIENTACION_ADICIONAL",
-  "CIERRE",
-  "SALUD_MENTAL",
-  "INTERVENCION_ADMINISTRATIVA",
-  "NOTIFICACIONES",
-  "MEDIACION_VECINAL",
   "AUDIENCIA",
+  "CIERRE",
+  "CONTENCION",
+  "DERIVACION",
+  "INFORME",
+  "INTERVENCION_ADMINISTRATIVA",
+  "MEDIACION_VECINAL",
+  "NOTIFICACIONES",
+  "NUEVA_PRESENTACION",
+  "OFICIO",
+  "ORIENTACION",
+  "ORIENTACION_ADICIONAL",
+  "PRIMERA_INTERVENCION",
+  "SALUD_MENTAL",
+  "SEGUIMIENTO",
   "OTRO",
 ];
 
 export const JURIDICAL_DERIVED_AREAS = [
-  "Obras Publicas",
-  "Servicios Urbanos",
-  "Transito",
+  "Articulacion y derivacion",
+  "Catastro",
   "Defensa Civil",
   "Desarrollo Social",
-  "gum",
-  "area directivos",
-  "Saneamiento",
-  "Regulacion dominial",
-  "Politica social",
-  "Catastro",
+  "Despacho",
+  "Directivo",
+  "GUM",
+  "Juzgado Civil / Cial",
+  "Juzgado de familia",
   "Medio ambiente",
-  "Urgencias vecinales",
-  "Ojos en alerta",
   "Ministerio Publico Fiscal",
   "MPF",
-  "Articulacion y derivacion",
-  "Juzgado de familia",
-  "Juzgado Civil / Cial",
+  "Obras Publicas",
+  "Ojos en alerta",
+  "Politica social",
+  "Regulacion dominial",
+  "Saneamiento",
+  "Servicios Urbanos",
+  "Transito",
+  "Urgencias vecinales",
   "Otros",
 ];
 

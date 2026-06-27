@@ -3,6 +3,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { getCloudflareR2Storage, isR2ObjectNotFoundError } from "@/lib/cloudflare-r2";
 import { prisma } from "@/lib/prisma";
 import { canAccessRetentions } from "@/lib/rbac";
+import { getRetentionDetail } from "@/lib/retentions-service";
 
 export const dynamic = "force-dynamic";
 
@@ -45,4 +46,26 @@ export async function GET(
       "X-Content-Type-Options": "nosniff",
     },
   });
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  ctx: { params: Promise<{ id: string; attachmentId: string }> },
+) {
+  const user = await getCurrentUser();
+  if (!user) return NextResponse.json({ error: "No autenticado." }, { status: 401 });
+  if (!canAccessRetentions(user)) return notFoundResponse();
+
+  const { id, attachmentId } = await ctx.params;
+  const attachment = await prisma.retentionAttachment.findFirst({
+    where: { id: attachmentId, retentionId: id },
+    select: { id: true },
+  });
+  if (!attachment) return notFoundResponse();
+
+  // Preserve the encrypted R2 object; only remove its association with this retention.
+  await prisma.retentionAttachment.delete({ where: { id: attachment.id } });
+  const item = await getRetentionDetail(id);
+  if (!item) return notFoundResponse();
+  return NextResponse.json({ item });
 }

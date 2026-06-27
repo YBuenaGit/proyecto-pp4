@@ -7,7 +7,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { ROLES } from "@/lib/constants";
-import { optionalText, text } from "@/lib/form";
+import { optionalText, sentenceText, text } from "@/lib/form";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessAdmin } from "@/lib/rbac";
 
@@ -23,7 +23,7 @@ export async function createUser(formData: FormData) {
   const currentUser = await requireUser();
   assertAccess(canAccessAdmin(currentUser));
   const parsed = userSchema.parse({
-    name: text(formData, "name"),
+    name: sentenceText(formData, "name"),
     username: text(formData, "username"),
     email: optionalText(formData, "email"),
     role: text(formData, "role"),
@@ -79,7 +79,7 @@ export async function createCatalogItem(formData: FormData) {
   assertAccess(canAccessAdmin(currentUser));
   const type = text(formData, "type");
   const value = text(formData, "value");
-  const label = text(formData, "label");
+  const label = sentenceText(formData, "label");
   if (!type || !value || !label) return;
 
   const item = await prisma.catalogItem.create({

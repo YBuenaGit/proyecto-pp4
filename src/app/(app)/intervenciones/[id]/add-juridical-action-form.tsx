@@ -21,7 +21,6 @@ type ActionSheetFormValues = {
   guidanceProvided: string;
   statusAfter: string;
   nextStepDescription: string;
-  nextStepDate: Date | string | null;
 };
 
 function nowInputValue() {
@@ -121,11 +120,6 @@ export function AddJuridicalActionForm({
             ))}
           </select>
         </FormField>
-        {showFollowUp ? (
-          <FormField label="Fecha de seguimiento">
-            <input name="nextStepDate" type="date" className={inputClass} defaultValue={initialValues?.nextStepDate ? toDateInputValue(initialValues.nextStepDate).slice(0, 10) : ""} />
-          </FormField>
-        ) : null}
       </div>
       <FormField label="Descripcion / relato">
         <textarea

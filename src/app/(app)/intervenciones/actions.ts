@@ -7,10 +7,11 @@ import { ACTION_TYPES, JURIDICAL_STATUSES, PRIORITIES } from "@/lib/constants";
 import { requireUser } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { saveAttachments } from "@/lib/files";
-import { nextInternalNumber, optionalDate, optionalText, text } from "@/lib/form";
+import { nextInternalNumber, optionalDate, optionalSentenceText, optionalText, sentenceText, text } from "@/lib/form";
 import { buildJuridicalActionContent } from "@/lib/juridical-action-content";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessJuridical } from "@/lib/rbac";
+import { capitalizeOptionalText, personDisplayName } from "@/lib/text";
 
 const interventionSchema = z.object({
   description: z.string().trim().min(1),
@@ -102,11 +103,11 @@ function complainantCreateData(person: ComplainantPayload, index: number) {
     sortOrder: index,
     isAnonymous: person.isAnonymous,
     dni: person.isAnonymous ? null : nullable(person.dni),
-    firstName: person.isAnonymous ? null : nullable(person.firstName),
-    lastName: person.isAnonymous ? null : nullable(person.lastName),
+    firstName: person.isAnonymous ? null : capitalizeOptionalText(person.firstName),
+    lastName: person.isAnonymous ? null : capitalizeOptionalText(person.lastName),
     phone1: person.isAnonymous ? null : nullable(person.phone1),
     phone2: person.isAnonymous ? null : nullable(person.phone2),
-    address: person.isAnonymous ? null : nullable(person.address),
+    address: person.isAnonymous ? null : capitalizeOptionalText(person.address),
   };
 }
 
@@ -114,17 +115,17 @@ function linkedPersonCreateData(person: LinkedPersonPayload, index: number) {
   return {
     sortOrder: index,
     dni: nullable(person.dni),
-    firstName: nullable(person.firstName),
-    apellidoApodoManual: nullable(person.apellidoApodoManual),
+    firstName: capitalizeOptionalText(person.firstName),
+    apellidoApodoManual: capitalizeOptionalText(person.apellidoApodoManual),
     phone1: nullable(person.phone1),
     phone2: nullable(person.phone2),
-    address: nullable(person.address),
+    address: capitalizeOptionalText(person.address),
   };
 }
 
 function linkedPersonName(person: LinkedPersonPayload | undefined) {
   if (!person) return null;
-  return [person.firstName, person.apellidoApodoManual].filter(Boolean).join(" ").trim() || null;
+  return personDisplayName(person.apellidoApodoManual, person.firstName) || null;
 }
 
 const juridicalAuditInclude = {
@@ -154,7 +155,7 @@ export async function createJuridicalIntervention(formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
   const parsed = interventionSchema.parse({
-    description: text(formData, "description"),
+    description: sentenceText(formData, "description"),
     type: text(formData, "type"),
     urgency: text(formData, "urgency") || "MEDIA",
     status: text(formData, "status") || "RECIBIDO",
@@ -163,6 +164,7 @@ export async function createJuridicalIntervention(formData: FormData) {
   const linkedPersons = parseLinkedPersons(formData);
   const firstComplainant = complainants[0];
   const firstLinkedPerson = linkedPersons[0];
+  const derivedArea = optionalText(formData, "derivedArea");
   const attendedAt = optionalDate(formData, "attendedAt") ?? new Date();
   if (Number.isNaN(attendedAt.getTime())) {
     throw new Error("La fecha y hora de atencion no es valida.");
@@ -178,11 +180,11 @@ export async function createJuridicalIntervention(formData: FormData) {
       nameSnapshot: linkedPersonName(firstLinkedPerson),
       complainantIsAnonymous: Boolean(firstComplainant?.isAnonymous),
       complainantDni: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.dni),
-      complainantFirstName: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.firstName),
-      complainantLastName: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.lastName),
+      complainantFirstName: firstComplainant?.isAnonymous ? null : capitalizeOptionalText(firstComplainant?.firstName),
+      complainantLastName: firstComplainant?.isAnonymous ? null : capitalizeOptionalText(firstComplainant?.lastName),
       complainantPhone1: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.phone1),
       complainantPhone2: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.phone2),
-      complainantAddress: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.address),
+      complainantAddress: firstComplainant?.isAnonymous ? null : capitalizeOptionalText(firstComplainant?.address),
       type: parsed.type,
       subType: null,
       urgency: parsed.urgency,
@@ -192,10 +194,10 @@ export async function createJuridicalIntervention(formData: FormData) {
       interventionContext: optionalText(formData, "interventionContext"),
       counterpartType: null,
       description: parsed.description,
-      guidanceProvided: optionalText(formData, "guidanceProvided"),
-      referredToAgency: optionalText(formData, "referredToAgency"),
-      derivedArea: optionalText(formData, "derivedArea"),
-      confidentialNotes: optionalText(formData, "confidentialNotes"),
+      guidanceProvided: optionalSentenceText(formData, "guidanceProvided"),
+      referredToAgency: optionalSentenceText(formData, "referredToAgency"),
+      derivedArea,
+      confidentialNotes: optionalSentenceText(formData, "confidentialNotes"),
       lastStatusAt: attendedAt,
       complainants: {
         create: complainants.map(complainantCreateData),
@@ -223,6 +225,12 @@ export async function createJuridicalIntervention(formData: FormData) {
     createdById: user.id,
     after: intervention,
   });
+  if (derivedArea?.toLocaleLowerCase("es-AR") === "despacho") {
+    const referralData = new FormData();
+    referralData.set("summary", parsed.description);
+    referralData.set("area", "Despacho");
+    await deriveJuridicalToDispatch(intervention.id, referralData);
+  }
   redirect(`/intervenciones/${intervention.id}`);
 }
 
@@ -231,7 +239,7 @@ export async function updateJuridicalIntervention(interventionId: string, formDa
   assertAccess(canAccessJuridical(user));
   const before = await juridicalAuditSnapshot(interventionId);
   const parsed = interventionSchema.parse({
-    description: text(formData, "description"),
+    description: sentenceText(formData, "description"),
     type: text(formData, "type"),
     urgency: text(formData, "urgency") || "MEDIA",
     status: text(formData, "status") || "RECIBIDO",
@@ -254,11 +262,11 @@ export async function updateJuridicalIntervention(interventionId: string, formDa
       nameSnapshot: linkedPersonName(firstLinkedPerson),
       complainantIsAnonymous: Boolean(firstComplainant?.isAnonymous),
       complainantDni: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.dni),
-      complainantFirstName: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.firstName),
-      complainantLastName: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.lastName),
+      complainantFirstName: firstComplainant?.isAnonymous ? null : capitalizeOptionalText(firstComplainant?.firstName),
+      complainantLastName: firstComplainant?.isAnonymous ? null : capitalizeOptionalText(firstComplainant?.lastName),
       complainantPhone1: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.phone1),
       complainantPhone2: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.phone2),
-      complainantAddress: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.address),
+      complainantAddress: firstComplainant?.isAnonymous ? null : capitalizeOptionalText(firstComplainant?.address),
       type: parsed.type,
       subType: null,
       urgency: parsed.urgency,
@@ -268,10 +276,10 @@ export async function updateJuridicalIntervention(interventionId: string, formDa
       interventionContext: optionalText(formData, "interventionContext"),
       counterpartType: null,
       description: parsed.description,
-      guidanceProvided: optionalText(formData, "guidanceProvided"),
-      referredToAgency: optionalText(formData, "referredToAgency"),
+      guidanceProvided: optionalSentenceText(formData, "guidanceProvided"),
+      referredToAgency: optionalSentenceText(formData, "referredToAgency"),
       derivedArea: optionalText(formData, "derivedArea"),
-      confidentialNotes: optionalText(formData, "confidentialNotes"),
+      confidentialNotes: optionalSentenceText(formData, "confidentialNotes"),
       lastStatusAt: before.status !== parsed.status ? new Date() : before.lastStatusAt,
       complainants: {
         deleteMany: {},
@@ -304,11 +312,11 @@ export async function addJuridicalAction(interventionId: string, formData: FormD
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
   const actionType = text(formData, "actionType") || "SEGUIMIENTO";
-  const description = text(formData, "description") || text(formData, "content");
+  const description = sentenceText(formData, "description") || sentenceText(formData, "content");
   const content = buildJuridicalActionContent({
     description,
-    guidanceProvided: optionalText(formData, "guidanceProvided") ?? "",
-    nextStepDescription: optionalText(formData, "nextStepDescription") ?? "",
+    guidanceProvided: optionalSentenceText(formData, "guidanceProvided") ?? "",
+    nextStepDescription: optionalSentenceText(formData, "nextStepDescription") ?? "",
   });
   const statusAfter = optionalText(formData, "statusAfter");
   if (!ACTION_TYPES.includes(actionType) || description.length < 3) return;
@@ -319,7 +327,6 @@ export async function addJuridicalAction(interventionId: string, formData: FormD
       juridicalInterventionId: interventionId,
       actionType,
       content,
-      nextStepDate: optionalDate(formData, "nextStepDate"),
       createdAt: optionalDate(formData, "createdAt") ?? new Date(),
       createdById: user.id,
     },
@@ -362,11 +369,11 @@ export async function updateJuridicalAction(actionId: string, formData: FormData
   assertAccess(canAccessJuridical(user));
   const existingAction = await prisma.juridicalAction.findUniqueOrThrow({ where: { id: actionId } });
   const actionType = text(formData, "actionType") || existingAction.actionType;
-  const description = text(formData, "description") || text(formData, "content");
+  const description = sentenceText(formData, "description") || sentenceText(formData, "content");
   const content = buildJuridicalActionContent({
     description,
-    guidanceProvided: optionalText(formData, "guidanceProvided") ?? "",
-    nextStepDescription: optionalText(formData, "nextStepDescription") ?? "",
+    guidanceProvided: optionalSentenceText(formData, "guidanceProvided") ?? "",
+    nextStepDescription: optionalSentenceText(formData, "nextStepDescription") ?? "",
   });
   const statusAfter = optionalText(formData, "statusAfter");
   if (!ACTION_TYPES.includes(actionType) || description.length < 3) return;
@@ -377,7 +384,6 @@ export async function updateJuridicalAction(actionId: string, formData: FormData
     data: {
       actionType,
       content,
-      nextStepDate: optionalDate(formData, "nextStepDate"),
       createdAt: optionalDate(formData, "createdAt") ?? existingAction.createdAt,
     },
   });
@@ -417,7 +423,7 @@ export async function updateJuridicalAction(actionId: string, formData: FormData
 export async function deriveJuridicalToDispatch(interventionId: string, formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
-  const summary = text(formData, "summary");
+  const summary = sentenceText(formData, "summary");
   if (summary.length < 8) return;
 
   const source = await prisma.juridicalIntervention.findUniqueOrThrow({

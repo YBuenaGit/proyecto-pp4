@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useRef, useState, type ClipboardEvent, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
+import { useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { AlertCircle, Check, ChevronLeft, ChevronRight, Lock, Pencil, Plus, Trash2, UploadCloud } from "lucide-react";
 import { Button, LinkButton } from "@/components/ui/button";
 import { cn } from "@/components/ui/cn";
 import { DISPATCH_STATUSES, PRIORITIES } from "@/lib/constants";
 import { formatDateTime, labelFromValue } from "@/lib/format";
+import { sortByLabel } from "@/lib/text";
 
 export type DispatchWizardValues = {
   attendedAt: string;
@@ -59,6 +60,7 @@ const inputClass =
 
 const textareaClass =
   "min-h-28 w-full rounded-sm border border-[#ced4da] bg-white px-2.5 py-2 text-sm leading-6 text-[#212529] outline-none transition duration-150 placeholder:text-[#6c757d] focus:border-[#80bdff] focus:ring-2 focus:ring-[rgba(0,123,255,.25)]";
+const autosizeTextareaClass = `${textareaClass} resize-none overflow-hidden`;
 
 const fileInputClass =
   "block w-full rounded-sm border border-dashed border-[#17a2b8] bg-[#d1ecf1]/40 px-3 py-2.5 text-sm text-[#212529] file:mr-2 file:rounded-sm file:border-0 file:bg-[#0667b0] file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white hover:file:bg-[#0a61b9]";
@@ -146,6 +148,11 @@ function valueAfterPaste(event: ClipboardEvent<HTMLInputElement>, sanitizer: (va
   const end = input.selectionEnd ?? input.value.length;
   const pasted = event.clipboardData.getData("text");
   return sanitizer(`${input.value.slice(0, start)}${pasted}${input.value.slice(end)}`);
+}
+
+function resizeTextarea(textarea: HTMLTextAreaElement) {
+  textarea.style.height = "auto";
+  textarea.style.height = `${textarea.scrollHeight}px`;
 }
 
 function cleanComplainant(person: ComplainantDraft) {
@@ -394,6 +401,18 @@ export function DispatchWizardForm({
   const [attemptedSteps, setAttemptedSteps] = useState([false, false, false, false]);
   const [values, setValues] = useState<DispatchWizardValues>(initialValues);
   const [attachmentNames, setAttachmentNames] = useState<string[]>([]);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const sortedCategories = useMemo(() => sortByLabel(categories, (item) => item.label), [categories]);
+  const sortedAreas = useMemo(() => {
+    const internalAreas = [
+      { value: "DIRECTIVO", label: "Directivo" },
+      { value: "INTERVENCIONES", label: "Intervenciones" },
+    ];
+    const unique = [...areas, ...internalAreas].filter(
+      (item, index, items) => items.findIndex((candidate) => candidate.label.toLocaleLowerCase("es-AR") === item.label.toLocaleLowerCase("es-AR")) === index,
+    );
+    return sortByLabel(unique, (item) => item.label);
+  }, [areas]);
 
   const submittedComplainants = useMemo(
     () => values.complainants.filter(hasComplainantData).map(cleanComplainant),
@@ -403,15 +422,22 @@ export function DispatchWizardForm({
     () => values.linkedPersons.filter(hasLinkedPersonData).map(cleanLinkedPerson),
     [values.linkedPersons],
   );
-  const selectedArea = areas.find((item) => item.label === values.referredArea || item.value === values.referredArea)?.label;
+  const selectedArea = sortedAreas.find((item) => item.label === values.referredArea || item.value === values.referredArea)?.label;
 
   const stepErrors = useMemo(() => validateAllSteps(values), [values]);
   const allValid = stepErrors.every((errors) => errors.length === 0);
   const currentErrors = attemptedSteps[currentStep] ? stepErrors[currentStep] : [];
-  const effectiveSubmitLabel = submitLabel === "Crear" ? "Crear atención" : submitLabel;
 
   function setValue<Key extends keyof DispatchWizardValues>(key: Key, value: DispatchWizardValues[Key]) {
     setValues((current) => ({ ...current, [key]: value }));
+  }
+
+  function setAutosizedTextareaValue(
+    key: "description" | "initialGuidance" | "confidentialNotes",
+    event: ChangeEvent<HTMLTextAreaElement>,
+  ) {
+    resizeTextarea(event.currentTarget);
+    setValue(key, event.currentTarget.value);
   }
 
   function updateComplainant(index: number, patch: Partial<ComplainantDraft>) {
@@ -459,6 +485,7 @@ export function DispatchWizardForm({
   }
 
   function goToStep(step: number) {
+    setShowConfirm(false);
     if (step === currentStep) return;
     if (!canOpenStep(step)) {
       const invalidStep = firstInvalidStepBefore(step);
@@ -489,10 +516,23 @@ export function DispatchWizardForm({
     markVisited(nextStep);
   }
 
+  function openSummary() {
+    setAttemptedSteps([true, true, true, true]);
+    const invalidStep = stepErrors.findIndex((errors) => errors.length > 0);
+    if (invalidStep >= 0) {
+      setCurrentStep(invalidStep);
+      markVisited(invalidStep);
+      focusFirstError(invalidStep);
+      return;
+    }
+    setShowConfirm(true);
+  }
+
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     if (currentStep < steps.length - 1) {
       event.preventDefault();
       createRequestedRef.current = false;
+      setShowConfirm(false);
       goNext();
       return;
     }
@@ -522,7 +562,6 @@ export function DispatchWizardForm({
       ref={formRef}
       action={action}
       onSubmit={handleSubmit}
-      encType="multipart/form-data"
       noValidate
       className="rounded-lg bg-[#f0f2f5] p-2 sm:p-3"
     >
@@ -628,7 +667,7 @@ export function DispatchWizardForm({
                   aria-required="true"
                 >
                   <option value="">Seleccionar</option>
-                  {categories.map((item) => (
+                  {sortedCategories.map((item) => (
                     <option key={item.value} value={item.value}>
                       {item.label}
                     </option>
@@ -724,19 +763,6 @@ export function DispatchWizardForm({
                           className={inputClass}
                         />
                       </Field>
-                      <Field label="Nombre" error={errorFor(`complainants.${personIndex}.firstName`)}>
-                        <input
-                          name={`complainants.${personIndex}.firstName`}
-                          value={person.firstName}
-                          onChange={(event) => updateComplainant(personIndex, { firstName: onlyLettersAndSpaces(event.target.value) })}
-                          onKeyDown={(event) => preventInvalidKey(event, /^[\p{L} ]$/u)}
-                          onPaste={(event) => {
-                            event.preventDefault();
-                            updateComplainant(personIndex, { firstName: valueAfterPaste(event, onlyLettersAndSpaces) });
-                          }}
-                          className={inputClass}
-                        />
-                      </Field>
                       <Field label="Apellido" error={errorFor(`complainants.${personIndex}.lastName`)}>
                         <input
                           name={`complainants.${personIndex}.lastName`}
@@ -746,6 +772,19 @@ export function DispatchWizardForm({
                           onPaste={(event) => {
                             event.preventDefault();
                             updateComplainant(personIndex, { lastName: valueAfterPaste(event, onlyLettersAndSpaces) });
+                          }}
+                          className={inputClass}
+                        />
+                      </Field>
+                      <Field label="Nombre" error={errorFor(`complainants.${personIndex}.firstName`)}>
+                        <input
+                          name={`complainants.${personIndex}.firstName`}
+                          value={person.firstName}
+                          onChange={(event) => updateComplainant(personIndex, { firstName: onlyLettersAndSpaces(event.target.value) })}
+                          onKeyDown={(event) => preventInvalidKey(event, /^[\p{L} ]$/u)}
+                          onPaste={(event) => {
+                            event.preventDefault();
+                            updateComplainant(personIndex, { firstName: valueAfterPaste(event, onlyLettersAndSpaces) });
                           }}
                           className={inputClass}
                         />
@@ -847,19 +886,6 @@ export function DispatchWizardForm({
                         className={inputClass}
                       />
                     </Field>
-                    <Field label="Nombre" error={errorFor(`linkedPersons.${personIndex}.firstName`)}>
-                      <input
-                        name={`linkedPersons.${personIndex}.firstName`}
-                        value={person.firstName}
-                        onChange={(event) => updateLinkedPerson(personIndex, { firstName: onlyLettersAndSpaces(event.target.value) })}
-                        onKeyDown={(event) => preventInvalidKey(event, /^[\p{L} ]$/u)}
-                        onPaste={(event) => {
-                          event.preventDefault();
-                          updateLinkedPerson(personIndex, { firstName: valueAfterPaste(event, onlyLettersAndSpaces) });
-                        }}
-                        className={inputClass}
-                      />
-                    </Field>
                     <Field label="Apellido / Apodo manual" error={errorFor(`linkedPersons.${personIndex}.apellidoApodoManual`)}>
                       <input
                         name={`linkedPersons.${personIndex}.apellidoApodoManual`}
@@ -869,6 +895,19 @@ export function DispatchWizardForm({
                         onPaste={(event) => {
                           event.preventDefault();
                           updateLinkedPerson(personIndex, { apellidoApodoManual: valueAfterPaste(event, onlyLettersAndSpaces) });
+                        }}
+                        className={inputClass}
+                      />
+                    </Field>
+                    <Field label="Nombre" error={errorFor(`linkedPersons.${personIndex}.firstName`)}>
+                      <input
+                        name={`linkedPersons.${personIndex}.firstName`}
+                        value={person.firstName}
+                        onChange={(event) => updateLinkedPerson(personIndex, { firstName: onlyLettersAndSpaces(event.target.value) })}
+                        onKeyDown={(event) => preventInvalidKey(event, /^[\p{L} ]$/u)}
+                        onPaste={(event) => {
+                          event.preventDefault();
+                          updateLinkedPerson(personIndex, { firstName: valueAfterPaste(event, onlyLettersAndSpaces) });
                         }}
                         className={inputClass}
                       />
@@ -928,8 +967,10 @@ export function DispatchWizardForm({
                 <textarea
                   name="description"
                   value={values.description}
-                  onChange={(event) => setValue("description", event.target.value)}
-                  className={textareaClass}
+                  onChange={(event) => setAutosizedTextareaValue("description", event)}
+                  onInput={(event) => resizeTextarea(event.currentTarget)}
+                  data-autosize="true"
+                  className={autosizeTextareaClass}
                   aria-required="true"
                 />
               </Field>
@@ -937,16 +978,20 @@ export function DispatchWizardForm({
                 <textarea
                   name="initialGuidance"
                   value={values.initialGuidance}
-                  onChange={(event) => setValue("initialGuidance", event.target.value)}
-                  className={textareaClass}
+                  onChange={(event) => setAutosizedTextareaValue("initialGuidance", event)}
+                  onInput={(event) => resizeTextarea(event.currentTarget)}
+                  data-autosize="true"
+                  className={autosizeTextareaClass}
                 />
               </Field>
               <Field label="Notas internas confidenciales">
                 <textarea
                   name="confidentialNotes"
                   value={values.confidentialNotes}
-                  onChange={(event) => setValue("confidentialNotes", event.target.value)}
-                  className={textareaClass}
+                  onChange={(event) => setAutosizedTextareaValue("confidentialNotes", event)}
+                  onInput={(event) => resizeTextarea(event.currentTarget)}
+                  data-autosize="true"
+                  className={autosizeTextareaClass}
                 />
               </Field>
             </div>
@@ -979,7 +1024,7 @@ export function DispatchWizardForm({
                   className={inputClass}
                 >
                   <option value="">Sin derivación</option>
-                  {areas.map((item) => (
+                  {sortedAreas.map((item) => (
                     <option key={item.value} value={item.label}>
                       {item.label}
                     </option>
@@ -1008,12 +1053,22 @@ export function DispatchWizardForm({
             </div>
           </StepCard>
 
-          <StepCard title="Resumen final">
+          {showConfirm ? (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+              <div className="max-h-[92dvh] w-full max-w-5xl overflow-y-auto rounded-lg bg-[#f0f2f5] p-3 shadow-xl sm:p-4">
+                <StepCard
+                  title="Resumen de la atencion"
+                  action={(
+                    <Button type="button" variant="secondary" onClick={() => setShowConfirm(false)}>
+                      Editar
+                    </Button>
+                  )}
+                >
             <div className="divide-y divide-slate-200">
               <SummaryBlock title="Situación" actionLabel="Editar situación" onEdit={() => goToStep(0)}>
                 <SummaryGrid>
                   <SummaryItem label="Fecha y hora" value={values.attendedAt ? formatDateTime(values.attendedAt) : "Fecha y hora actual al crear"} />
-                  <SummaryItem label="Categoría" value={selectedLabel(categories, values.category)} />
+                  <SummaryItem label="Categoría" value={selectedLabel(sortedCategories, values.category)} />
                   <SummaryItem label="Prioridad" value={labelFromValue(values.priority)} />
                 </SummaryGrid>
               </SummaryBlock>
@@ -1030,8 +1085,8 @@ export function DispatchWizardForm({
                           <SummaryItems
                             items={[
                               { label: "DNI", value: person.dni },
-                              { label: "Nombre", value: person.firstName },
                               { label: "Apellido", value: person.lastName },
+                              { label: "Nombre", value: person.firstName },
                               { label: "Teléfono disponible", value: [person.phone1, person.phone2].filter(Boolean).join(" / ") },
                               { label: "Domicilio", value: person.address },
                             ]}
@@ -1054,8 +1109,8 @@ export function DispatchWizardForm({
                         <SummaryItems
                           items={[
                             { label: "DNI", value: person.dni },
-                            { label: "Nombre", value: person.firstName },
                             { label: "Apellido / Apodo manual", value: person.apellidoApodoManual },
+                            { label: "Nombre", value: person.firstName },
                             { label: "Teléfono", value: [person.phone1, person.phone2].filter(Boolean).join(" / ") },
                             { label: "Domicilio", value: person.address },
                           ]}
@@ -1108,7 +1163,24 @@ export function DispatchWizardForm({
             <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">
               Revisá la información cargada antes de crear la atención. Una vez creada, quedará registrada en el sistema.
             </div>
-          </StepCard>
+                  <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-[#dee2e6] pt-4">
+                    <Button type="button" variant="secondary" onClick={() => setShowConfirm(false)}>
+                      Editar
+                    </Button>
+                    <Button
+                      type="submit"
+                      onClick={() => {
+                        createRequestedRef.current = true;
+                      }}
+                      className="border-[#0667b0] bg-[#0667b0] hover:bg-blue-700"
+                    >
+                      {submitLabel === "Crear" ? "Confirmar creacion" : submitLabel}
+                    </Button>
+                  </div>
+                </StepCard>
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[#dee2e6] bg-white px-3 py-2 shadow-sm">
@@ -1149,14 +1221,12 @@ export function DispatchWizardForm({
             </Button>
           ) : (
             <Button
-              type="submit"
+              type="button"
               disabled={!allValid}
-              onClick={() => {
-                createRequestedRef.current = true;
-              }}
+              onClick={openSummary}
               className="border-[#0667b0] bg-[#0667b0] hover:bg-blue-700"
             >
-              {effectiveSubmitLabel}
+              Revisar y confirmar
             </Button>
           )}
         </div>

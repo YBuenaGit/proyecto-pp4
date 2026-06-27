@@ -14,6 +14,7 @@ import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessDispatch } from "@/lib/rbac";
 import { dateRangeWhere, pagination, param } from "@/lib/search";
 import type { SearchParams } from "@/lib/types";
+import { personDisplayName } from "@/lib/text";
 import { createDispatchRecord } from "./actions";
 import { DispatchForm } from "./dispatch-form";
 
@@ -123,7 +124,7 @@ export default async function DispatchListPage({
           />
           <FilterSelect label="Estado" name="status" defaultValue={status} options={DISPATCH_STATUSES.map((s) => [s, labelFromValue(s)])} />
           <FilterInput label="DNI" name="dni" defaultValue={dni} />
-          <FilterInput label="Nombre y apellido" name="name" defaultValue={name} />
+          <FilterInput label="Apellido y nombre" name="name" defaultValue={name} />
           <FilterSelect
             label="Usuario que atendio"
             name="createdById"
@@ -159,9 +160,9 @@ export default async function DispatchListPage({
             </Td>
             <Td>
               <div className="font-medium text-[#212529]">
-                {record.nameSnapshot ??
-                  ([record.linkedPersons[0]?.firstName, record.linkedPersons[0]?.apellidoApodoManual].filter(Boolean).join(" ") ||
-                    "Sin identificar")}
+                {personDisplayName(record.linkedPersons[0]?.apellidoApodoManual, record.linkedPersons[0]?.firstName) ||
+                  record.nameSnapshot ||
+                  "Sin identificar"}
               </div>
               <div className="text-xs text-[#6c757d]">{record.dniSnapshot ?? "Sin DNI"}</div>
             </Td>

@@ -1,6 +1,7 @@
 import { Buffer } from "node:buffer";
 import { normalizeName } from "./format";
 import { prisma } from "./prisma";
+import { personDisplayName } from "./text";
 
 export type PeopleModule = "DESPACHO" | "JURIDICO";
 export type PeopleRole = "DENUNCIANTE" | "DENUNCIADO_VINCULADO" | "REGISTRO";
@@ -92,7 +93,7 @@ function clean(value: string | null | undefined) {
 }
 
 function personName(firstName: string | null | undefined, lastName: string | null | undefined) {
-  return [clean(firstName), clean(lastName)].filter(Boolean).join(" ").trim();
+  return personDisplayName(lastName, firstName);
 }
 
 function personKey(source: PersonSource) {
@@ -207,7 +208,7 @@ export async function getPeopleIndex({
   take?: number;
 }) {
   const [externalPeople, dispatchRecords, juridicalInterventions] = await Promise.all([
-    prisma.externalPerson.findMany({ orderBy: [{ lastName: "asc" }, { firstName: "asc" }] }),
+    prisma.externalPerson.findMany({ orderBy: { createdAt: "desc" } }),
     permissions.canDispatch
       ? prisma.dispatchRecord.findMany({
           include: {
@@ -243,7 +244,7 @@ export async function getPeopleIndex({
       phone2: person.phone2,
       address: person.address,
       role: "REGISTRO",
-      updatedAt: person.updatedAt,
+      updatedAt: person.createdAt,
       externalPersonId: person.id,
     });
   }
@@ -272,7 +273,7 @@ export async function getPeopleIndex({
         address: person.address,
         role: "DENUNCIANTE",
         caseItem: { ...baseCase, role: "DENUNCIANTE" },
-        updatedAt: record.updatedAt,
+        updatedAt: record.createdAt,
       });
     }
 
@@ -301,7 +302,7 @@ export async function getPeopleIndex({
         address: person.address,
         role: "DENUNCIADO_VINCULADO",
         caseItem: { ...baseCase, role: "DENUNCIADO_VINCULADO" },
-        updatedAt: record.updatedAt,
+        updatedAt: record.createdAt,
       });
     }
   }
@@ -330,7 +331,7 @@ export async function getPeopleIndex({
         address: person.address,
         role: "DENUNCIANTE",
         caseItem: { ...baseCase, role: "DENUNCIANTE" },
-        updatedAt: record.updatedAt,
+        updatedAt: record.createdAt,
       });
     }
 
@@ -359,7 +360,7 @@ export async function getPeopleIndex({
         address: person.address,
         role: "DENUNCIADO_VINCULADO",
         caseItem: { ...baseCase, role: "DENUNCIADO_VINCULADO" },
-        updatedAt: record.updatedAt,
+        updatedAt: record.createdAt,
       });
     }
   }
@@ -367,7 +368,10 @@ export async function getPeopleIndex({
   return [...entries.values()]
     .map(finalizeEntry)
     .filter((entry) => matchesFilters(entry, filters))
-    .sort((a, b) => a.displayName.localeCompare(b.displayName, "es"))
+    .sort((a, b) => {
+      const byCreatedAt = (b.updatedAt?.getTime() ?? 0) - (a.updatedAt?.getTime() ?? 0);
+      return byCreatedAt || a.displayName.localeCompare(b.displayName, "es");
+    })
     .slice(0, take);
 }
 

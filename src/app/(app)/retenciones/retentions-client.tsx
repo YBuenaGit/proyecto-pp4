@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, type ChangeEvent, type FormEvent } from "react";
-import { Edit3, Eye, FileText, Plus, Upload } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { Edit3, Eye, Plus, Trash2, Upload } from "lucide-react";
 import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { FilterBar, FilterInput, FilterSelect } from "@/components/ui/filter-bar";
@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Table, Td } from "@/components/ui/table";
 import { cn } from "@/components/ui/cn";
+import { sortByLabel } from "@/lib/text";
 import {
   ACT_TYPES,
   BRANDS,
@@ -115,19 +116,49 @@ async function apiJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise
   return data as T;
 }
 
+async function uploadRetentionFiles(retentionId: string, files: File[]) {
+  if (!files.length) return null;
+  const formData = new FormData();
+  files.forEach((file) => formData.append("files", file));
+  return apiJson<{ item: RetentionDetail }>(`/api/retenciones/${retentionId}/archivos`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
 function RetentionForm({
   initial,
+  onAttachmentChange,
   onCancel,
   onSave,
   submitLabel,
 }: {
   initial?: RetentionRecord;
+  onAttachmentChange?: (item: RetentionDetail) => void;
   onCancel: () => void;
-  onSave: (input: RetentionInput) => Promise<void>;
+  onSave: (input: RetentionInput, files: File[]) => Promise<void>;
   submitLabel: string;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [existingAttachments, setExistingAttachments] = useState<RetentionAttachment[]>([]);
+  const [deletingAttachmentId, setDeletingAttachmentId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!initial?.id) return;
+    let ignore = false;
+    apiJson<{ item: RetentionDetail }>(`/api/retenciones/${initial.id}`)
+      .then((data) => {
+        if (!ignore) setExistingAttachments(data.item.attachments);
+      })
+      .catch((err) => {
+        if (!ignore) setError(err instanceof Error ? err.message : "No se pudieron cargar los archivos.");
+      });
+    return () => {
+      ignore = true;
+    };
+  }, [initial?.id]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -141,12 +172,33 @@ function RetentionForm({
     setSaving(true);
     setError(null);
     try {
-      await onSave(input);
+      await onSave(input, selectedFiles);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo guardar la retencion.");
       setSaving(false);
     }
   }
+
+  async function deleteAttachment(attachment: RetentionAttachment) {
+    if (!initial) return;
+    setDeletingAttachmentId(attachment.id);
+    setError(null);
+    try {
+      const data = await apiJson<{ item: RetentionDetail }>(
+        `/api/retenciones/${initial.id}/archivos/${attachment.id}`,
+        { method: "DELETE" },
+      );
+      setExistingAttachments(data.item.attachments);
+      onAttachmentChange?.(data.item);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo quitar el archivo.");
+    } finally {
+      setDeletingAttachmentId(null);
+    }
+  }
+
+  const sortedBrands = sortByLabel(BRANDS, (brand) => brand);
+  const sortedColors = sortByLabel(COLORS, (color) => color);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -190,7 +242,7 @@ function RetentionForm({
         <FormField label="Marca">
           <select name="brand" defaultValue={initial?.brand ?? ""} required className={inputClass}>
             <option value="">Seleccione marca</option>
-            {BRANDS.map((brand) => (
+            {sortedBrands.map((brand) => (
               <option key={brand} value={brand}>
                 {brand}
               </option>
@@ -200,7 +252,7 @@ function RetentionForm({
         <FormField label="Color">
           <select name="color" defaultValue={initial?.color ?? ""} required className={inputClass}>
             <option value="">Seleccione color</option>
-            {COLORS.map((color) => (
+            {sortedColors.map((color) => (
               <option key={color} value={color}>
                 {color}
               </option>
@@ -219,7 +271,33 @@ function RetentionForm({
         <FormField label="Observaciones" className="md:col-span-2">
           <textarea name="description" defaultValue={initial?.description} required className={textareaClass} />
         </FormField>
+        <FormField label="Adjuntos" className="md:col-span-2">
+          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-sm border border-dashed border-[#17a2b8] bg-[#d1ecf1]/40 px-3 py-3 text-sm font-semibold text-[#0c5460] transition hover:bg-[#d1ecf1] focus-within:ring-2 focus-within:ring-[#80bdff]">
+            <Upload className="h-4 w-4" />
+            Seleccionar imagenes o archivos
+            <input
+              type="file"
+              multiple
+              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+              className="sr-only"
+              onChange={(event) => setSelectedFiles(Array.from(event.currentTarget.files ?? []))}
+            />
+          </label>
+          <p className="mt-1 text-xs font-medium text-[#6c757d]">
+            {selectedFiles.length ? `${selectedFiles.length} archivo(s) listo(s) para guardar.` : "Puedes seleccionar mas de un archivo."}
+          </p>
+        </FormField>
       </FormGrid>
+      {existingAttachments.length ? (
+        <section className="space-y-2 rounded-sm border border-[#dee2e6] bg-[#f8f9fa] p-3">
+          <h3 className="text-sm font-semibold text-[#212529]">Archivos asociados</h3>
+          <AttachmentGrid
+            attachments={existingAttachments}
+            deletingId={deletingAttachmentId}
+            onDelete={initial ? deleteAttachment : undefined}
+          />
+        </section>
+      ) : null}
       <div className="flex flex-wrap justify-end gap-2 border-t border-[#dee2e6] pt-3">
         <Button type="button" variant="secondary" onClick={onCancel} disabled={saving}>
           Cancelar
@@ -324,129 +402,49 @@ function RetentionDetailsPanel({ record }: { record: RetentionRecord }) {
   );
 }
 
-function AttachmentGrid({ attachments }: { attachments: RetentionAttachment[] }) {
+function AttachmentGrid({
+  attachments,
+  onDelete,
+  deletingId,
+}: {
+  attachments: RetentionAttachment[];
+  onDelete?: (attachment: RetentionAttachment) => void;
+  deletingId?: string | null;
+}) {
   if (!attachments.length) return <p className="rounded-sm border border-[#dee2e6] bg-[#f8f9fa] p-3 text-sm font-medium text-[#6c757d]">Sin archivos cargados.</p>;
 
   return (
     <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
       {attachments.map((file) => (
-        <a
-          key={file.id}
-          href={file.downloadUrl}
-          target="_blank"
-          rel="noreferrer"
-          className="rounded-sm border border-[#dee2e6] bg-[#f8f9fa] px-3 py-2 text-sm transition duration-150 hover:border-[#0667b0] hover:bg-white"
-        >
-          <div className="font-semibold text-[#0667b0] [overflow-wrap:anywhere]">{file.originalName || file.fileName}</div>
-          <div className="mt-1 text-xs font-medium text-[#6c757d]">
-            {formatFileSize(file.size)} - {file.mimeType || "application/octet-stream"}
-          </div>
-          <div className="mt-1 text-xs font-medium text-[#6c757d]">
-            {file.uploadedBy} - {formatDateTime(file.createdAt)}
-          </div>
-        </a>
+        <div key={file.id} className="rounded-sm border border-[#dee2e6] bg-[#f8f9fa] px-3 py-2 text-sm">
+          <a
+            href={file.downloadUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="block transition duration-150 hover:text-[#064f87]"
+          >
+            <div className="font-semibold text-[#0667b0] [overflow-wrap:anywhere]">{file.originalName || file.fileName}</div>
+            <div className="mt-1 text-xs font-medium text-[#6c757d]">
+              {formatFileSize(file.size)} - {file.mimeType || "application/octet-stream"}
+            </div>
+            <div className="mt-1 text-xs font-medium text-[#6c757d]">
+              {file.uploadedBy} - {formatDateTime(file.createdAt)}
+            </div>
+          </a>
+          {onDelete ? (
+            <button
+              type="button"
+              onClick={() => onDelete(file)}
+              disabled={deletingId === file.id}
+              className="mt-2 inline-flex min-h-8 items-center gap-1.5 rounded-sm border border-[#dc3545] bg-white px-2 text-xs font-semibold text-[#c82333] transition hover:bg-[#f8d7da] disabled:opacity-60"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              {deletingId === file.id ? "Quitando..." : "Quitar"}
+            </button>
+          ) : null}
+        </div>
       ))}
     </div>
-  );
-}
-
-function FileUploadPanel({
-  retentions,
-  onUploaded,
-}: {
-  retentions: RetentionRecord[];
-  onUploaded: (item: RetentionDetail) => void;
-}) {
-  const [selectedId, setSelectedId] = useState("");
-  const [attachments, setAttachments] = useState<RetentionAttachment[]>([]);
-  const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const activeSelectedId = selectedId || retentions[0]?.id || "";
-
-  useEffect(() => {
-    if (!activeSelectedId) return;
-
-    let ignore = false;
-    apiJson<{ item: RetentionDetail }>(`/api/retenciones/${activeSelectedId}`)
-      .then((data) => {
-        if (!ignore) setAttachments(data.item.attachments);
-      })
-      .catch((err) => {
-        if (!ignore) setError(err instanceof Error ? err.message : "No se pudieron cargar los archivos.");
-      })
-    return () => {
-      ignore = true;
-    };
-  }, [activeSelectedId]);
-
-  async function handleChange(event: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.target.files ?? []);
-    event.currentTarget.value = "";
-    if (!activeSelectedId || !files.length) return;
-
-    const formData = new FormData();
-    files.forEach((file) => formData.append("files", file));
-    setUploading(true);
-    setError(null);
-    try {
-      const data = await apiJson<{ item: RetentionDetail }>(`/api/retenciones/${activeSelectedId}/archivos`, {
-        method: "POST",
-        body: formData,
-      });
-      setAttachments(data.item.attachments);
-      onUploaded(data.item);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudieron subir los archivos.");
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  const selectedRetention = retentions.find((record) => record.id === activeSelectedId);
-
-  return (
-    <section className="mt-4 rounded-sm border border-[#dee2e6] bg-white shadow-sm">
-      <div className="flex flex-col gap-2 border-b border-[#dee2e6] bg-[#e9ecef] px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2 text-sm font-semibold text-[#212529]">
-          <FileText className="h-4 w-4 text-[#0667b0]" />
-          Imagenes / archivos
-        </div>
-        <label className={cn("inline-flex min-h-9 max-w-full cursor-pointer items-center justify-center gap-1.5 rounded-sm border border-[#0667b0] bg-[#0667b0] px-3 py-1.5 text-center text-sm font-semibold leading-tight text-white shadow-sm transition duration-150 hover:border-[#0a61b9] hover:bg-[#0a61b9] focus-within:ring-2 focus-within:ring-[#80bdff]", (!activeSelectedId || uploading) && "pointer-events-none opacity-60")}>
-          <Upload className="h-4 w-4" />
-          {uploading ? "Subiendo..." : "Subir imagenes / archivos"}
-          <input type="file" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt" className="sr-only" onChange={handleChange} disabled={!activeSelectedId || uploading} />
-        </label>
-      </div>
-
-      <div className="grid gap-3 p-3">
-        {error ? <div className="rounded-sm border border-[#f5c6cb] bg-[#f8d7da] px-3 py-2 text-sm font-semibold text-[#721c24]">{error}</div> : null}
-        <label className="block max-w-xl">
-          <span className="mb-1 block text-xs font-semibold text-[#495057]">Retencion / acta</span>
-          <select
-            value={activeSelectedId}
-            onChange={(event) => {
-              setError(null);
-              setSelectedId(event.target.value);
-            }}
-            className={inputClass}
-            disabled={!retentions.length || uploading}
-          >
-            {!retentions.length ? <option value="">Sin retenciones disponibles</option> : null}
-            {retentions.map((record) => (
-              <option key={record.id} value={record.id}>
-                {record.internalNumber} - Acta {record.actNumber} - {record.domain || record.engineNumber || record.chassisNumber}
-              </option>
-            ))}
-          </select>
-        </label>
-        {selectedRetention ? (
-          <p className="text-xs font-medium text-[#6c757d]">
-            Archivos asociados a {selectedRetention.internalNumber}. Se guardan en Cloudflare R2 al seleccionar archivos.
-          </p>
-        ) : null}
-        <AttachmentGrid attachments={activeSelectedId ? attachments : []} />
-      </div>
-    </section>
   );
 }
 
@@ -499,6 +497,15 @@ export function RetentionsClient() {
     refreshRetentions();
   }, [refreshRetentions]);
 
+  const resetAndRefresh = useCallback(() => {
+    setLoading(true);
+    setError(null);
+    setPage(1);
+    setFilters({});
+    setFilterRenderKey((current) => current + 1);
+    refreshRetentions();
+  }, [refreshRetentions]);
+
   function applyFilters(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
@@ -516,27 +523,29 @@ export function RetentionsClient() {
     setFilterRenderKey((current) => current + 1);
   }
 
-  async function addRetention(input: RetentionInput, close: () => void) {
-    await apiJson<{ item: RetentionDetail }>("/api/retenciones", {
+  async function addRetention(input: RetentionInput, files: File[], close: () => void) {
+    const created = await apiJson<{ item: RetentionDetail }>("/api/retenciones", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
+    await uploadRetentionFiles(created.item.id, files);
     refreshList();
     close();
   }
 
-  async function updateRetention(id: string, input: RetentionInput, close: () => void) {
+  async function updateRetention(id: string, input: RetentionInput, files: File[], close: () => void) {
     await apiJson<{ item: RetentionDetail }>(`/api/retenciones/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     });
+    await uploadRetentionFiles(id, files);
     refreshList();
     close();
   }
 
-  function updateUploadedRecord(item: RetentionDetail) {
+  function updateRecordFromDetail(item: RetentionDetail) {
     setRetentions((current) =>
       current.map((record) =>
         record.id === item.id
@@ -562,13 +571,13 @@ export function RetentionsClient() {
         actions={
           <AppModal title="Nueva retencion" trigger={<><Plus className="h-4 w-4" />Nueva retencion</>} size="xl">
             {({ close }) => (
-              <RetentionForm submitLabel="Crear retencion" onCancel={close} onSave={(input) => addRetention(input, close)} />
+              <RetentionForm submitLabel="Crear retencion" onCancel={close} onSave={(input, files) => addRetention(input, files, close)} />
             )}
           </AppModal>
         }
       >
         <div key={filterRenderKey}>
-          <FilterBar resetHref="/retenciones" label="Buscar retencion" onSubmit={applyFilters} onClear={clearFilters}>
+          <FilterBar resetHref="/retenciones" label="Buscar retencion" onSubmit={applyFilters} onClear={clearFilters} modal>
             <FilterInput label="Desde" name="from" type="date" defaultValue={filters.from} />
             <FilterInput label="Hasta" name="to" type="date" defaultValue={filters.to} />
             <FilterInput label="Nro de acta" name="actNumber" defaultValue={filters.actNumber} />
@@ -599,7 +608,7 @@ export function RetentionsClient() {
           setLoading(true);
           setPage(nextPage);
         }}
-        onRefresh={refreshList}
+        onRefresh={resetAndRefresh}
         headers={["Fecha y hora", "Tipo de acta / Nro", "Identificador", "Vehiculo / Marca / Color", "Estado", "Acciones"]}
         empty={!loading && !retentions.length}
         minWidth={1180}
@@ -641,7 +650,8 @@ export function RetentionsClient() {
                       initial={record}
                       submitLabel="Guardar cambios"
                       onCancel={close}
-                      onSave={(input) => updateRetention(record.id, input, close)}
+                      onAttachmentChange={updateRecordFromDetail}
+                      onSave={(input, files) => updateRetention(record.id, input, files, close)}
                     />
                   )}
                 </AppModal>
@@ -653,7 +663,6 @@ export function RetentionsClient() {
 
       {loading ? <p className="mt-3 text-sm font-medium text-[#6c757d]">Cargando retenciones...</p> : null}
 
-      <FileUploadPanel retentions={retentions} onUploaded={updateUploadedRecord} />
     </>
   );
 }

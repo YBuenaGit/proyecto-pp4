@@ -14,6 +14,7 @@ import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessJuridical } from "@/lib/rbac";
 import { dateRangeWhere, pagination, param } from "@/lib/search";
 import type { SearchParams } from "@/lib/types";
+import { personDisplayName } from "@/lib/text";
 import { createJuridicalIntervention } from "./actions";
 import { InterventionForm } from "./intervention-form";
 
@@ -71,7 +72,12 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
   const [interventions, totalInterventions, types, users, contexts] = await Promise.all([
     prisma.juridicalIntervention.findMany({
       where,
-      include: { person: true, createdBy: true, destinationReferrals: true },
+      include: {
+        person: true,
+        createdBy: true,
+        destinationReferrals: true,
+        linkedPersons: { orderBy: { sortOrder: "asc" }, take: 1 },
+      },
       orderBy: { attendedAt: "desc" },
       skip,
       take,
@@ -110,7 +116,7 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
           <FilterSelect label="Estado" name="status" defaultValue={status} options={JURIDICAL_STATUSES.map((s) => [s, labelFromValue(s)])} />
           <FilterSelect label="Urgencia" name="urgency" defaultValue={urgency} options={PRIORITIES.map((p) => [p, labelFromValue(p)])} />
           <FilterInput label="DNI" name="dni" defaultValue={dni} />
-          <FilterInput label="Nombre y apellido" name="name" defaultValue={name} />
+          <FilterInput label="Apellido y nombre" name="name" defaultValue={name} />
           <FilterInput label="Oficio" name="oficioNumber" defaultValue={oficioNumber} />
           <FilterInput label="Expediente" name="expedienteNumber" defaultValue={expedienteNumber} />
           <FilterSelect label="Usuario" name="createdById" defaultValue={createdById} options={users.map((item) => [item.id, item.name])} />
@@ -139,7 +145,9 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
               <div className="text-xs text-[#6c757d]">Reportado por: {intervention.createdBy.name}</div>
             </Td>
             <Td>
-              <div className="font-medium text-[#212529]">{intervention.nameSnapshot ?? "Sin identificar"}</div>
+              <div className="font-medium text-[#212529]">
+                {personDisplayName(intervention.linkedPersons[0]?.apellidoApodoManual, intervention.linkedPersons[0]?.firstName) || intervention.nameSnapshot || "Sin identificar"}
+              </div>
               <div className="text-xs text-[#6c757d]">{intervention.dniSnapshot ?? "Sin DNI"}</div>
             </Td>
             <Td>{types.find((item) => item.value === intervention.type)?.label ?? labelFromValue(intervention.type)}</Td>

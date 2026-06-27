@@ -1,5 +1,6 @@
 import { normalizeName } from "./format";
 import { prisma } from "./prisma";
+import { capitalizeFirstLetter, capitalizeOptionalText, personDisplayName } from "./text";
 
 export function text(formData: FormData, key: string) {
   const value = formData.get(key);
@@ -10,6 +11,14 @@ export function text(formData: FormData, key: string) {
 export function optionalText(formData: FormData, key: string) {
   const value = text(formData, key);
   return value.length ? value : null;
+}
+
+export function sentenceText(formData: FormData, key: string) {
+  return capitalizeFirstLetter(text(formData, key));
+}
+
+export function optionalSentenceText(formData: FormData, key: string) {
+  return capitalizeOptionalText(optionalText(formData, key));
 }
 
 export function checkbox(formData: FormData, key: string) {
@@ -40,26 +49,26 @@ export function complainantFromForm(formData: FormData) {
   return {
     complainantIsAnonymous,
     complainantDni: optionalText(formData, "complainantDni"),
-    complainantFirstName: optionalText(formData, "complainantFirstName"),
-    complainantLastName: optionalText(formData, "complainantLastName"),
+    complainantFirstName: optionalSentenceText(formData, "complainantFirstName"),
+    complainantLastName: optionalSentenceText(formData, "complainantLastName"),
     complainantPhone1: optionalText(formData, "complainantPhone1"),
     complainantPhone2: optionalText(formData, "complainantPhone2"),
-    complainantAddress: optionalText(formData, "complainantAddress"),
+    complainantAddress: optionalSentenceText(formData, "complainantAddress"),
   };
 }
 
 export async function upsertPersonFromForm(formData: FormData) {
   const dni = optionalText(formData, "dni");
-  const firstName = optionalText(formData, "firstName");
-  const lastName = optionalText(formData, "lastName");
+  const firstName = optionalSentenceText(formData, "firstName");
+  const lastName = optionalSentenceText(formData, "lastName");
   const phone1 = optionalText(formData, "phone1");
   const phone2 = optionalText(formData, "phone2");
-  const address = optionalText(formData, "address");
+  const address = optionalSentenceText(formData, "address");
 
   if (!dni && !firstName && !lastName) return null;
   const safeFirstName = firstName || "Sin";
   const safeLastName = lastName || "Identificar";
-  const fullNameNormalized = normalizeName(`${safeFirstName} ${safeLastName}`);
+  const fullNameNormalized = normalizeName(personDisplayName(safeLastName, safeFirstName));
 
   if (dni) {
     const existing = await prisma.externalPerson.findUnique({

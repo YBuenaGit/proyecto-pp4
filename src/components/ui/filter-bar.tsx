@@ -1,5 +1,9 @@
-import type { FormEventHandler, ReactNode } from "react";
+"use client";
+
+import type { FormEvent, FormEventHandler, ReactNode } from "react";
 import { Search } from "lucide-react";
+import { sortByLabel } from "@/lib/text";
+import { AppModal } from "./app-modal";
 import { Button, LinkButton } from "./button";
 
 function ClearControl({
@@ -30,13 +34,50 @@ export function FilterBar({
   onSubmit,
   onClear,
   label = "Buscar",
+  modal = false,
 }: {
   children: ReactNode;
   resetHref: string;
   onSubmit?: FormEventHandler<HTMLFormElement>;
   onClear?: () => void;
   label?: string;
+  modal?: boolean;
 }) {
+  function form(close?: () => void) {
+    return (
+      <form
+        className="p-3"
+        onSubmit={(event: FormEvent<HTMLFormElement>) => {
+          onSubmit?.(event);
+          if (onSubmit) close?.();
+        }}
+      >
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">{children}</div>
+        <div className="mt-3 flex flex-wrap items-center justify-end gap-2 border-t border-[#c7d2de] pt-3">
+          <ClearControl resetHref={resetHref} onClear={onClear} />
+          <Button type="submit" variant="success">
+            <Search className="h-4 w-4" />
+            {label}
+          </Button>
+        </div>
+      </form>
+    );
+  }
+
+  if (modal) {
+    return (
+      <AppModal
+        title="Filtros de busqueda"
+        description="Completa uno o varios campos para limitar los resultados."
+        trigger={<><Search className="h-4 w-4" />{label}</>}
+        triggerVariant="success"
+        size="xl"
+      >
+        {({ close }) => form(close)}
+      </AppModal>
+    );
+  }
+
   return (
     <details className="group">
       <summary className="flex w-fit cursor-pointer list-none marker:hidden">
@@ -50,16 +91,7 @@ export function FilterBar({
         <div className="border-b border-[#c7d2de] bg-[#edf5fb] px-3 py-2 text-sm font-semibold text-[#263544]">
           Filtros de búsqueda
         </div>
-        <form className="p-3" onSubmit={onSubmit}>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">{children}</div>
-          <div className="mt-3 flex flex-wrap items-center justify-end gap-2 border-t border-[#c7d2de] pt-3">
-            <ClearControl resetHref={resetHref} onClear={onClear} />
-            <Button type="submit" variant="success">
-              <Search className="h-4 w-4" />
-              {label}
-            </Button>
-          </div>
-        </form>
+        {form()}
       </section>
     </details>
   );
@@ -100,6 +132,8 @@ export function FilterSelect({
   defaultValue?: string;
   options: Array<string | [string, string]>;
 }) {
+  const sortedOptions = sortByLabel(options, (option) => (Array.isArray(option) ? option[1] : option));
+
   return (
     <label className="block">
       <span className="mb-1 block text-xs font-semibold text-[#495057]">{label}</span>
@@ -109,7 +143,7 @@ export function FilterSelect({
         className="h-9 w-full rounded-sm border border-[#b9c6d3] bg-white px-2.5 text-sm text-[#212529] outline-none transition duration-150 focus:border-[#0667b0] focus:ring-2 focus:ring-[rgba(6,103,176,.22)]"
       >
         <option value="">Todos</option>
-        {options.map((option) => {
+        {sortedOptions.map((option) => {
           const [value, labelText] = Array.isArray(option) ? option : [option, option];
           return (
             <option key={value} value={value}>

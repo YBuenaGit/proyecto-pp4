@@ -128,7 +128,7 @@ export default async function AgendaPage({ searchParams }: { searchParams?: Prom
             <AppModal
               title="Nueva cita"
               trigger={<><Plus className="h-4 w-4" />Nueva cita</>}
-              size="xl"
+              size="lg"
             >
               <AppointmentForm
                 action={createAppointment}

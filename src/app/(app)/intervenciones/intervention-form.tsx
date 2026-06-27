@@ -6,6 +6,7 @@ import { Button, LinkButton } from "@/components/ui/button";
 import { cn } from "@/components/ui/cn";
 import { JURIDICAL_DERIVED_AREAS, JURIDICAL_STATUSES, PRIORITIES } from "@/lib/constants";
 import { formatDateTime, labelFromValue, normalizeName, toDateInputValue } from "@/lib/format";
+import { sortByLabel } from "@/lib/text";
 
 type ComplainantDraft = {
   id: string;
@@ -678,6 +679,8 @@ export function InterventionForm({
   const [values, setValues] = useState<InterventionWizardValues>(() => valuesFromRecord(record));
   const [selectedAttachments, setSelectedAttachments] = useState<File[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
+  const sortedTypes = useMemo(() => sortByLabel(types, (item) => item.label), [types]);
+  const sortedContexts = useMemo(() => sortByLabel(contexts, (item) => item.label), [contexts]);
 
   const submittedComplainants = useMemo(
     () => values.complainants.filter(hasComplainantData).map(cleanComplainant),
@@ -892,7 +895,6 @@ export function InterventionForm({
       ref={formRef}
       action={action}
       onSubmit={handleSubmit}
-      encType="multipart/form-data"
       noValidate
       className="rounded-lg bg-[#f0f2f5] p-3 sm:p-5"
     >
@@ -973,7 +975,7 @@ export function InterventionForm({
               <Field label="Tipo" error={errorFor("type")}>
                 <select name="type" value={values.type} onChange={(event) => setValue("type", event.target.value)} className={inputClass}>
                   <option value="">Seleccionar</option>
-                  {types.map((item) => (
+                  {sortedTypes.map((item) => (
                     <option key={item.value} value={item.value}>
                       {item.label}
                     </option>
@@ -997,7 +999,7 @@ export function InterventionForm({
                   className={inputClass}
                 >
                   <option value="">Sin especificar</option>
-                  {contexts.map((item) => (
+                  {sortedContexts.map((item) => (
                     <option key={item.value} value={item.value}>
                       {item.label}
                     </option>
@@ -1098,19 +1100,6 @@ export function InterventionForm({
                           onUseExisting={(existingPerson) => applyExistingComplainant(personIndex, existingPerson)}
                         />
                       </div>
-                      <Field label="Nombre" error={errorFor(`complainants.${personIndex}.firstName`)}>
-                        <input
-                          name={`complainants.${personIndex}.firstName`}
-                          value={person.firstName}
-                          onChange={(event) => updateComplainant(personIndex, { firstName: onlyLettersAndSpaces(event.target.value) })}
-                          onKeyDown={(event) => preventInvalidKey(event, /^[\p{L} ]$/u)}
-                          onPaste={(event) => {
-                            event.preventDefault();
-                            updateComplainant(personIndex, { firstName: valueAfterPaste(event, onlyLettersAndSpaces) });
-                          }}
-                          className={inputClass}
-                        />
-                      </Field>
                       <Field label="Apellido" error={errorFor(`complainants.${personIndex}.lastName`)}>
                         <input
                           name={`complainants.${personIndex}.lastName`}
@@ -1120,6 +1109,19 @@ export function InterventionForm({
                           onPaste={(event) => {
                             event.preventDefault();
                             updateComplainant(personIndex, { lastName: valueAfterPaste(event, onlyLettersAndSpaces) });
+                          }}
+                          className={inputClass}
+                        />
+                      </Field>
+                      <Field label="Nombre" error={errorFor(`complainants.${personIndex}.firstName`)}>
+                        <input
+                          name={`complainants.${personIndex}.firstName`}
+                          value={person.firstName}
+                          onChange={(event) => updateComplainant(personIndex, { firstName: onlyLettersAndSpaces(event.target.value) })}
+                          onKeyDown={(event) => preventInvalidKey(event, /^[\p{L} ]$/u)}
+                          onPaste={(event) => {
+                            event.preventDefault();
+                            updateComplainant(personIndex, { firstName: valueAfterPaste(event, onlyLettersAndSpaces) });
                           }}
                           className={inputClass}
                         />
@@ -1224,19 +1226,6 @@ export function InterventionForm({
                         onUseExisting={(existingPerson) => applyExistingLinkedPerson(personIndex, existingPerson)}
                       />
                     </div>
-                    <Field label="Nombre" error={errorFor(`linkedPersons.${personIndex}.firstName`)}>
-                      <input
-                        name={`linkedPersons.${personIndex}.firstName`}
-                        value={person.firstName}
-                        onChange={(event) => updateLinkedPerson(personIndex, { firstName: onlyLettersAndSpaces(event.target.value) })}
-                        onKeyDown={(event) => preventInvalidKey(event, /^[\p{L} ]$/u)}
-                        onPaste={(event) => {
-                          event.preventDefault();
-                          updateLinkedPerson(personIndex, { firstName: valueAfterPaste(event, onlyLettersAndSpaces) });
-                        }}
-                        className={inputClass}
-                      />
-                    </Field>
                     <Field label="Apellido / apodo" error={errorFor(`linkedPersons.${personIndex}.apellidoApodoManual`)}>
                       <input
                         name={`linkedPersons.${personIndex}.apellidoApodoManual`}
@@ -1246,6 +1235,19 @@ export function InterventionForm({
                         onPaste={(event) => {
                           event.preventDefault();
                           updateLinkedPerson(personIndex, { apellidoApodoManual: valueAfterPaste(event, onlyLettersAndSpaces) });
+                        }}
+                        className={inputClass}
+                      />
+                    </Field>
+                    <Field label="Nombre" error={errorFor(`linkedPersons.${personIndex}.firstName`)}>
+                      <input
+                        name={`linkedPersons.${personIndex}.firstName`}
+                        value={person.firstName}
+                        onChange={(event) => updateLinkedPerson(personIndex, { firstName: onlyLettersAndSpaces(event.target.value) })}
+                        onKeyDown={(event) => preventInvalidKey(event, /^[\p{L} ]$/u)}
+                        onPaste={(event) => {
+                          event.preventDefault();
+                          updateLinkedPerson(personIndex, { firstName: valueAfterPaste(event, onlyLettersAndSpaces) });
                         }}
                         className={inputClass}
                       />
@@ -1460,9 +1462,9 @@ export function InterventionForm({
               <SummaryBlock title="Situacion" onEdit={() => goToStep(0)}>
                 <SummaryGrid>
                   <SummaryItem label="Fecha y hora" value={values.attendedAt ? formatDateTime(values.attendedAt) : "-"} />
-                  <SummaryItem label="Tipo" value={selectedLabel(types, values.type)} />
+                  <SummaryItem label="Tipo" value={selectedLabel(sortedTypes, values.type)} />
                   <SummaryItem label="Urgencia" value={labelFromValue(values.urgency)} />
-                  <SummaryItem label="Contexto" value={selectedLabel(contexts, values.interventionContext)} />
+                  <SummaryItem label="Contexto" value={selectedLabel(sortedContexts, values.interventionContext)} />
                   <SummaryItem label="Numero de oficio" value={values.oficioNumber} />
                   <SummaryItem label="Numero de expediente / legajo" value={values.expedienteNumber} />
                 </SummaryGrid>
@@ -1480,8 +1482,8 @@ export function InterventionForm({
                           <SummaryItems
                             items={[
                               { label: "DNI", value: person.dni },
-                              { label: "Nombre", value: person.firstName },
                               { label: "Apellido", value: person.lastName },
+                              { label: "Nombre", value: person.firstName },
                               { label: "Telefono", value: [person.phone1, person.phone2].filter(Boolean).join(" / ") },
                               { label: "Domicilio", value: person.address },
                             ]}
@@ -1504,8 +1506,8 @@ export function InterventionForm({
                         <SummaryItems
                           items={[
                             { label: "DNI", value: person.dni },
-                            { label: "Nombre", value: person.firstName },
                             { label: "Apellido / apodo", value: person.apellidoApodoManual },
+                            { label: "Nombre", value: person.firstName },
                             { label: "Telefono", value: [person.phone1, person.phone2].filter(Boolean).join(" / ") },
                             { label: "Domicilio", value: person.address },
                           ]}

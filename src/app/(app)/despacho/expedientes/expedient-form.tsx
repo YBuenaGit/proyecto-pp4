@@ -4,6 +4,7 @@ import { FormField, FormGrid, inputClass, textareaClass } from "@/components/ui/
 import { EXPEDIENT_AREAS, EXPEDIENT_STATUSES } from "@/lib/constants";
 import { CODIGOS_EXPEDIENTES } from "@/lib/constants/codigosExpedientes";
 import { labelFromValue } from "@/lib/format";
+import { sortByLabel } from "@/lib/text";
 
 type ExpedientRecord = {
   expedienteNumber?: string | null;
@@ -30,6 +31,9 @@ export function ExpedientForm({
   modal?: boolean;
   submitLabel?: string;
 }) {
+  const sortedCategories = sortByLabel(categories, (item) => item.label);
+  const sortedCodes = sortByLabel(CODIGOS_EXPEDIENTES, (item) => `${item.codigo} - ${item.descripcion}`);
+
   return (
     <form action={action} className="space-y-5">
       <DetailSection title="Expediente interno">
@@ -40,7 +44,7 @@ export function ExpedientForm({
           <FormField label="Código">
             <select name="codigo" defaultValue={record?.codigo ?? ""} className={inputClass}>
               <option value="">Seleccionar</option>
-              {CODIGOS_EXPEDIENTES.map((item) => (
+              {sortedCodes.map((item) => (
                 <option key={item.codigo} value={item.codigo}>
                   {item.codigo} - {item.descripcion}
                 </option>
@@ -50,7 +54,7 @@ export function ExpedientForm({
           <FormField label="Categoria">
             <select name="category" defaultValue={record?.category ?? ""} className={inputClass} required>
               <option value="">Seleccionar</option>
-              {categories.map((item) => (
+              {sortedCategories.map((item) => (
                 <option key={item.value} value={item.value}>{item.label}</option>
               ))}
             </select>
@@ -88,7 +92,7 @@ export function ExpedientForm({
           ) : null}
         </FormGrid>
       </DetailSection>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-end gap-2">
         <Button type="submit">{submitLabel ?? (record ? "Guardar cambios" : "Crear")}</Button>
         {modal ? (
           <Button type="button" variant="secondary" data-modal-close>

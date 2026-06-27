@@ -14,18 +14,18 @@ export const VEHICLE_TYPES = [
 ] as const;
 
 export const COLORS = [
-  "Blanco",
-  "Negro",
-  "Rojo",
-  "Azul",
-  "Verde",
   "Amarillo",
+  "Azul",
+  "Beige",
+  "Blanco",
   "Gris",
   "Marron",
   "Naranja",
-  "Violeta",
+  "Negro",
+  "Rojo",
   "Rosa",
-  "Beige",
+  "Verde",
+  "Violeta",
   "Otros",
 ] as const;
 
@@ -38,8 +38,8 @@ export const BRANDS = [
   "Beta",
   "BMW",
   "Brava",
-  "Chevrolet",
   "Chery",
+  "Chevrolet",
   "Citroen",
   "Corven",
   "Ducati",
@@ -66,8 +66,8 @@ export const BRANDS = [
 ] as const;
 
 export const RETENTION_STATUSES = [
-  ["PENDIENTE", "Pendiente"],
   ["ENTREGADO", "Entregado"],
+  ["PENDIENTE", "Pendiente"],
 ] as const;
 
 export const RETENTION_FILTER_KEYS = [

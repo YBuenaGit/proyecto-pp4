@@ -13,6 +13,7 @@ import {
   displayRetentionValue,
   normalizeOptionalIdentifier,
 } from "./retentions";
+import { capitalizeFirstLetter } from "./text";
 
 const retentionFields = [
   "actNumber",
@@ -29,6 +30,7 @@ const retentionFields = [
 ] as const satisfies RetentionField[];
 
 const requiredText = z.string().trim().min(1);
+const naturalText = requiredText.transform(capitalizeFirstLetter);
 const optionalIdentifier = z
   .string()
   .trim()
@@ -47,7 +49,7 @@ export const retentionInputSchema = z
     vehicleType: z.enum(["AUTO", "CAMION", "CAMIONETA", "COLECTIVO", "CUATRICICLO", "MOTO", "OTRO"]),
     brand: requiredText.refine((value) => (BRANDS as readonly string[]).includes(value), "Marca invalida."),
     color: requiredText.refine((value) => (COLORS as readonly string[]).includes(value), "Color invalido."),
-    description: requiredText,
+    description: naturalText,
     status: z.enum(["PENDIENTE", "ENTREGADO"]).default("PENDIENTE"),
   })
   .refine((value) => Boolean(value.domain || value.engineNumber || value.chassisNumber), {

@@ -10,6 +10,7 @@ import { requireUser } from "@/lib/auth";
 import { ROLE_LABELS, ROLES } from "@/lib/constants";
 import { formatDateTime, labelFromValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
+import { sortByLabel } from "@/lib/text";
 import { assertAccess, canAccessAdmin } from "@/lib/rbac";
 import { createCatalogItem, createUser, toggleUserActive } from "./actions";
 
@@ -48,7 +49,7 @@ export default async function AdminPage() {
                   </FormField>
                   <FormField label="Rol">
                     <select name="role" className={inputClass} defaultValue="despacho">
-                      {Object.values(ROLES).map((role) => (
+                      {sortByLabel(Object.values(ROLES), (role) => ROLE_LABELS[role]).map((role) => (
                         <option key={role} value={role}>{ROLE_LABELS[role]}</option>
                       ))}
                     </select>

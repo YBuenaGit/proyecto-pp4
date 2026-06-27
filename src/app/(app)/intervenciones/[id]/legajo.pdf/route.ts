@@ -8,6 +8,7 @@ import { formatDate, formatDateTime, labelFromValue } from "@/lib/format";
 import { parseJuridicalActionContent } from "@/lib/juridical-action-content";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessJuridical } from "@/lib/rbac";
+import { personDisplayName } from "@/lib/text";
 
 type JsonRecord = Record<string, unknown>;
 
@@ -510,13 +511,13 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       : [];
 
   const complainants: PersonLine[] = complainantsSource.map((person) => ({
-    name: person.isAnonymous ? "Denunciante anonimo" : [person.firstName, person.lastName].filter(Boolean).join(" "),
+    name: person.isAnonymous ? "Denunciante anonimo" : personDisplayName(person.lastName, person.firstName),
     dni: person.dni,
     phone: person.phone1,
     address: person.address,
   }));
   const linkedPersons: PersonLine[] = linkedSource.map((person) => ({
-    name: [person.firstName, person.apellidoApodoManual].filter(Boolean).join(" "),
+    name: personDisplayName(person.apellidoApodoManual, person.firstName),
     dni: person.dni,
     phone: person.phone1,
     address: person.address,

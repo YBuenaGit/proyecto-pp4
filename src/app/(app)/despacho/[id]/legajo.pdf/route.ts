@@ -4,6 +4,7 @@ import { formatDateTime, labelFromValue } from "@/lib/format";
 import { parseJuridicalActionContent } from "@/lib/juridical-action-content";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessDispatch } from "@/lib/rbac";
+import { personDisplayName } from "@/lib/text";
 
 type PdfLine = {
   text: string;
@@ -151,14 +152,14 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 
   lines.push({ text: "Personas denunciantes", size: 13, bold: true, gapBefore: 16 });
   record.complainants.forEach((person, index) => {
-    const name = person.isAnonymous ? "Denunciante anonimo" : [person.firstName, person.lastName].filter(Boolean).join(" ");
+    const name = person.isAnonymous ? "Denunciante anonimo" : personDisplayName(person.lastName, person.firstName);
     lines.push({ text: `${index + 1}. ${name || "-"} - DNI ${person.dni || "-"} - Tel. ${person.phone1 || "-"}` });
   });
   if (!record.complainants.length) lines.push({ text: "Sin denunciantes cargados." });
 
   lines.push({ text: "Personas denunciadas / vinculadas", size: 13, bold: true, gapBefore: 16 });
   record.linkedPersons.forEach((person, index) => {
-    const name = [person.firstName, person.apellidoApodoManual].filter(Boolean).join(" ");
+    const name = personDisplayName(person.apellidoApodoManual, person.firstName);
     lines.push({ text: `${index + 1}. ${name || "-"} - DNI ${person.dni || "-"} - Tel. ${person.phone1 || "-"}` });
   });
   if (!record.linkedPersons.length) lines.push({ text: "Sin personas vinculadas cargadas." });

@@ -6,7 +6,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { getAppointmentById } from "@/lib/appointment-service";
 import { writeAuditLog } from "@/lib/audit";
-import { optionalText, text } from "@/lib/form";
+import { optionalSentenceText, optionalText, sentenceText, text } from "@/lib/form";
 import { prisma } from "@/lib/prisma";
 import { assertAccess } from "@/lib/rbac";
 import {
@@ -71,7 +71,7 @@ async function appointmentOrNotFound(appointmentId: string) {
 
 async function parseAppointmentForm(formData: FormData) {
   const parsed = appointmentSchema.parse({
-    title: text(formData, "title"),
+    title: sentenceText(formData, "title"),
     date: text(formData, "date"),
     startTime: text(formData, "startTime"),
     endTime: optionalText(formData, "endTime"),
@@ -79,13 +79,13 @@ async function parseAppointmentForm(formData: FormData) {
     assignedUserId: optionalText(formData, "assignedUserId"),
     assignedLawyerId: optionalText(formData, "assignedLawyerId"),
     assignedArea: optionalText(formData, "assignedArea"),
-    clientName: optionalText(formData, "clientName"),
+    clientName: optionalSentenceText(formData, "clientName"),
     type: text(formData, "type"),
     status: text(formData, "status") || "PENDIENTE",
-    location: optionalText(formData, "location"),
-    notes: optionalText(formData, "notes"),
+    location: optionalSentenceText(formData, "location"),
+    notes: optionalSentenceText(formData, "notes"),
     caseId: optionalText(formData, "caseId"),
-    caseTitle: optionalText(formData, "caseTitle"),
+    caseTitle: optionalSentenceText(formData, "caseTitle"),
     expedienteNumber: optionalText(formData, "expedienteNumber"),
   });
 

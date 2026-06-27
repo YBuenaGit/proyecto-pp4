@@ -18,16 +18,16 @@ export const CALENDAR_SCOPE_BADGE_CLASS: Record<CalendarScope, string> = {
 };
 
 export const APPOINTMENT_TYPES = [
-  "CONSULTA",
   "AUDIENCIA",
-  "VENCIMIENTO",
-  "REUNION",
-  "MEDIACION",
+  "CONSULTA",
   "FIRMA_DOCUMENTACION",
-  "LLAMADA",
-  "TAREA_ADMINISTRATIVA",
   "GESTION_DOCUMENTAL",
+  "LLAMADA",
+  "MEDIACION",
   "RECORDATORIO",
+  "REUNION",
+  "TAREA_ADMINISTRATIVA",
+  "VENCIMIENTO",
   "OTRO",
 ] as const;
 
@@ -61,7 +61,7 @@ export const APPOINTMENT_TYPE_TONES: Record<AppointmentType, string> = {
   OTRO: "bg-zinc-100 text-zinc-700 ring-zinc-200",
 };
 
-export const APPOINTMENT_STATUSES = ["PENDIENTE", "CONFIRMADA", "CANCELADA", "FINALIZADA", "REPROGRAMADA"] as const;
+export const APPOINTMENT_STATUSES = ["CANCELADA", "CONFIRMADA", "FINALIZADA", "PENDIENTE", "REPROGRAMADA"] as const;
 
 export type AppointmentStatus = (typeof APPOINTMENT_STATUSES)[number];
 

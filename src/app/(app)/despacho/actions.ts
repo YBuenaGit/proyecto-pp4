@@ -5,13 +5,14 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { DISPATCH_STATUSES, EXPEDIENT_AREAS, EXPEDIENT_STATUSES, PRIORITIES } from "@/lib/constants";
 import { CODIGOS_EXPEDIENTES_SET } from "@/lib/constants/codigosExpedientes";
-import { checkbox, optionalDate, optionalText, text, nextInternalNumber } from "@/lib/form";
+import { checkbox, optionalDate, optionalSentenceText, optionalText, sentenceText, text, nextInternalNumber } from "@/lib/form";
 import { buildJuridicalActionContent } from "@/lib/juridical-action-content";
 import { saveAttachments } from "@/lib/files";
 import { prisma } from "@/lib/prisma";
 import { canAccessDispatch, canAccessExpedients, assertAccess } from "@/lib/rbac";
 import { requireUser } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
+import { capitalizeOptionalText, personDisplayName } from "@/lib/text";
 
 const dispatchSchema = z.object({
   description: z.string().trim().min(1),
@@ -122,7 +123,7 @@ function nullable(value: string) {
 
 function linkedPersonName(person: { firstName: string | null; apellidoApodoManual: string | null } | undefined) {
   if (!person) return null;
-  return [person.firstName, person.apellidoApodoManual].filter(Boolean).join(" ").trim() || null;
+  return personDisplayName(person.apellidoApodoManual, person.firstName) || null;
 }
 
 function complainantCreateData(person: ComplainantPayload, index: number) {
@@ -130,11 +131,11 @@ function complainantCreateData(person: ComplainantPayload, index: number) {
     sortOrder: index,
     isAnonymous: person.isAnonymous,
     dni: person.isAnonymous ? null : nullable(person.dni),
-    firstName: person.isAnonymous ? null : nullable(person.firstName),
-    lastName: person.isAnonymous ? null : nullable(person.lastName),
+    firstName: person.isAnonymous ? null : capitalizeOptionalText(person.firstName),
+    lastName: person.isAnonymous ? null : capitalizeOptionalText(person.lastName),
     phone1: person.isAnonymous ? null : nullable(person.phone1),
     phone2: person.isAnonymous ? null : nullable(person.phone2),
-    address: person.isAnonymous ? null : nullable(person.address),
+    address: person.isAnonymous ? null : capitalizeOptionalText(person.address),
   };
 }
 
@@ -142,11 +143,11 @@ function linkedPersonCreateData(person: LinkedPersonPayload, index: number) {
   return {
     sortOrder: index,
     dni: nullable(person.dni),
-    firstName: nullable(person.firstName),
-    apellidoApodoManual: nullable(person.apellidoApodoManual),
+    firstName: capitalizeOptionalText(person.firstName),
+    apellidoApodoManual: capitalizeOptionalText(person.apellidoApodoManual),
     phone1: nullable(person.phone1),
     phone2: nullable(person.phone2),
-    address: nullable(person.address),
+    address: capitalizeOptionalText(person.address),
   };
 }
 
@@ -166,7 +167,7 @@ export async function createDispatchRecord(formData: FormData) {
   assertAccess(canAccessDispatch(user));
 
   const parsed = dispatchSchema.parse({
-    description: text(formData, "description"),
+    description: sentenceText(formData, "description"),
     category: text(formData, "category"),
     priority: text(formData, "priority") || "MEDIA",
     status: text(formData, "status") || "RECIBIDO",
@@ -175,6 +176,7 @@ export async function createDispatchRecord(formData: FormData) {
   const complainants = parseComplainants(formData);
   const linkedPersons = parseLinkedPersons(formData);
   const firstLinkedPerson = linkedPersons[0];
+  const referredArea = optionalText(formData, "referredArea");
   const usesHistoricalDate = checkbox(formData, "usesHistoricalDate");
   const attendedAt = usesHistoricalDate ? optionalDate(formData, "attendedAt") : new Date();
   if (!attendedAt || Number.isNaN(attendedAt.getTime())) {
@@ -191,12 +193,12 @@ export async function createDispatchRecord(formData: FormData) {
       dniSnapshot: firstLinkedPerson?.dni || null,
       nameSnapshot: linkedPersonName(firstLinkedPerson),
       description: parsed.description,
-      initialGuidance: optionalText(formData, "initialGuidance"),
-      confidentialNotes: optionalText(formData, "confidentialNotes"),
+      initialGuidance: optionalSentenceText(formData, "initialGuidance"),
+      confidentialNotes: optionalSentenceText(formData, "confidentialNotes"),
       category: parsed.category,
       priority: parsed.priority,
       status: parsed.status,
-      referredArea: optionalText(formData, "referredArea"),
+      referredArea,
       lastStatusAt: attendedAt,
       complainants: {
         create: complainants.map(complainantCreateData),
@@ -223,6 +225,12 @@ export async function createDispatchRecord(formData: FormData) {
     after: record,
   });
 
+  if (referredArea?.toLocaleLowerCase("es-AR").startsWith("intervenciones")) {
+    const referralData = new FormData();
+    referralData.set("summary", parsed.description);
+    await deriveDispatchToJuridical(record.id, referralData);
+  }
+
   redirect(`/despacho/${record.id}`);
 }
 
@@ -232,7 +240,7 @@ export async function updateDispatchRecord(recordId: string, formData: FormData)
   const before = await prisma.dispatchRecord.findUniqueOrThrow({ where: { id: recordId } });
 
   const parsed = dispatchSchema.parse({
-    description: text(formData, "description"),
+    description: sentenceText(formData, "description"),
     category: text(formData, "category"),
     priority: text(formData, "priority") || "MEDIA",
     status: text(formData, "status") || "RECIBIDO",
@@ -257,8 +265,8 @@ export async function updateDispatchRecord(recordId: string, formData: FormData)
       dniSnapshot: firstLinkedPerson?.dni || null,
       nameSnapshot: linkedPersonName(firstLinkedPerson),
       description: parsed.description,
-      initialGuidance: optionalText(formData, "initialGuidance"),
-      confidentialNotes: optionalText(formData, "confidentialNotes"),
+      initialGuidance: optionalSentenceText(formData, "initialGuidance"),
+      confidentialNotes: optionalSentenceText(formData, "confidentialNotes"),
       category: parsed.category,
       priority: parsed.priority,
       status: parsed.status,
@@ -294,11 +302,11 @@ export async function updateDispatchRecord(recordId: string, formData: FormData)
 export async function addDispatchFollowUp(recordId: string, formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessDispatch(user));
-  const description = text(formData, "description") || text(formData, "content");
+  const description = sentenceText(formData, "description") || sentenceText(formData, "content");
   if (description.length < 3) return;
   const content = buildJuridicalActionContent({
     description,
-    guidanceProvided: optionalText(formData, "guidanceProvided") ?? "",
+    guidanceProvided: optionalSentenceText(formData, "guidanceProvided") ?? "",
   });
   const statusAfter = optionalText(formData, "statusAfter");
   const createdAt = optionalDate(formData, "createdAt") ?? new Date();
@@ -351,7 +359,7 @@ export async function referDispatchToArea(recordId: string, formData: FormData) 
   const user = await requireUser();
   assertAccess(canAccessDispatch(user));
   const area = text(formData, "area");
-  const summary = text(formData, "summary");
+  const summary = sentenceText(formData, "summary");
   if (!area || !summary) return;
 
   const before = await prisma.dispatchRecord.findUniqueOrThrow({ where: { id: recordId } });
@@ -387,7 +395,7 @@ export async function referDispatchToArea(recordId: string, formData: FormData) 
 export async function deriveDispatchToJuridical(recordId: string, formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessDispatch(user));
-  const summary = text(formData, "summary");
+  const summary = sentenceText(formData, "summary");
   const type = text(formData, "type") || "PRIMERA_INTERVENCION";
   if (summary.length < 8) return;
 
@@ -528,8 +536,8 @@ export async function createExpedient(formData: FormData) {
     codigo: optionalText(formData, "codigo"),
     category: text(formData, "category"),
     area: text(formData, "area"),
-    description: text(formData, "description"),
-    observation: optionalText(formData, "observation"),
+    description: sentenceText(formData, "description"),
+    observation: optionalSentenceText(formData, "observation"),
     status: text(formData, "status") || "INICIADO",
   });
 
@@ -574,8 +582,8 @@ export async function updateExpedient(expedientId: string, formData: FormData) {
     codigo: optionalText(formData, "codigo"),
     category: text(formData, "category"),
     area: text(formData, "area"),
-    description: text(formData, "description"),
-    observation: optionalText(formData, "observation"),
+    description: sentenceText(formData, "description"),
+    observation: optionalSentenceText(formData, "observation"),
     status: text(formData, "status") || "INICIADO",
   });
 

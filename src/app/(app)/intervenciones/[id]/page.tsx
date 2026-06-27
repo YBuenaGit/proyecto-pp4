@@ -17,6 +17,7 @@ import { chunkForBookPages, paginateBookTextSections } from "@/lib/book-paginati
 import { parseJuridicalActionContent } from "@/lib/juridical-action-content";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessJuridical } from "@/lib/rbac";
+import { personDisplayName, sortByLabel } from "@/lib/text";
 import {
   addJuridicalAction,
   deriveJuridicalToDispatch,
@@ -61,7 +62,7 @@ function display(value: string | null | undefined) {
 }
 
 function fullName(person: PersonItem) {
-  return [person.firstName, person.lastName ?? person.apellidoApodoManual].filter(Boolean).join(" ").trim();
+  return personDisplayName(person.lastName ?? person.apellidoApodoManual, person.firstName);
 }
 
 function phoneLine(person: PersonItem) {
@@ -702,7 +703,7 @@ export default async function InterventionDetailPage({ params }: { params: Promi
                 <FormField label="Area sugerida">
                   <select name="area" className={inputClass} defaultValue="">
                     <option value="">Despacho</option>
-                    {areas.map((item) => (
+                    {sortByLabel(areas, (item) => item.label).map((item) => (
                       <option key={item.value} value={item.label}>{item.label}</option>
                     ))}
                   </select>
@@ -813,7 +814,6 @@ export default async function InterventionDetailPage({ params }: { params: Promi
                           description: parsed.description,
                           guidanceProvided: parsed.guidanceProvided,
                           nextStepDescription: parsed.nextStepDescription,
-                          nextStepDate: action.nextStepDate,
                         }}
                         submitLabel="Guardar intervencion"
                       />

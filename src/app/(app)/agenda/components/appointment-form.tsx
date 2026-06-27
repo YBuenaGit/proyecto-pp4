@@ -13,6 +13,7 @@ import {
 } from "@/lib/appointment-constants";
 import { isCalendarScope } from "@/lib/appointment-permissions";
 import type { AgendaUserOption, AppointmentWithRelations } from "@/lib/appointment-service";
+import { sortByLabel } from "@/lib/text";
 
 type AppointmentFormProps = {
   action: (formData: FormData) => Promise<void>;
@@ -42,16 +43,19 @@ export function AppointmentForm({
     : allowedScopes.includes("personal")
       ? "personal"
       : allowedScopes[0];
+  const sortedScopes = sortByLabel(allowedScopes, (item) => CALENDAR_SCOPE_LABELS[item]);
+  const sortedLawyers = sortByLabel(lawyers, (user) => user.name);
+  const sortedUsers = sortByLabel(users, (user) => user.name);
 
   return (
     <form action={action} className="space-y-4">
-      <FormGrid>
+      <FormGrid className="xl:grid-cols-4">
         <FormField label="Titulo" className="xl:col-span-2">
           <input name="title" className={inputClass} defaultValue={appointment?.title ?? ""} required />
         </FormField>
-        <FormField label="Agenda destino">
-          <select name="calendarScope" className={inputClass} defaultValue={scope} required>
-            {allowedScopes.map((item) => (
+        <FormField label="Agenda destino" className="rounded-sm border-2 border-[#0667b0] bg-[#e8f2ff] p-2 xl:col-span-2">
+          <select name="calendarScope" className={`${inputClass} border-[#0667b0] font-semibold text-[#064f87]`} defaultValue={scope} required>
+            {sortedScopes.map((item) => (
               <option key={item} value={item}>
                 {CALENDAR_SCOPE_LABELS[item]}
               </option>
@@ -73,7 +77,7 @@ export function AppointmentForm({
         <FormField label="Abogado asignado">
           <select name="assignedLawyerId" className={inputClass} defaultValue={appointment?.assignedLawyerId ?? ""}>
             <option value="">Sin asignar</option>
-            {lawyers.map((user) => (
+            {sortedLawyers.map((user) => (
               <option key={user.id} value={user.id}>
                 {user.name}
               </option>
@@ -83,7 +87,7 @@ export function AppointmentForm({
         <FormField label="Usuario asignado">
           <select name="assignedUserId" className={inputClass} defaultValue={appointment?.assignedUserId ?? ""}>
             <option value="">Sin asignar</option>
-            {users.map((user) => (
+            {sortedUsers.map((user) => (
               <option key={user.id} value={user.id}>
                 {user.name}
               </option>

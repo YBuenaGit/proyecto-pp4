@@ -15,6 +15,7 @@ import {
 } from "@/lib/appointment-constants";
 import { agendaHref } from "@/lib/agenda-query";
 import type { AgendaFilters, AgendaUserOption } from "@/lib/appointment-service";
+import { sortByLabel } from "@/lib/text";
 
 export function AppointmentFilters({
   scopes,
@@ -48,6 +49,9 @@ export function AppointmentFilters({
     assignedArea: undefined,
     date: undefined,
   });
+  const sortedScopes = sortByLabel(scopes, (scope) => CALENDAR_SCOPE_LABELS[scope]);
+  const sortedLawyers = sortByLabel(lawyers, (user) => user.name);
+  const sortedUsers = sortByLabel(users, (user) => user.name);
 
   return (
     <div className={cn("flex flex-wrap items-center gap-2", className)}>
@@ -83,7 +87,7 @@ export function AppointmentFilters({
               <label className="block">
                 <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[#6c757d]">Agenda</span>
                 <select name="scope" className={inputClass} defaultValue={activeScope}>
-                  {scopes.map((scope) => (
+                  {sortedScopes.map((scope) => (
                     <option key={scope} value={scope}>
                       {CALENDAR_SCOPE_LABELS[scope]}
                     </option>
@@ -116,7 +120,7 @@ export function AppointmentFilters({
                 <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[#6c757d]">Abogado</span>
                 <select name="assignedLawyerId" className={inputClass} defaultValue={filters.assignedLawyerId ?? ""}>
                   <option value="">Todos</option>
-                  {lawyers.map((user) => (
+                  {sortedLawyers.map((user) => (
                     <option key={user.id} value={user.id}>
                       {user.name}
                     </option>
@@ -127,7 +131,7 @@ export function AppointmentFilters({
                 <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[#6c757d]">Usuario</span>
                 <select name="assignedUserId" className={inputClass} defaultValue={filters.assignedUserId ?? ""}>
                   <option value="">Todos</option>
-                  {users.map((user) => (
+                  {sortedUsers.map((user) => (
                     <option key={user.id} value={user.id}>
                       {user.name}
                     </option>
