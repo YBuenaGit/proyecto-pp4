@@ -75,6 +75,7 @@ const MARGIN = 44;
 const BOTTOM = 58;
 const CONTENT_W = PAGE.w - MARGIN * 2;
 const COLUMN_GAP = 12;
+const TITLE_MARGIN_TOP = 4;
 
 const COLORS = {
   navy: rgb(0.035, 0.153, 0.302),
@@ -117,10 +118,6 @@ function formatLongDate(value: Date | string | null | undefined) {
 function sheetTitle(number: number) {
   if (number === 1) return ORDINAL_ATTENTION[1];
   return ORDINAL_INTERVENTION[number] ?? `Intervencion ${number}`;
-}
-
-function personLine(person: LegajoPdfPerson) {
-  return `${display(person.name)} - DNI ${display(person.dni)} - Tel. ${display(person.phone)} - Dom. ${display(person.address)}`;
 }
 
 async function loadPng(doc: PDFDocument, filename: string) {
@@ -260,16 +257,40 @@ function drawIntro(ctx: Ctx, input: LegajoPdfInput) {
 }
 
 function sectionTitle(ctx: Ctx, text: string) {
-  ctx.y -= 8;
+  ctx.y -= 21 + TITLE_MARGIN_TOP;
   ensure(ctx, 34);
   ctx.page.drawRectangle({ x: MARGIN, y: ctx.y - 8, width: CONTENT_W, height: 25, color: COLORS.sky });
   ctx.page.drawRectangle({ x: MARGIN, y: ctx.y - 8, width: 5, height: 25, color: COLORS.blue });
   ctx.page.drawText(asciiText(text), { x: MARGIN + 14, y: ctx.y, size: 12.4, font: ctx.bold, color: COLORS.navy });
-  ctx.y -= 31;
+  ctx.y -= 24;
 }
 
 function smallTitle(ctx: Ctx, text: string) {
-  paragraph(ctx, text, { size: 10.5, bold: true, color: COLORS.blue, gapBefore: 5 });
+  ctx.y -= 8 + TITLE_MARGIN_TOP;
+  ensure(ctx, 22);
+  ctx.page.drawText(asciiText(text), { x: MARGIN, y: ctx.y, size: 10.5, font: ctx.bold, color: COLORS.blue });
+  ctx.y -= 13;
+}
+
+function personRows(ctx: Ctx, person: LegajoPdfPerson) {
+  const valueX = MARGIN + 92;
+  const rows: Array<[string, string]> = [
+    ["Nombre", display(person.name)],
+    ["DNI", display(person.dni)],
+    ["Telefono", display(person.phone)],
+    ["Domicilio", display(person.address)],
+  ];
+  return {
+    valueX,
+    rows: rows.map(([label, value]) => ({
+      label,
+      lines: wrapText(value, ctx.font, 8.8, PAGE.w - MARGIN - valueX - 12),
+    })),
+  };
+}
+
+function personBlockHeight(rowData: ReturnType<typeof personRows>["rows"]) {
+  return 26 + rowData.reduce((sum, row) => sum + Math.max(1, row.lines.length) * 13 + 3, 0);
 }
 
 function fieldGrid(ctx: Ctx, fields: LegajoPdfField[]) {
@@ -312,7 +333,33 @@ function listPeople(ctx: Ctx, people: LegajoPdfPerson[], emptyText: string) {
     paragraph(ctx, emptyText, { italic: true, color: COLORS.muted, indent: 8 });
     return;
   }
-  people.forEach((person, index) => paragraph(ctx, `${index + 1}. ${personLine(person)}`, { indent: 8 }));
+  people.forEach((person, index) => {
+    if (index > 0) ctx.y -= 7;
+    const { valueX, rows } = personRows(ctx, person);
+    const height = personBlockHeight(rows);
+    ensure(ctx, height + 8);
+    const top = ctx.y;
+    const bottom = top - height;
+    ctx.page.drawRectangle({ x: MARGIN + 8, y: bottom, width: CONTENT_W - 8, height, color: rgb(0.985, 0.992, 1), borderColor: COLORS.line, borderWidth: 0.5 });
+    ctx.page.drawText(`Persona ${index + 1}`, { x: MARGIN + 20, y: top - 15, size: 8.2, font: ctx.bold, color: COLORS.blue });
+    let rowY = top - 32;
+    rows.forEach((row) => {
+      ctx.page.drawText(`${row.label}:`, { x: MARGIN + 20, y: rowY, size: 8.8, font: ctx.bold, color: COLORS.navy });
+      row.lines.forEach((line, lineIndex) => {
+        ctx.page.drawText(line, { x: valueX, y: rowY - lineIndex * 13, size: 8.8, font: ctx.font, color: COLORS.ink });
+      });
+      rowY -= Math.max(1, row.lines.length) * 13 + 3;
+    });
+    ctx.y = bottom - 8;
+  });
+}
+
+function peopleGroup(ctx: Ctx, title: string, people: LegajoPdfPerson[], emptyText: string) {
+  const firstPerson = people[0];
+  const firstBlockHeight = firstPerson ? personBlockHeight(personRows(ctx, firstPerson).rows) : 18;
+  ensure(ctx, 32 + firstBlockHeight);
+  smallTitle(ctx, title);
+  listPeople(ctx, people, emptyText);
 }
 
 function drawReferrals(ctx: Ctx, referrals: LegajoPdfReferral[]) {
@@ -334,7 +381,7 @@ function drawAttachments(ctx: Ctx, attachments: LegajoPdfAttachment[]) {
 }
 
 function drawSheet(ctx: Ctx, sheet: LegajoPdfSheet) {
-  ctx.y -= 8;
+  ctx.y -= 17 + TITLE_MARGIN_TOP;
   ensure(ctx, 78);
   const top = ctx.y;
   const height = 54;
@@ -347,7 +394,7 @@ function drawSheet(ctx: Ctx, sheet: LegajoPdfSheet) {
   if (sheet.type) {
     drawRightText(ctx, labelFromValue(sheet.type), PAGE.w - MARGIN - 14, top - 24, 8.6, ctx.bold, COLORS.sky);
   }
-  ctx.y = bottom - 16;
+  ctx.y = bottom - 20;
 
   if (sheet.statusText) paragraph(ctx, sheet.statusText, { color: COLORS.muted, italic: true });
   if (sheet.nextStepDate) paragraph(ctx, `Fecha de seguimiento: ${formatDate(sheet.nextStepDate)}`, { color: COLORS.muted, italic: true });
@@ -414,10 +461,8 @@ export async function renderLegajoPdf(input: LegajoPdfInput): Promise<Uint8Array
 
   if (input.complainants || input.linkedPersons) {
     sectionTitle(ctx, "Personas vinculadas");
-    smallTitle(ctx, "Personas denunciantes");
-    listPeople(ctx, input.complainants ?? [], "Sin personas denunciantes cargadas.");
-    smallTitle(ctx, "Personas denunciadas / vinculadas");
-    listPeople(ctx, input.linkedPersons ?? [], "Sin personas denunciadas o vinculadas cargadas.");
+    peopleGroup(ctx, "Personas denunciantes", input.complainants ?? [], "Sin personas denunciantes cargadas.");
+    peopleGroup(ctx, "Personas denunciadas / vinculadas", input.linkedPersons ?? [], "Sin personas denunciadas o vinculadas cargadas.");
   }
 
   if (input.generalAttachments?.length) {

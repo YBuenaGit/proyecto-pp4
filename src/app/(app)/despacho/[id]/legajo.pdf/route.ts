@@ -116,7 +116,6 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       { label: "Categoria", value: labelFromValue(record.category) },
       { label: "Fecha de atencion", value: formatDateTime(record.attendedAt) },
       { label: "Area derivada", value: record.referredArea },
-      { label: "Origen", value: labelFromValue(record.origin) },
     ],
     complainants,
     linkedPersons,

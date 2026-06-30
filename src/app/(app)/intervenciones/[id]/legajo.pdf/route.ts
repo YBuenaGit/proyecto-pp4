@@ -217,7 +217,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
           { label: "Oficio", value: intervention.oficioNumber },
           { label: "Expediente / legajo", value: intervention.expedienteNumber },
           { label: "Area derivada", value: intervention.derivedArea },
-          { label: "Origen", value: labelFromValue(intervention.origin) },
         ],
     complainants: requestedSheet ? null : complainants,
     linkedPersons: requestedSheet ? null : linkedPersons,
