@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "r
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FormField, inputClass, textareaClass } from "@/components/ui/form-controls";
-import { ACTION_TYPES, JURIDICAL_STATUSES } from "@/lib/constants";
+import { JURIDICAL_STATUSES } from "@/lib/constants";
 import { labelFromValue, toDateInputValue } from "@/lib/format";
 
 function resizeTextarea(textarea: HTMLTextAreaElement) {
@@ -13,6 +13,7 @@ function resizeTextarea(textarea: HTMLTextAreaElement) {
 }
 
 const autosizeTextareaClass = `${textareaClass} resize-none overflow-hidden`;
+const actionStatuses = JURIDICAL_STATUSES.filter((status) => status !== "DERIVADO_EXTERNAMENTE");
 
 type ActionSheetFormValues = {
   actionType: string;
@@ -93,15 +94,6 @@ export function AddJuridicalActionForm({
   return (
     <form ref={formRef} action={action} className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-2">
-        <FormField label="Tipo de registro">
-          <select name="actionType" className={inputClass} defaultValue={initialValues?.actionType ?? "SEGUIMIENTO"}>
-            {ACTION_TYPES.map((item) => (
-              <option key={item} value={item}>
-                {labelFromValue(item)}
-              </option>
-            ))}
-          </select>
-        </FormField>
         <FormField label="Fecha y hora">
           <input
             name="createdAt"
@@ -113,7 +105,7 @@ export function AddJuridicalActionForm({
         <FormField label="Estado">
           <select name="statusAfter" className={inputClass} defaultValue={initialValues?.statusAfter ?? ""}>
             <option value="">Sin cambio</option>
-            {JURIDICAL_STATUSES.map((status) => (
+            {actionStatuses.map((status) => (
               <option key={status} value={status}>
                 {labelFromValue(status)}
               </option>

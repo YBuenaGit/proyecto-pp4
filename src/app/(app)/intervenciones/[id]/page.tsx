@@ -20,7 +20,7 @@ import { assertAccess, canAccessJuridical } from "@/lib/rbac";
 import { personDisplayName, sortByLabel } from "@/lib/text";
 import {
   addJuridicalAction,
-  deriveJuridicalToDispatch,
+  referJuridicalToArea,
   updateJuridicalAction,
   updateJuridicalIntervention,
 } from "../actions";
@@ -368,7 +368,7 @@ export default async function InterventionDetailPage({ params }: { params: Promi
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
   const { id } = await params;
-  const [intervention, areas, types, contexts] = await Promise.all([
+  const [intervention, types, contexts] = await Promise.all([
     prisma.juridicalIntervention.findUnique({
       where: { id },
       include: {
@@ -387,7 +387,6 @@ export default async function InterventionDetailPage({ params }: { params: Promi
         },
       },
     }),
-    prisma.catalogItem.findMany({ where: { type: "dispatch_area", active: true }, orderBy: { sortOrder: "asc" } }),
     prisma.catalogItem.findMany({ where: { type: "juridical_type", active: true }, orderBy: { sortOrder: "asc" } }),
     prisma.catalogItem.findMany({ where: { type: "intervention_context", active: true }, orderBy: { sortOrder: "asc" } }),
   ]);
@@ -695,18 +694,25 @@ export default async function InterventionDetailPage({ params }: { params: Promi
             <AppModal title="Nuevo registro de intervencion" description="Crea una nueva intervencion documental dentro de este legajo." trigger={<><Plus className="h-4 w-4" />Nueva intervencion</>} size="md">
               <AddJuridicalActionForm action={addJuridicalAction.bind(null, intervention.id)} submitLabel="Crear intervencion" showFollowUp={false} />
             </AppModal>
-            <AppModal title="Derivar a Despacho" trigger={<><Send className="h-4 w-4" />Derivar</>} triggerVariant="secondary" size="md">
-              <form action={deriveJuridicalToDispatch.bind(null, intervention.id)} className="space-y-4">
-                <FormField label="Derivar a Despacho">
-                  <textarea name="summary" className={textareaClass} placeholder="Resumen operativo, sin notas sensibles innecesarias" required />
-                </FormField>
-                <FormField label="Area sugerida">
-                  <select name="area" className={inputClass} defaultValue="">
-                    <option value="">Despacho</option>
-                    {sortByLabel(areas, (item) => item.label).map((item) => (
-                      <option key={item.value} value={item.label}>{item.label}</option>
+            <AppModal title="Derivaciones" trigger={<><Send className="h-4 w-4" />Derivar</>} triggerVariant="secondary" size="md">
+              <form action={referJuridicalToArea.bind(null, intervention.id)} className="space-y-4">
+                <FormField label="Area a derivar">
+                  <select name="area" className={inputClass} defaultValue="" required>
+                    <option value="">Seleccionar area</option>
+                    {sortByLabel(
+                      [
+                        { value: "Despacho", label: "Despacho" },
+                        { value: "Atencion y Contencion a la Victima", label: "Atencion y Contencion a la Victima" },
+                        { value: "Directivo", label: "Directivo" },
+                      ],
+                      (item) => item.label,
+                    ).map((item) => (
+                      <option key={item.value} value={item.value}>{item.label}</option>
                     ))}
                   </select>
+                </FormField>
+                <FormField label="Resumen de derivacion">
+                  <textarea name="summary" className={textareaClass} placeholder="Resumen operativo, sin notas sensibles innecesarias" required />
                 </FormField>
                 <div className="flex flex-wrap items-center gap-2">
                   <Button type="submit">Guardar</Button>

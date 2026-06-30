@@ -13,6 +13,7 @@ function resizeTextarea(textarea: HTMLTextAreaElement) {
 }
 
 const autosizeTextareaClass = `${textareaClass} resize-none overflow-hidden`;
+const followUpStatuses = DISPATCH_STATUSES.filter((status) => status !== "DERIVADO");
 
 type DispatchFollowUpFormValues = {
   createdAt: Date | string;
@@ -100,7 +101,7 @@ export function AddDispatchFollowUpForm({
         <FormField label="Estado">
           <select name="statusAfter" className={inputClass} defaultValue={initialValues?.statusAfter ?? ""}>
             <option value="">Sin cambio</option>
-            {DISPATCH_STATUSES.map((status) => (
+            {followUpStatuses.map((status) => (
               <option key={status} value={status}>
                 {labelFromValue(status)}
               </option>

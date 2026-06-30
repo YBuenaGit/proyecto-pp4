@@ -1,7 +1,7 @@
 import "server-only";
 
 import type { Prisma } from "@prisma/client";
-import { APPOINTMENT_STATUSES, APPOINTMENT_TYPES, ASSIGNED_AREAS, type AgendaViewScope } from "./appointment-constants";
+import { APPOINTMENT_TYPES, type AgendaViewScope } from "./appointment-constants";
 import { canViewAppointment } from "./appointment-permissions";
 import { ROLES } from "./constants";
 import { prisma } from "./prisma";
@@ -43,13 +43,9 @@ export type AppointmentWithRelations = {
 };
 
 export type AgendaFilters = {
-  q?: string;
   type?: string;
-  status?: string;
-  assignedLawyerId?: string;
-  assignedUserId?: string;
-  assignedArea?: string;
-  date?: string;
+  dateFrom?: string;
+  dateTo?: string;
 };
 
 const appointmentInclude = {
@@ -92,27 +88,6 @@ function rowToAppointment(record: AppointmentRecord): AppointmentWithRelations {
   };
 }
 
-function addSearchFilter(query: string): Prisma.AppointmentWhereInput {
-  const contains = query.trim();
-  return {
-    OR: [
-      { title: { contains, mode: "insensitive" } },
-      { clientName: { contains, mode: "insensitive" } },
-      { lawyerName: { contains, mode: "insensitive" } },
-      { type: { contains, mode: "insensitive" } },
-      { status: { contains, mode: "insensitive" } },
-      { assignedArea: { contains, mode: "insensitive" } },
-      { caseId: { contains, mode: "insensitive" } },
-      { caseTitle: { contains, mode: "insensitive" } },
-      { expedienteNumber: { contains, mode: "insensitive" } },
-      { notes: { contains, mode: "insensitive" } },
-      { location: { contains, mode: "insensitive" } },
-      { assignedUser: { name: { contains, mode: "insensitive" } } },
-      { assignedLawyer: { name: { contains, mode: "insensitive" } } },
-    ],
-  };
-}
-
 export async function getVisibleAppointments(input: {
   user: CurrentUser;
   viewScope: AgendaViewScope;
@@ -123,8 +98,11 @@ export async function getVisibleAppointments(input: {
   const filters = input.filters ?? {};
   const where: Prisma.AppointmentWhereInput = {};
 
-  if (filters.date) {
-    where.date = filters.date;
+  if (filters.dateFrom || filters.dateTo) {
+    where.date = {
+      ...(filters.dateFrom ? { gte: filters.dateFrom } : {}),
+      ...(filters.dateTo ? { lte: filters.dateTo } : {}),
+    };
   } else {
     where.date = { gte: input.monthStart, lte: input.monthEnd };
   }
@@ -132,16 +110,7 @@ export async function getVisibleAppointments(input: {
   if (filters.type && (APPOINTMENT_TYPES as readonly string[]).includes(filters.type)) {
     where.type = filters.type;
   }
-  if (filters.status && (APPOINTMENT_STATUSES as readonly string[]).includes(filters.status)) {
-    where.status = filters.status;
-  }
-  if (filters.assignedLawyerId) where.assignedLawyerId = filters.assignedLawyerId;
-  if (filters.assignedUserId) where.assignedUserId = filters.assignedUserId;
-  if (filters.assignedArea && (ASSIGNED_AREAS as readonly string[]).includes(filters.assignedArea)) {
-    where.assignedArea = filters.assignedArea;
-  }
   if (input.viewScope !== "all") where.calendarScope = input.viewScope;
-  if (filters.q) where.AND = [addSearchFilter(filters.q)];
 
   const rows = await prisma.appointment.findMany({
     where,

@@ -1,5 +1,4 @@
 import {
-  Ban,
   BriefcaseBusiness,
   CalendarClock,
   Circle,
@@ -19,18 +18,15 @@ import { cn } from "@/components/ui/cn";
 import { labelFromValue } from "@/lib/format";
 import type { CurrentUser } from "@/lib/types";
 import {
-  APPOINTMENT_STATUS_LABELS,
-  APPOINTMENT_STATUS_TONES,
   APPOINTMENT_TYPE_LABELS,
   CALENDAR_SCOPE_BADGE_CLASS,
   CALENDAR_SCOPE_LABELS,
-  type AppointmentStatus,
   type AppointmentType,
   type CalendarScope,
 } from "@/lib/appointment-constants";
 import { canDeleteAppointment, canEditAppointment, isCalendarScope } from "@/lib/appointment-permissions";
-import type { AgendaUserOption, AppointmentWithRelations } from "@/lib/appointment-service";
-import { cancelAppointment, deleteAppointment, updateAppointment } from "../actions";
+import type { AppointmentWithRelations } from "@/lib/appointment-service";
+import { deleteAppointment, updateAppointment } from "../actions";
 import { AppointmentForm } from "./appointment-form";
 
 function badgeClass(value: string, tones: Record<string, string>) {
@@ -63,10 +59,6 @@ function appointmentTypeLabel(type: string) {
   return APPOINTMENT_TYPE_LABELS[type as AppointmentType] ?? labelFromValue(type);
 }
 
-function appointmentStatusLabel(status: string) {
-  return APPOINTMENT_STATUS_LABELS[status as AppointmentStatus] ?? labelFromValue(status);
-}
-
 function MetaItem({ children }: { children?: React.ReactNode }) {
   if (!children) return null;
   return <span className="truncate">{children}</span>;
@@ -76,22 +68,13 @@ export function AppointmentCard({
   appointment,
   user,
   allowedScopes,
-  users,
-  lawyers,
 }: {
   appointment: AppointmentWithRelations;
   user: CurrentUser;
   allowedScopes: CalendarScope[];
-  users: AgendaUserOption[];
-  lawyers: AgendaUserOption[];
 }) {
   const canEdit = canEditAppointment(user, appointment);
   const canDelete = canDeleteAppointment(user, appointment);
-  const lawyerName = appointment.lawyerName ?? appointment.assignedLawyer?.name;
-  const assignedName = appointment.assignedUser?.name;
-  const assignedArea = appointment.assignedArea === "lawyers" ? "Abogados" : appointment.assignedArea === "dispatch" ? "Despacho" : null;
-  const caseLabel = [appointment.caseTitle, appointment.expedienteNumber].filter(Boolean).join(" · ");
-  const timeLabel = appointment.endTime ? `${appointment.startTime} - ${appointment.endTime}` : appointment.startTime;
   const visual = typeVisual(appointment.type);
   const Icon = visual.Icon;
 
@@ -105,23 +88,16 @@ export function AppointmentCard({
           <div className="flex min-w-0 items-start justify-between gap-2">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm font-semibold text-[#212529]">{timeLabel}</span>
+                <span className="text-sm font-semibold text-[#212529]">{appointment.startTime}</span>
                 <span className="text-[11px] font-semibold text-[#607589]">{appointmentTypeLabel(appointment.type)}</span>
               </div>
               <h3 className="mt-0.5 truncate text-sm font-semibold text-[#212529]">{appointment.title}</h3>
             </div>
-            <span className={cn("shrink-0", badgeClass(appointment.status, APPOINTMENT_STATUS_TONES))}>
-              {appointmentStatusLabel(appointment.status)}
-            </span>
           </div>
 
           <div className="mt-1 grid gap-x-2 gap-y-0.5 text-[11px] font-medium leading-5 text-[#607589]">
             <MetaItem>{appointment.clientName ? `Cliente: ${appointment.clientName}` : null}</MetaItem>
-            <MetaItem>{lawyerName ? `Abogado: ${lawyerName}` : null}</MetaItem>
-            <MetaItem>{assignedName ? `Usuario: ${assignedName}` : null}</MetaItem>
-            <MetaItem>{assignedArea ? `Area: ${assignedArea}` : null}</MetaItem>
             <MetaItem>{appointment.location ? `Lugar: ${appointment.location}` : null}</MetaItem>
-            <MetaItem>{caseLabel || null}</MetaItem>
           </div>
         </div>
       </div>
@@ -144,21 +120,11 @@ export function AppointmentCard({
               <AppointmentForm
                 action={updateAppointment.bind(null, appointment.id)}
                 allowedScopes={allowedScopes}
-                users={users}
-                lawyers={lawyers}
                 defaultDate={appointment.date}
                 appointment={appointment}
-                compact
                 modal
               />
             </AppModal>
-          ) : null}
-          {canEdit && appointment.status !== "CANCELADA" ? (
-            <form action={cancelAppointment.bind(null, appointment.id)}>
-              <Button type="submit" variant="secondary" className="h-8 w-8 px-0 text-[#6c757d] shadow-none hover:text-[#0667b0]" title="Cancelar cita">
-                <Ban className="h-3.5 w-3.5" />
-              </Button>
-            </form>
           ) : null}
           {canDelete ? (
             <AppModal

@@ -121,6 +121,30 @@ function nullable(value: string) {
   return value.trim() || null;
 }
 
+function normalizeReferralArea(value: string | null | undefined) {
+  return (value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[_-]+/g, " ")
+    .toLocaleLowerCase("es-AR")
+    .trim();
+}
+
+function isJuridicalReferralArea(value: string | null | undefined) {
+  const area = normalizeReferralArea(value);
+  return Boolean(
+    area &&
+      (area.startsWith("intervenciones") ||
+        area.includes("juridico") ||
+        area.includes("contencion a la victima") ||
+        area.includes("proteccion a la victima")),
+  );
+}
+
+function isDirectivoReferralArea(value: string | null | undefined) {
+  return normalizeReferralArea(value) === "directivo";
+}
+
 function linkedPersonName(person: { firstName: string | null; apellidoApodoManual: string | null } | undefined) {
   if (!person) return null;
   return personDisplayName(person.apellidoApodoManual, person.firstName) || null;
@@ -159,6 +183,47 @@ async function syncDispatchReferralSummary(recordId: string, status: string) {
       status: ["RESUELTO", "CERRADO", "ARCHIVADO"].includes(status) ? "CERRADA" : "EN_GESTION",
       closedAt: ["RESUELTO", "CERRADO", "ARCHIVADO"].includes(status) ? new Date() : null,
     },
+  });
+}
+
+async function createDispatchDirectivoReferral(recordId: string, summary: string, userId: string) {
+  const before = await prisma.dispatchRecord.findUniqueOrThrow({ where: { id: recordId } });
+  const referral = await prisma.referral.create({
+    data: {
+      originModule: "DESPACHO",
+      destinationModule: "DIRECTIVO",
+      originDispatchRecordId: recordId,
+      summary,
+      status: "PENDIENTE",
+      visibleStatusForOrigin: "Derivada a Directivo - pendiente de recepcion",
+      referredById: userId,
+    },
+  });
+  const after = await prisma.dispatchRecord.update({
+    where: { id: recordId },
+    data: {
+      referredArea: "Directivo",
+      status: "DERIVADO",
+      lastStatusAt: new Date(),
+    },
+  });
+  const followUp = await prisma.dispatchFollowUp.create({
+    data: {
+      dispatchRecordId: recordId,
+      content: `Derivacion a Directivo: ${summary}`,
+      statusAfter: "DERIVADO",
+      createdById: userId,
+    },
+  });
+
+  await writeAuditLog({
+    module: "DESPACHO",
+    entityType: "Referral",
+    entityId: referral.id,
+    action: "REFERRAL",
+    createdById: userId,
+    before,
+    after: { record: after, followUp, referral },
   });
 }
 
@@ -225,10 +290,13 @@ export async function createDispatchRecord(formData: FormData) {
     after: record,
   });
 
-  if (referredArea?.toLocaleLowerCase("es-AR").startsWith("intervenciones")) {
+  if (referredArea && isJuridicalReferralArea(referredArea)) {
     const referralData = new FormData();
     referralData.set("summary", parsed.description);
+    referralData.set("area", referredArea);
     await deriveDispatchToJuridical(record.id, referralData);
+  } else if (isDirectivoReferralArea(referredArea)) {
+    await createDispatchDirectivoReferral(record.id, parsed.description, user.id);
   }
 
   redirect(`/despacho/${record.id}`);
@@ -362,6 +430,20 @@ export async function referDispatchToArea(recordId: string, formData: FormData) 
   const summary = sentenceText(formData, "summary");
   if (!area || !summary) return;
 
+  if (isJuridicalReferralArea(area)) {
+    const referralData = new FormData();
+    referralData.set("summary", summary);
+    referralData.set("area", area);
+    await deriveDispatchToJuridical(recordId, referralData);
+    return;
+  }
+
+  if (isDirectivoReferralArea(area)) {
+    await createDispatchDirectivoReferral(recordId, summary, user.id);
+    revalidatePath(`/despacho/${recordId}`);
+    redirect(`/despacho/${recordId}`);
+  }
+
   const before = await prisma.dispatchRecord.findUniqueOrThrow({ where: { id: recordId } });
   const after = await prisma.dispatchRecord.update({
     where: { id: recordId },
@@ -409,6 +491,7 @@ export async function deriveDispatchToJuridical(recordId: string, formData: Form
   });
   const complainant = source.complainants[0];
   const firstLinkedPerson = source.linkedPersons[0];
+  const destinationArea = optionalText(formData, "area") ?? source.referredArea ?? "Intervenciones Juridico-Institucionales";
 
   const intervention = await prisma.juridicalIntervention.create({
     data: {
@@ -468,7 +551,7 @@ export async function deriveDispatchToJuridical(recordId: string, formData: Form
       destinationJuridicalInterventionId: intervention.id,
       summary,
       status: "PENDIENTE",
-      visibleStatusForOrigin: "Derivada a Intervenciones - pendiente de recepcion",
+      visibleStatusForOrigin: `Derivada a ${destinationArea} - pendiente de recepcion`,
       referredById: user.id,
     },
   });
@@ -477,7 +560,7 @@ export async function deriveDispatchToJuridical(recordId: string, formData: Form
     where: { id: recordId },
     data: {
       status: "DERIVADO",
-      referredArea: "Intervenciones Juridico-Institucionales",
+      referredArea: destinationArea,
       lastStatusAt: new Date(),
     },
   });
@@ -485,7 +568,7 @@ export async function deriveDispatchToJuridical(recordId: string, formData: Form
   await prisma.dispatchFollowUp.create({
     data: {
       dispatchRecordId: recordId,
-      content: `Derivacion a Intervenciones: ${summary}`,
+      content: `Derivacion a ${destinationArea}: ${summary}`,
       statusAfter: "DERIVADO",
       createdById: user.id,
     },

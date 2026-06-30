@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useId, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { cn } from "./cn";
 
@@ -77,6 +78,49 @@ export function AppModal({
     };
   }, [close, open]);
 
+  const modal =
+    open ? (
+      <div
+        className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
+        role="presentation"
+        onMouseDown={(event) => {
+          if (event.target === event.currentTarget) close();
+        }}
+        onClick={(event) => {
+          const target = event.target as HTMLElement;
+          if (target.closest("[data-modal-close]")) close();
+        }}
+      >
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={titleId}
+          className={cn(
+            "flex max-h-[96dvh] w-full flex-col overflow-hidden rounded-t-sm border border-[#dee2e6] bg-white shadow-xl sm:rounded-sm",
+            modalSizes[size],
+          )}
+        >
+          <div className="flex items-start justify-between gap-3 border-b border-[#dee2e6] bg-[#e9ecef] px-3 py-2.5 sm:px-4">
+            <div>
+              <h2 id={titleId} className="text-lg font-semibold tracking-normal text-[#212529]">
+                {title}
+              </h2>
+              {description ? <p className="mt-1 max-w-2xl text-sm leading-6 text-[#6c757d]">{description}</p> : null}
+            </div>
+            <button
+              type="button"
+              onClick={close}
+              className="rounded-sm p-2 text-[#6c757d] transition duration-150 hover:bg-white hover:text-[#212529] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff]"
+              aria-label="Cerrar modal"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+          <div className="overflow-y-auto p-3 sm:p-4">{typeof children === "function" ? children({ close }) : children}</div>
+        </div>
+      </div>
+    ) : null;
+
   return (
     <>
       {trigger !== undefined ? (
@@ -93,47 +137,7 @@ export function AppModal({
         </button>
       ) : null}
 
-      {open ? (
-        <div
-          className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) close();
-          }}
-          onClick={(event) => {
-            const target = event.target as HTMLElement;
-            if (target.closest("[data-modal-close]")) close();
-          }}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={titleId}
-            className={cn(
-              "flex max-h-[96dvh] w-full flex-col overflow-hidden rounded-t-sm border border-[#dee2e6] bg-white shadow-xl sm:rounded-sm",
-              modalSizes[size],
-            )}
-          >
-            <div className="flex items-start justify-between gap-3 border-b border-[#dee2e6] bg-[#e9ecef] px-3 py-2.5 sm:px-4">
-              <div>
-                <h2 id={titleId} className="text-lg font-semibold tracking-normal text-[#212529]">
-                  {title}
-                </h2>
-                {description ? <p className="mt-1 max-w-2xl text-sm leading-6 text-[#6c757d]">{description}</p> : null}
-              </div>
-              <button
-                type="button"
-                onClick={close}
-                className="rounded-sm p-2 text-[#6c757d] transition duration-150 hover:bg-white hover:text-[#212529] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff]"
-                aria-label="Cerrar modal"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="overflow-y-auto p-3 sm:p-4">{typeof children === "function" ? children({ close }) : children}</div>
-          </div>
-        </div>
-      ) : null}
+      {modal && typeof document !== "undefined" ? createPortal(modal, document.body) : null}
     </>
   );
 }

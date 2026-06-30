@@ -1,7 +1,8 @@
-import { Plus } from "lucide-react";
+import { Plus, RefreshCw } from "lucide-react";
 import { AppModal } from "@/components/ui/app-modal";
+import { LinkButton } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
-import type { AgendaQueryValues } from "@/lib/agenda-query";
+import { agendaHref, type AgendaQueryValues } from "@/lib/agenda-query";
 import {
   firstDayOfMonth,
   getMonthRange,
@@ -20,7 +21,7 @@ import {
   getAllowedCalendarScopes,
   normalizeAgendaViewScope,
 } from "@/lib/appointment-permissions";
-import { getAgendaUserOptions, getVisibleAppointments, type AgendaFilters } from "@/lib/appointment-service";
+import { getVisibleAppointments, type AgendaFilters } from "@/lib/appointment-service";
 import { createAppointment } from "./actions";
 import { AgendaScopeTabs } from "./components/agenda-scope-tabs";
 import { AppointmentFilters } from "./components/appointment-filters";
@@ -43,13 +44,9 @@ function buildQueryValues(input: {
     scope: input.scope,
     month: input.month,
     day: input.day,
-    q: input.filters.q,
     type: input.filters.type,
-    status: input.filters.status,
-    assignedLawyerId: input.filters.assignedLawyerId,
-    assignedUserId: input.filters.assignedUserId,
-    assignedArea: input.filters.assignedArea,
-    date: input.filters.date,
+    dateFrom: input.filters.dateFrom,
+    dateTo: input.filters.dateTo,
   };
 }
 
@@ -60,14 +57,20 @@ export default async function AgendaPage({ searchParams }: { searchParams?: Prom
   const params = searchParams ? await searchParams : {};
   const todayKey = toDateKey(new Date());
   const requestedDate = cleanParam(param(params, "date"));
+  const requestedDateFrom = cleanParam(param(params, "dateFrom"));
+  const requestedDateTo = cleanParam(param(params, "dateTo"));
   const requestedMonth = cleanParam(param(params, "month"));
   const requestedDay = cleanParam(param(params, "day"));
   const activeScope = normalizeAgendaViewScope(user, cleanParam(param(params, "scope")));
+  const dateFrom = isDateKey(requestedDateFrom) ? requestedDateFrom : undefined;
+  const dateTo = isDateKey(requestedDateTo) ? requestedDateTo : undefined;
 
   const monthKey = isDateKey(requestedDate)
     ? requestedDate.slice(0, 7)
     : isMonthKey(requestedMonth)
       ? requestedMonth
+      : dateFrom
+        ? dateFrom.slice(0, 7)
       : toMonthKey(new Date());
   const selectedDay =
     isDateKey(requestedDate)
@@ -79,30 +82,32 @@ export default async function AgendaPage({ searchParams }: { searchParams?: Prom
           : firstDayOfMonth(monthKey);
 
   const filters: AgendaFilters = {
-    q: cleanParam(param(params, "q")),
     type: cleanParam(param(params, "type")),
-    status: cleanParam(param(params, "status")),
-    assignedLawyerId: cleanParam(param(params, "assignedLawyerId")),
-    assignedUserId: cleanParam(param(params, "assignedUserId")),
-    assignedArea: cleanParam(param(params, "assignedArea")),
-    date: isDateKey(requestedDate) ? requestedDate : undefined,
+    dateFrom,
+    dateTo,
   };
 
   const allowedScopes = getAllowedCalendarScopes(user);
   const viewScopes = getAllowedAgendaViewScopes(user);
   const monthRange = getMonthRange(monthKey);
   const query = buildQueryValues({ scope: activeScope, month: monthKey, day: selectedDay, filters });
+  const resetHref = agendaHref(query, {
+    month: todayKey.slice(0, 7),
+    day: todayKey,
+    q: undefined,
+    type: undefined,
+    date: undefined,
+    dateFrom: undefined,
+    dateTo: undefined,
+  });
 
-  const [appointments, agendaUsers] = await Promise.all([
-    getVisibleAppointments({
-      user,
-      viewScope: activeScope,
-      monthStart: monthRange.monthStart,
-      monthEnd: monthRange.monthEnd,
-      filters,
-    }),
-    getAgendaUserOptions(),
-  ]);
+  const appointments = await getVisibleAppointments({
+    user,
+    viewScope: activeScope,
+    monthStart: monthRange.monthStart,
+    monthEnd: monthRange.monthEnd,
+    filters,
+  });
 
   const selectedDayAppointments = appointments
     .filter((appointment) => appointment.date === selectedDay)
@@ -120,10 +125,8 @@ export default async function AgendaPage({ searchParams }: { searchParams?: Prom
               activeScope={activeScope}
               monthKey={monthKey}
               selectedDay={selectedDay}
-              todayKey={todayKey}
               filters={filters}
-              users={agendaUsers.users}
-              lawyers={agendaUsers.lawyers}
+              resetHref={resetHref}
             />
             <AppModal
               title="Nueva cita"
@@ -133,8 +136,6 @@ export default async function AgendaPage({ searchParams }: { searchParams?: Prom
               <AppointmentForm
                 action={createAppointment}
                 allowedScopes={allowedScopes}
-                users={agendaUsers.users}
-                lawyers={agendaUsers.lawyers}
                 defaultDate={selectedDay}
                 modal
               />
@@ -143,7 +144,15 @@ export default async function AgendaPage({ searchParams }: { searchParams?: Prom
         }
       />
 
-      <AgendaScopeTabs scopes={viewScopes} activeScope={activeScope} query={query} />
+      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_350px]">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <AgendaScopeTabs scopes={viewScopes} activeScope={activeScope} query={query} />
+          <LinkButton href={resetHref} variant="secondary" className="bg-white shadow-none">
+            <RefreshCw className="h-4 w-4" />
+            Limpiar
+          </LinkButton>
+        </div>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_320px] xl:grid-cols-[minmax(0,1fr)_350px]">
         <div>
@@ -161,8 +170,6 @@ export default async function AgendaPage({ searchParams }: { searchParams?: Prom
             appointments={selectedDayAppointments}
             user={user}
             allowedScopes={allowedScopes}
-            users={agendaUsers.users}
-            lawyers={agendaUsers.lawyers}
           />
         </div>
       </div>

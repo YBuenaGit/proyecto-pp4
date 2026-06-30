@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 import { AlertCircle, Check, ChevronLeft, ChevronRight, Lock, Pencil, Plus, Trash2, UploadCloud } from "lucide-react";
 import { Button, LinkButton } from "@/components/ui/button";
 import { cn } from "@/components/ui/cn";
 import { DISPATCH_STATUSES, PRIORITIES } from "@/lib/constants";
-import { formatDateTime, labelFromValue } from "@/lib/format";
+import { formatDateTime, labelFromValue, normalizeName } from "@/lib/format";
 import { sortByLabel } from "@/lib/text";
 
 export type DispatchWizardValues = {
@@ -46,6 +46,38 @@ export type LinkedPersonDraft = {
   phone1: string;
   phone2: string;
   address: string;
+};
+
+type DniLookupPerson = {
+  id: string;
+  href: string;
+  displayName: string;
+  dni: string | null;
+  firstName: string | null;
+  lastName: string | null;
+  phone1: string | null;
+  phone2: string | null;
+  address: string | null;
+  roles: string[];
+  caseCount: number;
+  latestCase: {
+    href: string;
+    internalNumber: string;
+    attendedAt: string;
+  } | null;
+};
+
+type DniLookupResponse = {
+  exists: boolean;
+  person?: DniLookupPerson;
+  error?: string;
+};
+
+type DniLookupState = {
+  status: "idle" | "checking" | "found" | "not-found" | "error";
+  dni?: string;
+  person?: DniLookupPerson;
+  error?: string;
 };
 
 const steps = [
@@ -153,6 +185,10 @@ function valueAfterPaste(event: ClipboardEvent<HTMLInputElement>, sanitizer: (va
 function resizeTextarea(textarea: HTMLTextAreaElement) {
   textarea.style.height = "auto";
   textarea.style.height = `${textarea.scrollHeight}px`;
+}
+
+function attachmentKey(file: File) {
+  return `${file.name}-${file.size}-${file.lastModified}`;
 }
 
 function cleanComplainant(person: ComplainantDraft) {
@@ -317,6 +353,145 @@ function Field({
   );
 }
 
+function hasLookupNameConflict(person: DniLookupPerson, firstName: string, lastName: string) {
+  const enteredFirstName = firstName.trim();
+  const enteredLastName = lastName.trim();
+  const storedFirstName = person.firstName?.trim();
+  const storedLastName = person.lastName?.trim();
+
+  return Boolean(
+    (enteredFirstName && storedFirstName && normalizeName(enteredFirstName) !== normalizeName(storedFirstName)) ||
+      (enteredLastName && storedLastName && normalizeName(enteredLastName) !== normalizeName(storedLastName)),
+  );
+}
+
+function DniLookupNotice({
+  dni,
+  firstName,
+  lastName,
+  onUseExisting,
+  disabled = false,
+}: {
+  dni: string;
+  firstName: string;
+  lastName: string;
+  onUseExisting?: (person: DniLookupPerson) => void;
+  disabled?: boolean;
+}) {
+  const [lookup, setLookup] = useState<DniLookupState>({ status: "idle" });
+  const cleanedDni = onlyDigits(dni, 8);
+  const canLookupDni = !disabled && dniPattern.test(cleanedDni);
+
+  useEffect(() => {
+    if (!canLookupDni) return;
+
+    const controller = new AbortController();
+    const timeout = window.setTimeout(async () => {
+      setLookup({ status: "checking", dni: cleanedDni });
+
+      try {
+        const response = await fetch(`/api/personas/lookup?dni=${encodeURIComponent(cleanedDni)}`, {
+          headers: { Accept: "application/json" },
+          signal: controller.signal,
+        });
+        const payload = (await response.json()) as DniLookupResponse;
+
+        if (!response.ok) {
+          setLookup({ status: "error", dni: cleanedDni, error: payload.error ?? "No se pudo validar el DNI." });
+          return;
+        }
+
+        setLookup(
+          payload.exists && payload.person
+            ? { status: "found", dni: cleanedDni, person: payload.person }
+            : { status: "not-found", dni: cleanedDni },
+        );
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") return;
+        setLookup({ status: "error", dni: cleanedDni, error: "No se pudo validar el DNI." });
+      }
+    }, 400);
+
+    return () => {
+      window.clearTimeout(timeout);
+      controller.abort();
+    };
+  }, [canLookupDni, cleanedDni]);
+
+  const visibleLookup: DniLookupState = canLookupDni && lookup.dni === cleanedDni ? lookup : { status: "idle" };
+
+  if (visibleLookup.status === "idle") return null;
+
+  if (visibleLookup.status === "checking") {
+    return (
+      <div className="rounded-md border border-[#dee2e6] bg-white px-3 py-2 text-xs font-medium text-[#6c757d]">
+        Validando DNI en Personas...
+      </div>
+    );
+  }
+
+  if (visibleLookup.status === "not-found") {
+    return (
+      <div className="rounded-md border border-[#dee2e6] bg-white px-3 py-2 text-xs font-medium text-[#6c757d]">
+        No hay persona registrada con este DNI.
+      </div>
+    );
+  }
+
+  if (visibleLookup.status === "error") {
+    return (
+      <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-800">
+        {visibleLookup.error ?? "No se pudo validar el DNI ahora."}
+      </div>
+    );
+  }
+
+  const foundPerson = visibleLookup.person;
+  if (!foundPerson) return null;
+
+  const nameConflict = hasLookupNameConflict(foundPerson, firstName, lastName);
+  const roles = foundPerson.roles.length ? foundPerson.roles.join(" / ") : "Registro";
+  const cases = foundPerson.caseCount === 1 ? "1 caso" : `${foundPerson.caseCount} casos`;
+
+  return (
+    <div
+      className={cn(
+        "rounded-md border px-3 py-2 text-xs leading-5",
+        nameConflict ? "border-amber-200 bg-amber-50 text-amber-800" : "border-emerald-200 bg-emerald-50 text-emerald-800",
+      )}
+    >
+      <div className="flex items-start gap-2">
+        {nameConflict ? <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /> : <Check className="mt-0.5 h-4 w-4 shrink-0" />}
+        <div className="min-w-0 space-y-1">
+          <p>
+            El DNI ya existe en Personas:{" "}
+            <a href={foundPerson.href} className="font-semibold underline underline-offset-2">
+              {foundPerson.displayName}
+            </a>
+            .
+          </p>
+          <p>
+            {roles} - {cases}
+            {foundPerson.latestCase
+              ? ` - Ultimo caso ${foundPerson.latestCase.internalNumber} (${formatDateTime(foundPerson.latestCase.attendedAt)})`
+              : ""}
+          </p>
+          {nameConflict ? <p className="font-semibold">El DNI ya figura con otro nombre, revisa los datos.</p> : null}
+          {onUseExisting ? (
+            <button
+              type="button"
+              onClick={() => onUseExisting(foundPerson)}
+              className="mt-1 inline-flex h-8 items-center rounded-md border border-current bg-white/70 px-3 text-xs font-semibold transition hover:bg-white"
+            >
+              Usar datos existentes
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SummaryBlock({
   title,
   actionLabel,
@@ -394,17 +569,19 @@ export function DispatchWizardForm({
   submitLabel: string;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const createRequestedRef = useRef(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [furthestStep, setFurthestStep] = useState(0);
   const [visitedSteps, setVisitedSteps] = useState([true, false, false, false]);
   const [attemptedSteps, setAttemptedSteps] = useState([false, false, false, false]);
   const [values, setValues] = useState<DispatchWizardValues>(initialValues);
-  const [attachmentNames, setAttachmentNames] = useState<string[]>([]);
+  const [selectedAttachments, setSelectedAttachments] = useState<File[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
   const sortedCategories = useMemo(() => sortByLabel(categories, (item) => item.label), [categories]);
   const sortedAreas = useMemo(() => {
     const internalAreas = [
+      { value: "ATENCION_Y_CONTENCION_A_LA_VICTIMA", label: "Atencion y Contencion a la Victima" },
       { value: "DIRECTIVO", label: "Directivo" },
       { value: "INTERVENCIONES", label: "Intervenciones" },
     ];
@@ -432,6 +609,40 @@ export function DispatchWizardForm({
     setValues((current) => ({ ...current, [key]: value }));
   }
 
+  function syncAttachmentInput(files: File[]) {
+    if (!fileInputRef.current) return;
+    const dataTransfer = new DataTransfer();
+    files.forEach((file) => dataTransfer.items.add(file));
+    fileInputRef.current.files = dataTransfer.files;
+  }
+
+  function addAttachments(event: ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(event.currentTarget.files ?? []);
+    if (!files.length) return;
+
+    setSelectedAttachments((current) => {
+      const existingKeys = new Set(current.map(attachmentKey));
+      const next = [...current];
+      files.forEach((file) => {
+        const key = attachmentKey(file);
+        if (!existingKeys.has(key)) {
+          existingKeys.add(key);
+          next.push(file);
+        }
+      });
+      syncAttachmentInput(next);
+      return next;
+    });
+  }
+
+  function removeAttachment(indexToRemove: number) {
+    setSelectedAttachments((current) => {
+      const next = current.filter((_, index) => index !== indexToRemove);
+      syncAttachmentInput(next);
+      return next;
+    });
+  }
+
   function setAutosizedTextareaValue(
     key: "description" | "initialGuidance" | "confidentialNotes",
     event: ChangeEvent<HTMLTextAreaElement>,
@@ -452,6 +663,28 @@ export function DispatchWizardForm({
       ...current,
       linkedPersons: current.linkedPersons.map((person, personIndex) => (personIndex === index ? { ...person, ...patch } : person)),
     }));
+  }
+
+  function applyExistingComplainant(index: number, person: DniLookupPerson) {
+    updateComplainant(index, {
+      dni: onlyDigits(person.dni ?? "", 8),
+      firstName: onlyLettersAndSpaces(person.firstName ?? ""),
+      lastName: onlyLettersAndSpaces(person.lastName ?? ""),
+      phone1: onlyDigits(person.phone1 ?? "", 10),
+      phone2: onlyDigits(person.phone2 ?? "", 10),
+      address: onlyAddressChars(person.address ?? ""),
+    });
+  }
+
+  function applyExistingLinkedPerson(index: number, person: DniLookupPerson) {
+    updateLinkedPerson(index, {
+      dni: onlyDigits(person.dni ?? "", 8),
+      firstName: onlyLettersAndSpaces(person.firstName ?? ""),
+      apellidoApodoManual: onlyLettersAndSpaces(person.lastName ?? ""),
+      phone1: onlyDigits(person.phone1 ?? "", 10),
+      phone2: onlyDigits(person.phone2 ?? "", 10),
+      address: onlyAddressChars(person.address ?? ""),
+    });
   }
 
   function markAttempted(step: number) {
@@ -749,20 +982,28 @@ export function DispatchWizardForm({
                     <p className="rounded-md bg-white px-2.5 py-1.5 text-sm text-[#6c757d]">Los campos personales quedan ocultos para este denunciante.</p>
                   ) : (
                     <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
-                      <Field label="DNI" error={errorFor(`complainants.${personIndex}.dni`)}>
-                        <input
-                          name={`complainants.${personIndex}.dni`}
-                          value={person.dni}
-                          onChange={(event) => updateComplainant(personIndex, { dni: onlyDigits(event.target.value, 8) })}
-                          onKeyDown={(event) => preventInvalidKey(event, /^\d$/)}
-                          onPaste={(event) => {
-                            event.preventDefault();
-                            updateComplainant(personIndex, { dni: valueAfterPaste(event, (value) => onlyDigits(value, 8)) });
-                          }}
-                          inputMode="numeric"
-                          className={inputClass}
+                      <div className="space-y-2">
+                        <Field label="DNI" error={errorFor(`complainants.${personIndex}.dni`)}>
+                          <input
+                            name={`complainants.${personIndex}.dni`}
+                            value={person.dni}
+                            onChange={(event) => updateComplainant(personIndex, { dni: onlyDigits(event.target.value, 8) })}
+                            onKeyDown={(event) => preventInvalidKey(event, /^\d$/)}
+                            onPaste={(event) => {
+                              event.preventDefault();
+                              updateComplainant(personIndex, { dni: valueAfterPaste(event, (value) => onlyDigits(value, 8)) });
+                            }}
+                            inputMode="numeric"
+                            className={inputClass}
+                          />
+                        </Field>
+                        <DniLookupNotice
+                          dni={person.dni}
+                          firstName={person.firstName}
+                          lastName={person.lastName}
+                          onUseExisting={(existingPerson) => applyExistingComplainant(personIndex, existingPerson)}
                         />
-                      </Field>
+                      </div>
                       <Field label="Apellido" error={errorFor(`complainants.${personIndex}.lastName`)}>
                         <input
                           name={`complainants.${personIndex}.lastName`}
@@ -872,20 +1113,28 @@ export function DispatchWizardForm({
                     ) : null}
                   </div>
                   <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
-                    <Field label="DNI" error={errorFor(`linkedPersons.${personIndex}.dni`)}>
-                      <input
-                        name={`linkedPersons.${personIndex}.dni`}
-                        value={person.dni}
-                        onChange={(event) => updateLinkedPerson(personIndex, { dni: onlyDigits(event.target.value, 8) })}
-                        onKeyDown={(event) => preventInvalidKey(event, /^\d$/)}
-                        onPaste={(event) => {
-                          event.preventDefault();
-                          updateLinkedPerson(personIndex, { dni: valueAfterPaste(event, (value) => onlyDigits(value, 8)) });
-                        }}
-                        inputMode="numeric"
-                        className={inputClass}
+                    <div className="space-y-2">
+                      <Field label="DNI" error={errorFor(`linkedPersons.${personIndex}.dni`)}>
+                        <input
+                          name={`linkedPersons.${personIndex}.dni`}
+                          value={person.dni}
+                          onChange={(event) => updateLinkedPerson(personIndex, { dni: onlyDigits(event.target.value, 8) })}
+                          onKeyDown={(event) => preventInvalidKey(event, /^\d$/)}
+                          onPaste={(event) => {
+                            event.preventDefault();
+                            updateLinkedPerson(personIndex, { dni: valueAfterPaste(event, (value) => onlyDigits(value, 8)) });
+                          }}
+                          inputMode="numeric"
+                          className={inputClass}
+                        />
+                      </Field>
+                      <DniLookupNotice
+                        dni={person.dni}
+                        firstName={person.firstName}
+                        lastName={person.apellidoApodoManual}
+                        onUseExisting={(existingPerson) => applyExistingLinkedPerson(personIndex, existingPerson)}
                       />
-                    </Field>
+                    </div>
                     <Field label="Apellido / Apodo manual" error={errorFor(`linkedPersons.${personIndex}.apellidoApodoManual`)}>
                       <input
                         name={`linkedPersons.${personIndex}.apellidoApodoManual`}
@@ -1037,15 +1286,33 @@ export function DispatchWizardForm({
                     <UploadCloud className="mt-1 h-5 w-5 shrink-0 text-[#0667b0]" />
                     <div className="w-full space-y-1.5">
                       <input
+                        ref={fileInputRef}
                         name="attachments"
                         type="file"
                         multiple
-                        onChange={(event) => setAttachmentNames(Array.from(event.target.files ?? []).map((file) => file.name))}
+                        onChange={addAttachments}
                         className={fileInputClass}
                       />
                       <p className="text-xs text-[#6c757d]">
-                        {attachmentNames.length ? `${attachmentNames.length} archivo(s) seleccionado(s).` : "Sin adjuntos seleccionados."}
+                        {selectedAttachments.length ? `${selectedAttachments.length} archivo(s) seleccionado(s).` : "Sin adjuntos seleccionados."}
                       </p>
+                      {selectedAttachments.length ? (
+                        <ul className="space-y-1 rounded-md bg-white px-3 py-2 text-sm text-[#495057]">
+                          {selectedAttachments.map((file, index) => (
+                            <li key={`${attachmentKey(file)}-${index}`} className="flex items-center justify-between gap-3">
+                              <span className="min-w-0 truncate">{file.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => removeAttachment(index)}
+                                className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-rose-100 bg-white px-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Quitar
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
                     </div>
                   </div>
                 </Field>
@@ -1148,12 +1415,12 @@ export function DispatchWizardForm({
                 <SummaryGrid>
                   <SummaryItem label="Estado" value={labelFromValue(values.status)} />
                   <SummaryItem label="Área derivada" value={selectedArea ?? "Sin derivación"} />
-                  <SummaryItem label="Cantidad de adjuntos" value={allowAttachments ? attachmentNames.length : "Sin cambios desde este formulario"} />
+                  <SummaryItem label="Cantidad de adjuntos" value={allowAttachments ? selectedAttachments.length : "Sin cambios desde este formulario"} />
                 </SummaryGrid>
-                {attachmentNames.length ? (
+                {selectedAttachments.length ? (
                   <ul className="mt-2 space-y-0.5 rounded-md bg-[#f8f9fa] px-2.5 py-1.5 text-sm text-[#495057]">
-                    {attachmentNames.map((name) => (
-                      <li key={name}>{name}</li>
+                    {selectedAttachments.map((file, index) => (
+                      <li key={`${attachmentKey(file)}-${index}`}>{file.name}</li>
                     ))}
                   </ul>
                 ) : null}

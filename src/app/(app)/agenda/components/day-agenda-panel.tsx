@@ -1,7 +1,7 @@
 import { CalendarDays } from "lucide-react";
 import { formatDayTitle } from "@/lib/agenda-dates";
 import type { CalendarScope } from "@/lib/appointment-constants";
-import type { AgendaUserOption, AppointmentWithRelations } from "@/lib/appointment-service";
+import type { AppointmentWithRelations } from "@/lib/appointment-service";
 import type { CurrentUser } from "@/lib/types";
 import { AppointmentCard } from "./appointment-card";
 
@@ -10,15 +10,11 @@ export function DayAgendaPanel({
   appointments,
   user,
   allowedScopes,
-  users,
-  lawyers,
 }: {
   dateKey: string;
   appointments: AppointmentWithRelations[];
   user: CurrentUser;
   allowedScopes: CalendarScope[];
-  users: AgendaUserOption[];
-  lawyers: AgendaUserOption[];
 }) {
   return (
     <section className="rounded-sm border border-[#dee2e6] bg-white shadow-sm md:sticky md:top-20">
@@ -39,8 +35,6 @@ export function DayAgendaPanel({
               appointment={appointment}
               user={user}
               allowedScopes={allowedScopes}
-              users={users}
-              lawyers={lawyers}
             />
           ))
         ) : (
