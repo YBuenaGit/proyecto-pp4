@@ -5,6 +5,7 @@ import { formatDateTime, labelFromValue } from "@/lib/format";
 import { parseJuridicalActionContent } from "@/lib/juridical-action-content";
 import { renderLegajoPdf, type LegajoPdfPerson, type LegajoPdfReferral, type LegajoPdfSheet } from "@/lib/legajo-pdf";
 import { prisma } from "@/lib/prisma";
+import { earliestDate, isVisibleBeforeReferralCutoff } from "@/lib/referral-privacy";
 import { assertAccess, canAccessJuridical } from "@/lib/rbac";
 import { personDisplayName } from "@/lib/text";
 
@@ -81,7 +82,12 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   });
   if (!intervention) notFound();
 
-  const actionIds = intervention.actions.map((action) => action.id);
+  const isDerivationAction = (action: { actionType: string }) => action.actionType === "DERIVACION";
+  const outgoingReferralAt = earliestDate(intervention.originReferrals.map((referral) => referral.referredAt));
+  const derivationActionAt = earliestDate(intervention.actions.filter(isDerivationAction).map((action) => action.createdAt));
+  const privacyCutoffAt = earliestDate([outgoingReferralAt, derivationActionAt]);
+  const visibleActions = intervention.actions.filter((action) => isVisibleBeforeReferralCutoff(action, privacyCutoffAt, isDerivationAction));
+  const actionIds = visibleActions.map((action) => action.id);
   const [attachments, auditLogs] = await Promise.all([
     prisma.attachment.findMany({
       where: {
@@ -109,7 +115,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       attachmentsByActionId.set(attachment.entityId, current);
     });
 
-  const visibleActions = intervention.actions.filter((action) => action.actionType !== "DERIVACION");
   const sheets: LegajoPdfSheet[] = [
     {
       number: 1,

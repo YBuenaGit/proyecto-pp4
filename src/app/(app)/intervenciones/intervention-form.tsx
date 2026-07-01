@@ -900,6 +900,7 @@ export function InterventionForm({
     >
       <input type="hidden" name="complainantsPayload" value={JSON.stringify(submittedComplainants)} />
       <input type="hidden" name="linkedPersonsPayload" value={JSON.stringify(submittedLinkedPersons)} />
+      {record ? <input type="hidden" name="derivedArea" value={values.derivedArea} /> : null}
 
       <div className="space-y-4">
         <div className="rounded-lg border border-[#dee2e6] bg-white p-4 shadow-sm">
@@ -1346,21 +1347,23 @@ export function InterventionForm({
                   ))}
                 </select>
               </Field>
-              <Field label="Area derivada">
-                <select
-                  name="derivedArea"
-                  value={values.derivedArea}
-                  onChange={(event) => setValue("derivedArea", event.target.value)}
-                  className={inputClass}
-                >
-                  <option value="">Sin derivacion</option>
-                  {JURIDICAL_DERIVED_AREAS.map((area) => (
-                    <option key={area} value={area}>
-                      {area}
-                    </option>
-                  ))}
-                </select>
-              </Field>
+              {!record ? (
+                <Field label="Area derivada">
+                  <select
+                    name="derivedArea"
+                    value={values.derivedArea}
+                    onChange={(event) => setValue("derivedArea", event.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="">Sin derivacion</option>
+                    {JURIDICAL_DERIVED_AREAS.map((area) => (
+                      <option key={area} value={area}>
+                        {area}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              ) : null}
               {!record ? (
                 <Field label="Adjuntos" className="md:col-span-2 xl:col-span-3">
                   <div className="flex items-start gap-3 rounded-lg bg-[#f8f9fa] p-3">
@@ -1540,7 +1543,7 @@ export function InterventionForm({
               <SummaryBlock title="Cierre" onEdit={() => goToStep(3)}>
                 <SummaryGrid>
                   <SummaryItem label="Estado" value={labelFromValue(values.status)} />
-                  <SummaryItem label="Area derivada" value={values.derivedArea || "Sin derivacion"} />
+                  {!record ? <SummaryItem label="Area derivada" value={values.derivedArea || "Sin derivacion"} /> : null}
                   <SummaryItem label="Cantidad de adjuntos" value={!record ? selectedAttachments.length : "Sin cambios desde este formulario"} />
                 </SummaryGrid>
                 {selectedAttachments.length ? (

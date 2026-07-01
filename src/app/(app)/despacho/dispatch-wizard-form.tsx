@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardE
 import { AlertCircle, Check, ChevronLeft, ChevronRight, Lock, Pencil, Plus, Trash2, UploadCloud } from "lucide-react";
 import { Button, LinkButton } from "@/components/ui/button";
 import { cn } from "@/components/ui/cn";
-import { DISPATCH_STATUSES, PRIORITIES } from "@/lib/constants";
+import { DISPATCH_INTERNAL_DERIVED_AREAS, DISPATCH_STATUSES, PRIORITIES } from "@/lib/constants";
 import { formatDateTime, labelFromValue, normalizeName } from "@/lib/format";
 import { sortByLabel } from "@/lib/text";
 
@@ -580,12 +580,7 @@ export function DispatchWizardForm({
   const [showConfirm, setShowConfirm] = useState(false);
   const sortedCategories = useMemo(() => sortByLabel(categories, (item) => item.label), [categories]);
   const sortedAreas = useMemo(() => {
-    const internalAreas = [
-      { value: "ATENCION_Y_CONTENCION_A_LA_VICTIMA", label: "Atencion y Contencion a la Victima" },
-      { value: "DIRECTIVO", label: "Directivo" },
-      { value: "INTERVENCIONES", label: "Intervenciones" },
-    ];
-    const unique = [...areas, ...internalAreas].filter(
+    const unique = [...areas, ...DISPATCH_INTERNAL_DERIVED_AREAS].filter(
       (item, index, items) => items.findIndex((candidate) => candidate.label.toLocaleLowerCase("es-AR") === item.label.toLocaleLowerCase("es-AR")) === index,
     );
     return sortByLabel(unique, (item) => item.label);
@@ -801,6 +796,7 @@ export function DispatchWizardForm({
       <input type="hidden" name="complainantsPayload" value={JSON.stringify(submittedComplainants)} />
       <input type="hidden" name="linkedPersonsPayload" value={JSON.stringify(submittedLinkedPersons)} />
       <input type="hidden" name="usesHistoricalDate" value={values.usesHistoricalDate ? "true" : "false"} />
+      {!allowAttachments ? <input type="hidden" name="referredArea" value={values.referredArea} /> : null}
 
       <div className="space-y-3">
         <div className="rounded-lg border border-[#dee2e6] bg-white p-2.5 shadow-sm">
@@ -1265,6 +1261,7 @@ export function DispatchWizardForm({
                   ))}
                 </select>
               </Field>
+              {allowAttachments ? (
               <Field label="Área derivada">
                 <select
                   name="referredArea"
@@ -1280,6 +1277,7 @@ export function DispatchWizardForm({
                   ))}
                 </select>
               </Field>
+              ) : null}
               {allowAttachments ? (
                 <Field label="Adjuntos" className="md:col-span-2 xl:col-span-3">
                   <div className="flex items-start gap-2 rounded-lg bg-[#f8f9fa] p-2.5">
@@ -1414,7 +1412,9 @@ export function DispatchWizardForm({
               <SummaryBlock title="Cierre" actionLabel="Editar cierre" onEdit={() => goToStep(3)}>
                 <SummaryGrid>
                   <SummaryItem label="Estado" value={labelFromValue(values.status)} />
+                  {allowAttachments ? (
                   <SummaryItem label="Área derivada" value={selectedArea ?? "Sin derivación"} />
+                  ) : null}
                   <SummaryItem label="Cantidad de adjuntos" value={allowAttachments ? selectedAttachments.length : "Sin cambios desde este formulario"} />
                 </SummaryGrid>
                 {selectedAttachments.length ? (

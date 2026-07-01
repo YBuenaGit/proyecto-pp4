@@ -107,6 +107,15 @@ function normalizeReferralArea(value: string | null | undefined) {
     .trim();
 }
 
+function referralSummaryFrom(source: { description: string; internalNumber: string }, area: string) {
+  const description = source.description.trim();
+  return description.length >= 8 ? description : `Derivacion a ${area} desde ${source.internalNumber}.`;
+}
+
+function redirectWithReferralSuccess(path: string) {
+  redirect(`${path}?derivacion=ok`);
+}
+
 function isDispatchReferralArea(value: string | null | undefined) {
   return normalizeReferralArea(value) === "despacho";
 }
@@ -179,7 +188,18 @@ async function syncJuridicalReferralSummary(interventionId: string, status: stri
   });
 }
 
-async function createJuridicalDirectivoReferral(interventionId: string, summary: string, userId: string) {
+async function isJuridicalLegajoDerivedOut(interventionId: string) {
+  const intervention = await prisma.juridicalIntervention.findUniqueOrThrow({
+    where: { id: interventionId },
+    select: {
+      derivedArea: true,
+      _count: { select: { originReferrals: true } },
+    },
+  });
+  return Boolean(intervention.derivedArea || intervention._count.originReferrals);
+}
+
+async function createJuridicalDirectivoReferral(interventionId: string, summary: string, userId: string, destinationArea = "Directivo") {
   const before = await juridicalAuditSnapshot(interventionId);
   const referral = await prisma.referral.create({
     data: {
@@ -192,39 +212,10 @@ async function createJuridicalDirectivoReferral(interventionId: string, summary:
       referredById: userId,
     },
   });
-  const action = await prisma.juridicalAction.create({
-    data: {
-      juridicalInterventionId: interventionId,
-      actionType: "DERIVACION",
-      content: `Derivacion a Directivo: ${summary}`,
-      createdById: userId,
-    },
-  });
-
-  await writeAuditLog({
-    module: "JURIDICO",
-    entityType: "Referral",
-    entityId: referral.id,
-    action: "REFERRAL",
-    createdById: userId,
-    before,
-    after: { intervention: before, action, referral },
-  });
-}
-
-async function createJuridicalSelfReferral(interventionId: string, summary: string, userId: string, destinationArea: string) {
-  const before = await juridicalAuditSnapshot(interventionId);
-  const referral = await prisma.referral.create({
-    data: {
-      originModule: "JURIDICO",
-      destinationModule: "JURIDICO",
-      originJuridicalInterventionId: interventionId,
-      destinationJuridicalInterventionId: interventionId,
-      summary,
-      status: "PENDIENTE",
-      visibleStatusForOrigin: `Derivada a ${destinationArea} - pendiente de recepcion`,
-      referredById: userId,
-    },
+  const after = await prisma.juridicalIntervention.update({
+    where: { id: interventionId },
+    data: { derivedArea: destinationArea },
+    include: juridicalAuditInclude,
   });
   const action = await prisma.juridicalAction.create({
     data: {
@@ -242,8 +233,96 @@ async function createJuridicalSelfReferral(interventionId: string, summary: stri
     action: "REFERRAL",
     createdById: userId,
     before,
-    after: { intervention: before, action, referral },
+    after: { intervention: after, action, referral },
   });
+}
+
+async function createJuridicalSelfReferral(interventionId: string, summary: string, userId: string, destinationArea: string) {
+  const before = await juridicalAuditSnapshot(interventionId);
+  const referral = await prisma.referral.create({
+    data: {
+      originModule: "JURIDICO",
+      destinationModule: "JURIDICO",
+      originJuridicalInterventionId: interventionId,
+      destinationJuridicalInterventionId: interventionId,
+      summary,
+      status: "PENDIENTE",
+      visibleStatusForOrigin: `Derivada a ${destinationArea} - pendiente de recepcion`,
+      referredById: userId,
+    },
+  });
+  const after = await prisma.juridicalIntervention.update({
+    where: { id: interventionId },
+    data: { derivedArea: destinationArea },
+    include: juridicalAuditInclude,
+  });
+  const action = await prisma.juridicalAction.create({
+    data: {
+      juridicalInterventionId: interventionId,
+      actionType: "DERIVACION",
+      content: `Derivacion a ${destinationArea}: ${summary}`,
+      createdById: userId,
+    },
+  });
+
+  await writeAuditLog({
+    module: "JURIDICO",
+    entityType: "Referral",
+    entityId: referral.id,
+    action: "REFERRAL",
+    createdById: userId,
+    before,
+    after: { intervention: after, action, referral },
+  });
+}
+
+async function createJuridicalExternalAreaReferral(interventionId: string, area: string, userId: string) {
+  const before = await juridicalAuditSnapshot(interventionId);
+  const after = await prisma.juridicalIntervention.update({
+    where: { id: interventionId },
+    data: { derivedArea: area },
+    include: juridicalAuditInclude,
+  });
+  const action = await prisma.juridicalAction.create({
+    data: {
+      juridicalInterventionId: interventionId,
+      actionType: "DERIVACION",
+      content: `Derivacion a ${area}.`,
+      createdById: userId,
+    },
+  });
+
+  await writeAuditLog({
+    module: "JURIDICO",
+    entityType: "JuridicalIntervention",
+    entityId: interventionId,
+    action: "REFERRAL",
+    createdById: userId,
+    before,
+    after: { intervention: after, action },
+  });
+}
+
+async function applyJuridicalReferralFromArea(interventionId: string, area: string, summary: string, userId: string) {
+  if (isDispatchReferralArea(area)) {
+    const referralData = new FormData();
+    referralData.set("summary", summary);
+    referralData.set("area", area);
+    await deriveJuridicalToDispatch(interventionId, referralData);
+    return;
+  }
+
+  if (isDirectivoReferralArea(area)) {
+    await createJuridicalDirectivoReferral(interventionId, summary, userId, area);
+    return;
+  }
+
+  if (isJuridicalReferralArea(area)) {
+    await createJuridicalSelfReferral(interventionId, summary, userId, area);
+    return;
+  }
+
+  await createJuridicalExternalAreaReferral(interventionId, area, userId);
 }
 
 export async function createJuridicalIntervention(formData: FormData) {
@@ -320,13 +399,9 @@ export async function createJuridicalIntervention(formData: FormData) {
     createdById: user.id,
     after: intervention,
   });
-  if (isDispatchReferralArea(derivedArea)) {
-    const referralData = new FormData();
-    referralData.set("summary", parsed.description);
-    referralData.set("area", "Despacho");
-    await deriveJuridicalToDispatch(intervention.id, referralData);
-  } else if (isDirectivoReferralArea(derivedArea)) {
-    await createJuridicalDirectivoReferral(intervention.id, parsed.description, user.id);
+  if (derivedArea) {
+    await applyJuridicalReferralFromArea(intervention.id, derivedArea, parsed.description, user.id);
+    redirectWithReferralSuccess(`/intervenciones/${intervention.id}`);
   }
   redirect(`/intervenciones/${intervention.id}`);
 }
@@ -375,7 +450,7 @@ export async function updateJuridicalIntervention(interventionId: string, formDa
       description: parsed.description,
       guidanceProvided: optionalSentenceText(formData, "guidanceProvided"),
       referredToAgency: optionalSentenceText(formData, "referredToAgency"),
-      derivedArea: optionalText(formData, "derivedArea"),
+      derivedArea: before.derivedArea,
       confidentialNotes: optionalSentenceText(formData, "confidentialNotes"),
       lastStatusAt: before.status !== parsed.status ? new Date() : before.lastStatusAt,
       complainants: {
@@ -408,6 +483,10 @@ export async function updateJuridicalIntervention(interventionId: string, formDa
 export async function addJuridicalAction(interventionId: string, formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
+  if (await isJuridicalLegajoDerivedOut(interventionId)) {
+    revalidatePath(`/intervenciones/${interventionId}`);
+    redirect(`/intervenciones/${interventionId}`);
+  }
   const actionType = text(formData, "actionType") || "SEGUIMIENTO";
   const description = sentenceText(formData, "description") || sentenceText(formData, "content");
   const content = buildJuridicalActionContent({
@@ -465,6 +544,10 @@ export async function updateJuridicalAction(actionId: string, formData: FormData
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
   const existingAction = await prisma.juridicalAction.findUniqueOrThrow({ where: { id: actionId } });
+  if (await isJuridicalLegajoDerivedOut(existingAction.juridicalInterventionId)) {
+    revalidatePath(`/intervenciones/${existingAction.juridicalInterventionId}`);
+    redirect(`/intervenciones/${existingAction.juridicalInterventionId}`);
+  }
   const actionType = text(formData, "actionType") || existingAction.actionType;
   const description = sentenceText(formData, "description") || sentenceText(formData, "content");
   const content = buildJuridicalActionContent({
@@ -520,9 +603,6 @@ export async function updateJuridicalAction(actionId: string, formData: FormData
 export async function deriveJuridicalToDispatch(interventionId: string, formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
-  const summary = sentenceText(formData, "summary");
-  if (summary.length < 8) return;
-
   const source = await prisma.juridicalIntervention.findUniqueOrThrow({
     where: { id: interventionId },
     include: {
@@ -531,6 +611,9 @@ export async function deriveJuridicalToDispatch(interventionId: string, formData
       linkedPersons: { orderBy: { sortOrder: "asc" } },
     },
   });
+  const destinationArea = optionalText(formData, "area") ?? "Despacho";
+  const submittedSummary = sentenceText(formData, "summary");
+  const summary = submittedSummary.length >= 8 ? submittedSummary : referralSummaryFrom(source, destinationArea);
   const complainants = source.complainants.length
     ? source.complainants
     : source.complainantIsAnonymous ||
@@ -578,7 +661,7 @@ export async function deriveJuridicalToDispatch(interventionId: string, formData
       category: "PEDIDO",
       priority: source.urgency,
       status: "RECIBIDO",
-      referredArea: optionalText(formData, "area") ?? "Despacho",
+      referredArea: destinationArea,
       origin: "FROM_JURIDICO",
       attendedAt: new Date(),
       lastStatusAt: new Date(),
@@ -606,6 +689,11 @@ export async function deriveJuridicalToDispatch(interventionId: string, formData
         })),
       },
     },
+  });
+
+  const updatedSource = await prisma.juridicalIntervention.update({
+    where: { id: interventionId },
+    data: { derivedArea: destinationArea },
   });
 
   const referral = await prisma.referral.create({
@@ -637,43 +725,39 @@ export async function deriveJuridicalToDispatch(interventionId: string, formData
     action: "REFERRAL",
     createdById: user.id,
     before: source,
-    after: { dispatchRecord, referral },
+    after: { intervention: updatedSource, dispatchRecord, referral },
   });
   revalidatePath(`/intervenciones/${interventionId}`);
-  redirect(`/intervenciones/${interventionId}`);
+  redirectWithReferralSuccess(`/intervenciones/${interventionId}`);
 }
 
 export async function referJuridicalToArea(interventionId: string, formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
+  if (await isJuridicalLegajoDerivedOut(interventionId)) {
+    revalidatePath(`/intervenciones/${interventionId}`);
+    redirect(`/intervenciones/${interventionId}`);
+  }
   const area = text(formData, "area");
-  const summary = sentenceText(formData, "summary");
-  if (!area || summary.length < 8) return;
+  if (!area) return;
+  const source = await prisma.juridicalIntervention.findUniqueOrThrow({
+    where: { id: interventionId },
+    select: { description: true, internalNumber: true },
+  });
+  const summary = referralSummaryFrom(source, area);
 
-  if (isDispatchReferralArea(area)) {
-    const referralData = new FormData();
-    referralData.set("summary", summary);
-    referralData.set("area", area);
-    await deriveJuridicalToDispatch(interventionId, referralData);
-    return;
-  }
-
-  if (isDirectivoReferralArea(area)) {
-    await createJuridicalDirectivoReferral(interventionId, summary, user.id);
-    revalidatePath(`/intervenciones/${interventionId}`);
-    redirect(`/intervenciones/${interventionId}`);
-  }
-
-  if (isJuridicalReferralArea(area)) {
-    await createJuridicalSelfReferral(interventionId, summary, user.id, area);
-    revalidatePath(`/intervenciones/${interventionId}`);
-    redirect(`/intervenciones/${interventionId}`);
-  }
+  await applyJuridicalReferralFromArea(interventionId, area, summary, user.id);
+  revalidatePath(`/intervenciones/${interventionId}`);
+  redirectWithReferralSuccess(`/intervenciones/${interventionId}`);
 }
 
 export async function uploadJuridicalAttachment(interventionId: string, formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
+  if (await isJuridicalLegajoDerivedOut(interventionId)) {
+    revalidatePath(`/intervenciones/${interventionId}`);
+    redirect(`/intervenciones/${interventionId}`);
+  }
   const saved = await saveAttachments({
     files: formData.getAll("attachments"),
     module: "JURIDICO",

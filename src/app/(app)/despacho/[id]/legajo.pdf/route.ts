@@ -4,6 +4,7 @@ import { formatDateTime, labelFromValue } from "@/lib/format";
 import { parseJuridicalActionContent } from "@/lib/juridical-action-content";
 import { renderLegajoPdf, type LegajoPdfPerson, type LegajoPdfReferral, type LegajoPdfSheet } from "@/lib/legajo-pdf";
 import { prisma } from "@/lib/prisma";
+import { earliestDate, isVisibleBeforeReferralCutoff } from "@/lib/referral-privacy";
 import { assertAccess, canAccessDispatch } from "@/lib/rbac";
 import { personDisplayName } from "@/lib/text";
 
@@ -26,7 +27,15 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 
   if (!record) notFound();
 
-  const followUpIds = record.followUps.map((followUp) => followUp.id);
+  const isDerivationFollowUp = (followUp: { content: string; statusAfter: string | null }) =>
+    followUp.statusAfter === "DERIVADO" || followUp.content.toLocaleLowerCase("es-AR").startsWith("deriv");
+  const outgoingReferralAt = earliestDate(record.originReferrals.map((referral) => referral.referredAt));
+  const derivationFollowUpAt = earliestDate(record.followUps.filter(isDerivationFollowUp).map((followUp) => followUp.createdAt));
+  const privacyCutoffAt = earliestDate([outgoingReferralAt, derivationFollowUpAt]);
+  const visibleFollowUps = record.followUps.filter((followUp) =>
+    isVisibleBeforeReferralCutoff(followUp, privacyCutoffAt, isDerivationFollowUp),
+  );
+  const followUpIds = visibleFollowUps.map((followUp) => followUp.id);
   const attachments = await prisma.attachment.findMany({
     where: {
       module: "DESPACHO",
@@ -87,7 +96,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
       statusText: `Estado actual: ${labelFromValue(record.status)}`,
       attachments: [],
     },
-    ...record.followUps.map((followUp, index) => {
+    ...visibleFollowUps.map((followUp, index) => {
       const parsed = parseJuridicalActionContent(followUp.content);
       return {
         number: index + 2,

@@ -88,6 +88,7 @@ export const ACTION_TYPES = [
 
 export const JURIDICAL_DERIVED_AREAS = [
   "Articulacion y derivacion",
+  "Atencion y Contencion a la Victima",
   "Catastro",
   "Defensa Civil",
   "Desarrollo Social",
@@ -109,6 +110,12 @@ export const JURIDICAL_DERIVED_AREAS = [
   "Urgencias vecinales",
   "Otros",
 ];
+
+export const DISPATCH_INTERNAL_DERIVED_AREAS = [
+  { value: "ATENCION_Y_CONTENCION_A_LA_VICTIMA", label: "Atencion y Contencion a la Victima" },
+  { value: "DIRECTIVO", label: "Directivo" },
+  { value: "INTERVENCIONES", label: "Intervenciones" },
+] as const;
 
 export const DISPATCH_CATEGORY_LABELS: Record<string, string> = {
   RECLAMO: "Reclamo",

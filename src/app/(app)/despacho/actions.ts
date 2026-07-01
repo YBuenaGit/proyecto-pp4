@@ -130,6 +130,15 @@ function normalizeReferralArea(value: string | null | undefined) {
     .trim();
 }
 
+function referralSummaryFrom(source: { description: string; internalNumber: string }, area: string) {
+  const description = source.description.trim();
+  return description.length >= 8 ? description : `Derivacion a ${area} desde ${source.internalNumber}.`;
+}
+
+function redirectWithReferralSuccess(path: string) {
+  redirect(`${path}?derivacion=ok`);
+}
+
 function isJuridicalReferralArea(value: string | null | undefined) {
   const area = normalizeReferralArea(value);
   return Boolean(
@@ -186,6 +195,18 @@ async function syncDispatchReferralSummary(recordId: string, status: string) {
   });
 }
 
+async function isDispatchLegajoDerivedOut(recordId: string) {
+  const record = await prisma.dispatchRecord.findUniqueOrThrow({
+    where: { id: recordId },
+    select: {
+      status: true,
+      referredArea: true,
+      _count: { select: { originReferrals: true } },
+    },
+  });
+  return Boolean(record._count.originReferrals || (record.referredArea && record.status === "DERIVADO"));
+}
+
 async function createDispatchDirectivoReferral(recordId: string, summary: string, userId: string) {
   const before = await prisma.dispatchRecord.findUniqueOrThrow({ where: { id: recordId } });
   const referral = await prisma.referral.create({
@@ -225,6 +246,52 @@ async function createDispatchDirectivoReferral(recordId: string, summary: string
     before,
     after: { record: after, followUp, referral },
   });
+}
+
+async function createDispatchExternalAreaReferral(recordId: string, area: string, summary: string, userId: string, updateStatus: boolean) {
+  const before = await prisma.dispatchRecord.findUniqueOrThrow({ where: { id: recordId } });
+  const statusData = updateStatus ? { status: "DERIVADO", lastStatusAt: new Date() } : {};
+  const after = await prisma.dispatchRecord.update({
+    where: { id: recordId },
+    data: {
+      referredArea: area,
+      ...statusData,
+    },
+  });
+  const followUp = await prisma.dispatchFollowUp.create({
+    data: {
+      dispatchRecordId: recordId,
+      content: `Derivado a ${area}. ${summary}`,
+      statusAfter: updateStatus ? "DERIVADO" : after.status,
+      createdById: userId,
+    },
+  });
+  await writeAuditLog({
+    module: "DESPACHO",
+    entityType: "DispatchRecord",
+    entityId: recordId,
+    action: "REFERRAL",
+    createdById: userId,
+    before,
+    after: { record: after, followUp },
+  });
+}
+
+async function applyDispatchReferralFromArea(recordId: string, area: string, summary: string, userId: string, updateExternalStatus = true) {
+  if (isJuridicalReferralArea(area)) {
+    const referralData = new FormData();
+    referralData.set("summary", summary);
+    referralData.set("area", area);
+    await deriveDispatchToJuridical(recordId, referralData);
+    return;
+  }
+
+  if (isDirectivoReferralArea(area)) {
+    await createDispatchDirectivoReferral(recordId, summary, userId);
+    return;
+  }
+
+  await createDispatchExternalAreaReferral(recordId, area, summary, userId, updateExternalStatus);
 }
 
 export async function createDispatchRecord(formData: FormData) {
@@ -290,13 +357,9 @@ export async function createDispatchRecord(formData: FormData) {
     after: record,
   });
 
-  if (referredArea && isJuridicalReferralArea(referredArea)) {
-    const referralData = new FormData();
-    referralData.set("summary", parsed.description);
-    referralData.set("area", referredArea);
-    await deriveDispatchToJuridical(record.id, referralData);
-  } else if (isDirectivoReferralArea(referredArea)) {
-    await createDispatchDirectivoReferral(record.id, parsed.description, user.id);
+  if (referredArea) {
+    await applyDispatchReferralFromArea(record.id, referredArea, parsed.description, user.id);
+    redirectWithReferralSuccess(`/despacho/${record.id}`);
   }
 
   redirect(`/despacho/${record.id}`);
@@ -338,7 +401,7 @@ export async function updateDispatchRecord(recordId: string, formData: FormData)
       category: parsed.category,
       priority: parsed.priority,
       status: parsed.status,
-      referredArea: optionalText(formData, "referredArea"),
+      referredArea: before.referredArea,
       lastStatusAt: before.status !== parsed.status ? new Date() : before.lastStatusAt,
       complainants: {
         deleteMany: {},
@@ -370,6 +433,10 @@ export async function updateDispatchRecord(recordId: string, formData: FormData)
 export async function addDispatchFollowUp(recordId: string, formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessDispatch(user));
+  if (await isDispatchLegajoDerivedOut(recordId)) {
+    revalidatePath(`/despacho/${recordId}`);
+    redirect(`/despacho/${recordId}`);
+  }
   const description = sentenceText(formData, "description") || sentenceText(formData, "content");
   if (description.length < 3) return;
   const content = buildJuridicalActionContent({
@@ -426,61 +493,27 @@ export async function addDispatchFollowUp(recordId: string, formData: FormData) 
 export async function referDispatchToArea(recordId: string, formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessDispatch(user));
-  const area = text(formData, "area");
-  const summary = sentenceText(formData, "summary");
-  if (!area || !summary) return;
-
-  if (isJuridicalReferralArea(area)) {
-    const referralData = new FormData();
-    referralData.set("summary", summary);
-    referralData.set("area", area);
-    await deriveDispatchToJuridical(recordId, referralData);
-    return;
-  }
-
-  if (isDirectivoReferralArea(area)) {
-    await createDispatchDirectivoReferral(recordId, summary, user.id);
+  if (await isDispatchLegajoDerivedOut(recordId)) {
     revalidatePath(`/despacho/${recordId}`);
     redirect(`/despacho/${recordId}`);
   }
-
-  const before = await prisma.dispatchRecord.findUniqueOrThrow({ where: { id: recordId } });
-  const after = await prisma.dispatchRecord.update({
+  const area = text(formData, "area");
+  if (!area) return;
+  const source = await prisma.dispatchRecord.findUniqueOrThrow({
     where: { id: recordId },
-    data: {
-      referredArea: area,
-      status: "DERIVADO",
-      lastStatusAt: new Date(),
-    },
+    select: { description: true, internalNumber: true },
   });
-  const followUp = await prisma.dispatchFollowUp.create({
-    data: {
-      dispatchRecordId: recordId,
-      content: `Derivado a ${area}. ${summary}`,
-      statusAfter: "DERIVADO",
-      createdById: user.id,
-    },
-  });
-  await writeAuditLog({
-    module: "DESPACHO",
-    entityType: "DispatchRecord",
-    entityId: recordId,
-    action: "REFERRAL",
-    createdById: user.id,
-    before,
-    after: { record: after, followUp },
-  });
+  const summary = referralSummaryFrom(source, area);
+
+  await applyDispatchReferralFromArea(recordId, area, summary, user.id);
   revalidatePath(`/despacho/${recordId}`);
-  redirect(`/despacho/${recordId}`);
+  redirectWithReferralSuccess(`/despacho/${recordId}`);
 }
 
 export async function deriveDispatchToJuridical(recordId: string, formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessDispatch(user));
-  const summary = sentenceText(formData, "summary");
   const type = text(formData, "type") || "PRIMERA_INTERVENCION";
-  if (summary.length < 8) return;
-
   const source = await prisma.dispatchRecord.findUniqueOrThrow({
     where: { id: recordId },
     include: {
@@ -492,6 +525,8 @@ export async function deriveDispatchToJuridical(recordId: string, formData: Form
   const complainant = source.complainants[0];
   const firstLinkedPerson = source.linkedPersons[0];
   const destinationArea = optionalText(formData, "area") ?? source.referredArea ?? "Intervenciones Juridico-Institucionales";
+  const submittedSummary = sentenceText(formData, "summary");
+  const summary = submittedSummary.length >= 8 ? submittedSummary : referralSummaryFrom(source, destinationArea);
 
   const intervention = await prisma.juridicalIntervention.create({
     data: {
@@ -584,12 +619,16 @@ export async function deriveDispatchToJuridical(recordId: string, formData: Form
     after: { dispatchRecord: after, intervention, referral },
   });
   revalidatePath(`/despacho/${recordId}`);
-  redirect(`/despacho/${recordId}`);
+  redirectWithReferralSuccess(`/despacho/${recordId}`);
 }
 
 export async function uploadDispatchAttachment(recordId: string, formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessDispatch(user));
+  if (await isDispatchLegajoDerivedOut(recordId)) {
+    revalidatePath(`/despacho/${recordId}`);
+    redirect(`/despacho/${recordId}`);
+  }
   const saved = await saveAttachments({
     files: formData.getAll("attachments"),
     module: "DESPACHO",

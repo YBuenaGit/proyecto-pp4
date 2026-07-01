@@ -7,15 +7,18 @@ import { AppModal } from "@/components/ui/app-modal";
 import { AuditTimeline } from "@/components/ui/audit-timeline";
 import { Button, LinkButton } from "@/components/ui/button";
 import { DetailField, DetailSection, FieldGrid } from "@/components/ui/detail-section";
-import { FormField, inputClass, textareaClass } from "@/components/ui/form-controls";
+import { FormField, inputClass } from "@/components/ui/form-controls";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { SuccessToast } from "@/components/ui/success-toast";
 import { Table, Td } from "@/components/ui/table";
-import { JURIDICAL_CONTEXT_LABELS } from "@/lib/constants";
+import { JURIDICAL_CONTEXT_LABELS, JURIDICAL_DERIVED_AREAS } from "@/lib/constants";
 import { requireUser } from "@/lib/auth";
+import type { SearchParams } from "@/lib/types";
 import { formatDate, formatDateTime, labelFromValue } from "@/lib/format";
 import { chunkForBookPages, paginateBookTextSections } from "@/lib/book-pagination";
 import { parseJuridicalActionContent } from "@/lib/juridical-action-content";
 import { prisma } from "@/lib/prisma";
+import { earliestDate, isVisibleBeforeReferralCutoff } from "@/lib/referral-privacy";
 import { assertAccess, canAccessJuridical } from "@/lib/rbac";
 import { personDisplayName, sortByLabel } from "@/lib/text";
 import {
@@ -364,10 +367,18 @@ function attentionLabel(position: number) {
   return word ? `${word} atencion` : `Atencion ${position}`;
 }
 
-export default async function InterventionDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function InterventionDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<SearchParams>;
+}) {
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
   const { id } = await params;
+  const query = searchParams ? await searchParams : {};
+  const showReferralToast = query.derivacion === "ok";
   const [intervention, types, contexts] = await Promise.all([
     prisma.juridicalIntervention.findUnique({
       where: { id },
@@ -392,7 +403,13 @@ export default async function InterventionDetailPage({ params }: { params: Promi
   ]);
   if (!intervention) notFound();
 
-  const actionIds = intervention.actions.map((action) => action.id);
+  const isDerivationAction = (action: { actionType: string }) => action.actionType === "DERIVACION";
+  const outgoingReferralAt = earliestDate(intervention.originReferrals.map((referral) => referral.referredAt));
+  const derivationActionAt = earliestDate(intervention.actions.filter(isDerivationAction).map((action) => action.createdAt));
+  const privacyCutoffAt = earliestDate([outgoingReferralAt, derivationActionAt]);
+  const isOriginRestricted = Boolean(intervention.derivedArea || intervention.originReferrals.length);
+  const visibleActions = intervention.actions.filter((action) => isVisibleBeforeReferralCutoff(action, privacyCutoffAt, isDerivationAction));
+  const actionIds = visibleActions.map((action) => action.id);
   const [attachments, auditLogs] = await Promise.all([
     prisma.attachment.findMany({
       where: {
@@ -461,7 +478,6 @@ export default async function InterventionDetailPage({ params }: { params: Promi
   const primaryLinkedName = primaryLinkedPerson ? display(fullName(primaryLinkedPerson)) : "-";
 
   const statusChanges = statusChangeByActionId(auditLogs);
-  const visibleActions = intervention.actions.filter((action) => !(action.actionType === "DERIVACION" && action.content.startsWith("Derivacion a Despacho:")));
   const actionSheets = visibleActions.map((action, actionIndex) => {
     const parsed = parseJuridicalActionContent(action.content);
     const statusChange = statusChanges.get(action.id);
@@ -663,6 +679,7 @@ export default async function InterventionDetailPage({ params }: { params: Promi
 
   return (
     <main className="space-y-5">
+      {showReferralToast ? <SuccessToast /> : null}
       <section
         className="relative overflow-hidden rounded-sm border border-[#b7dfee] bg-[#a1bbcf] p-3 text-[#212529] shadow-sm sm:p-4"
       >
@@ -691,35 +708,29 @@ export default async function InterventionDetailPage({ params }: { params: Promi
                 submitLabel="Guardar cambios"
               />
             </AppModal>
-            <AppModal title="Nuevo registro de intervencion" description="Crea una nueva intervencion documental dentro de este legajo." trigger={<><Plus className="h-4 w-4" />Nueva intervencion</>} size="md">
-              <AddJuridicalActionForm action={addJuridicalAction.bind(null, intervention.id)} submitLabel="Crear intervencion" showFollowUp={false} />
-            </AppModal>
-            <AppModal title="Derivaciones" trigger={<><Send className="h-4 w-4" />Derivar</>} triggerVariant="secondary" size="md">
-              <form action={referJuridicalToArea.bind(null, intervention.id)} className="space-y-4">
-                <FormField label="Area a derivar">
-                  <select name="area" className={inputClass} defaultValue="" required>
-                    <option value="">Seleccionar area</option>
-                    {sortByLabel(
-                      [
-                        { value: "Despacho", label: "Despacho" },
-                        { value: "Atencion y Contencion a la Victima", label: "Atencion y Contencion a la Victima" },
-                        { value: "Directivo", label: "Directivo" },
-                      ],
-                      (item) => item.label,
-                    ).map((item) => (
-                      <option key={item.value} value={item.value}>{item.label}</option>
-                    ))}
-                  </select>
-                </FormField>
-                <FormField label="Resumen de derivacion">
-                  <textarea name="summary" className={textareaClass} placeholder="Resumen operativo, sin notas sensibles innecesarias" required />
-                </FormField>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button type="submit">Guardar</Button>
-                  <Button type="button" variant="secondary" data-modal-close>Cancelar</Button>
-                </div>
-              </form>
-            </AppModal>
+            {!isOriginRestricted ? (
+              <>
+                <AppModal title="Nuevo registro de intervencion" description="Crea una nueva intervencion documental dentro de este legajo." trigger={<><Plus className="h-4 w-4" />Nueva intervencion</>} size="md">
+                  <AddJuridicalActionForm action={addJuridicalAction.bind(null, intervention.id)} submitLabel="Crear intervencion" showFollowUp={false} />
+                </AppModal>
+                <AppModal title="Derivaciones" trigger={<><Send className="h-4 w-4" />Derivar</>} triggerVariant="secondary" size="md">
+                  <form action={referJuridicalToArea.bind(null, intervention.id)} className="space-y-4">
+                    <FormField label="Area a derivar">
+                      <select name="area" className={inputClass} defaultValue="" required>
+                        <option value="">Seleccionar area</option>
+                        {sortByLabel(JURIDICAL_DERIVED_AREAS, (item) => item).map((area) => (
+                          <option key={area} value={area}>{area}</option>
+                        ))}
+                      </select>
+                    </FormField>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button type="submit">Guardar</Button>
+                      <Button type="button" variant="secondary" data-modal-close>Cancelar</Button>
+                    </div>
+                  </form>
+                </AppModal>
+              </>
+            ) : null}
             <AppModal title="Historial completo de auditoria" trigger={<><FileText className="h-4 w-4" />Auditoria</>} triggerVariant="secondary" size="lg">
               <AuditTimeline logs={auditLogs} />
             </AppModal>
@@ -810,21 +821,23 @@ export default async function InterventionDetailPage({ params }: { params: Promi
                 <Td>
                   <span className="block font-semibold">{labelFromValue(action.actionType)}</span>
                   <span className="mt-1 block text-xs font-medium text-[#0667b0]">Clic para ver el detalle</span>
-                  <div className="mt-2">
-                    <LegajoActionEditButton title={`Editar intervencion N° ${sheetNumber}`}>
-                      <AddJuridicalActionForm
-                        action={updateJuridicalAction.bind(null, action.id)}
-                        initialValues={{
-                          actionType: action.actionType,
-                          createdAt: action.createdAt,
-                          description: parsed.description,
-                          guidanceProvided: parsed.guidanceProvided,
-                          nextStepDescription: parsed.nextStepDescription,
-                        }}
-                        submitLabel="Guardar intervencion"
-                      />
-                    </LegajoActionEditButton>
-                  </div>
+                  {!isOriginRestricted ? (
+                    <div className="mt-2">
+                      <LegajoActionEditButton title={`Editar intervencion N° ${sheetNumber}`}>
+                        <AddJuridicalActionForm
+                          action={updateJuridicalAction.bind(null, action.id)}
+                          initialValues={{
+                            actionType: action.actionType,
+                            createdAt: action.createdAt,
+                            description: parsed.description,
+                            guidanceProvided: parsed.guidanceProvided,
+                            nextStepDescription: parsed.nextStepDescription,
+                          }}
+                          submitLabel="Guardar intervencion"
+                        />
+                      </LegajoActionEditButton>
+                    </div>
+                  ) : null}
                 </Td>
                 <Td className="w-[230px]">
                   <div className="flex flex-wrap gap-1.5">

@@ -6,16 +6,20 @@ import { AppModal } from "@/components/ui/app-modal";
 import { AuditTimeline } from "@/components/ui/audit-timeline";
 import { Button, LinkButton } from "@/components/ui/button";
 import { DetailField, DetailSection, FieldGrid } from "@/components/ui/detail-section";
-import { FormField, inputClass, textareaClass } from "@/components/ui/form-controls";
+import { FormField, inputClass } from "@/components/ui/form-controls";
 import { StatusBadge } from "@/components/ui/status-badge";
+import { SuccessToast } from "@/components/ui/success-toast";
 import { Table, Td } from "@/components/ui/table";
+import { DISPATCH_INTERNAL_DERIVED_AREAS } from "@/lib/constants";
 import { requireUser } from "@/lib/auth";
 import { chunkForBookPages, paginateBookTextSections } from "@/lib/book-pagination";
 import { formatDateTime, labelFromValue } from "@/lib/format";
 import { parseJuridicalActionContent } from "@/lib/juridical-action-content";
 import { prisma } from "@/lib/prisma";
+import { earliestDate, isVisibleBeforeReferralCutoff } from "@/lib/referral-privacy";
 import { assertAccess, canAccessDispatch } from "@/lib/rbac";
 import { personDisplayName, sortByLabel } from "@/lib/text";
+import type { SearchParams } from "@/lib/types";
 import {
   addDispatchFollowUp,
   referDispatchToArea,
@@ -156,10 +160,18 @@ function DispatchReadContent({
   );
 }
 
-export default async function DispatchDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function DispatchDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams?: Promise<SearchParams>;
+}) {
   const user = await requireUser();
   assertAccess(canAccessDispatch(user));
   const { id } = await params;
+  const query = searchParams ? await searchParams : {};
+  const showReferralToast = query.derivacion === "ok";
 
   const [record, categories, areas] = await Promise.all([
     prisma.dispatchRecord.findUnique({
@@ -186,7 +198,22 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
 
   if (!record) notFound();
 
-  const followUpIds = record.followUps.map((followUp) => followUp.id);
+  const isDerivationFollowUp = (followUp: { content: string; statusAfter: string | null }) =>
+    followUp.statusAfter === "DERIVADO" || followUp.content.toLocaleLowerCase("es-AR").startsWith("deriv");
+  const outgoingReferralAt = earliestDate(record.originReferrals.map((referral) => referral.referredAt));
+  const derivationFollowUpAt = earliestDate(record.followUps.filter(isDerivationFollowUp).map((followUp) => followUp.createdAt));
+  const privacyCutoffAt = earliestDate([outgoingReferralAt, derivationFollowUpAt]);
+  const isOriginRestricted = Boolean(record.originReferrals.length || (record.referredArea && record.status === "DERIVADO"));
+  const visibleFollowUps = record.followUps.filter((followUp) =>
+    isVisibleBeforeReferralCutoff(followUp, privacyCutoffAt, isDerivationFollowUp),
+  );
+  const referralAreas = sortByLabel(
+    [...areas.map((item) => ({ value: item.value, label: item.label })), ...DISPATCH_INTERNAL_DERIVED_AREAS].filter(
+      (item, index, items) => items.findIndex((candidate) => candidate.label.toLocaleLowerCase("es-AR") === item.label.toLocaleLowerCase("es-AR")) === index,
+    ),
+    (item) => item.label,
+  );
+  const followUpIds = visibleFollowUps.map((followUp) => followUp.id);
   const [attachments, auditLogs] = await Promise.all([
     prisma.attachment.findMany({
       where: {
@@ -229,7 +256,7 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
         },
       ].filter(hasLinkedPersonData);
   const categoryLabel = categories.find((item) => item.value === record.category)?.label ?? labelFromValue(record.category);
-  const followUpsForLegajo = [...record.followUps].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+  const followUpsForLegajo = [...visibleFollowUps].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   const followUpRows = followUpsForLegajo.map((followUp, index) => ({ followUp, sheetNumber: index + 2 }));
   const displayFollowUpRows = [...followUpRows].reverse();
   const bookEntries: Array<{ item: LegajoBookItem; node: ReactNode }> = [];
@@ -383,6 +410,7 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
 
   return (
     <>
+      {showReferralToast ? <SuccessToast /> : null}
       <section
         className="relative mb-5 overflow-hidden rounded-sm border border-[#b7dfee] bg-[#a1bbcf] p-3 text-[#212529] shadow-sm sm:p-4"
       >
@@ -411,34 +439,29 @@ export default async function DispatchDetailPage({ params }: { params: Promise<{
                 submitLabel="Guardar cambios"
               />
             </AppModal>
-            <AppModal title="Nuevo registro de atencion" description="Crea un nuevo seguimiento documental dentro de este legajo." trigger={<><Plus className="h-4 w-4" />Nueva intervencion</>} size="md">
-              <AddDispatchFollowUpForm action={addDispatchFollowUp.bind(null, record.id)} submitLabel="Crear intervencion" />
-            </AppModal>
-            <AppModal title="Derivaciones" trigger={<><Send className="h-4 w-4" />Derivar</>} triggerVariant="secondary" size="md">
-              <form action={referDispatchToArea.bind(null, record.id)} className="space-y-4">
-                <FormField label="Area a derivar">
-                  <select name="area" className={inputClass} defaultValue="" required>
-                    <option value="">Seleccionar area</option>
-                    {sortByLabel(
-                      [
-                        { value: "Atencion y Contencion a la Victima", label: "Atencion y Contencion a la Victima" },
-                        { value: "Directivo", label: "Directivo" },
-                      ],
-                      (item) => item.label,
-                    ).map((item) => (
-                      <option key={item.value} value={item.value}>{item.label}</option>
-                    ))}
-                  </select>
-                </FormField>
-                <FormField label="Resumen de derivacion">
-                  <textarea name="summary" className={textareaClass} placeholder="Resumen necesario para continuar la intervencion" required />
-                </FormField>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button type="submit">Guardar</Button>
-                  <Button type="button" variant="secondary" data-modal-close>Cancelar</Button>
-                </div>
-              </form>
-            </AppModal>
+            {!isOriginRestricted ? (
+              <>
+                <AppModal title="Nuevo registro de atencion" description="Crea un nuevo seguimiento documental dentro de este legajo." trigger={<><Plus className="h-4 w-4" />Nueva intervencion</>} size="md">
+                  <AddDispatchFollowUpForm action={addDispatchFollowUp.bind(null, record.id)} submitLabel="Crear intervencion" />
+                </AppModal>
+                <AppModal title="Derivaciones" trigger={<><Send className="h-4 w-4" />Derivar</>} triggerVariant="secondary" size="md">
+                  <form action={referDispatchToArea.bind(null, record.id)} className="space-y-4">
+                    <FormField label="Area a derivar">
+                      <select name="area" className={inputClass} defaultValue="" required>
+                        <option value="">Seleccionar area</option>
+                        {referralAreas.map((item) => (
+                          <option key={item.value} value={item.label}>{item.label}</option>
+                        ))}
+                      </select>
+                    </FormField>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Button type="submit">Guardar</Button>
+                      <Button type="button" variant="secondary" data-modal-close>Cancelar</Button>
+                    </div>
+                  </form>
+                </AppModal>
+              </>
+            ) : null}
             <AppModal title="Historial completo de auditoria" trigger={<><FileText className="h-4 w-4" />Auditoria</>} triggerVariant="secondary" size="lg">
               <AuditTimeline logs={auditLogs} />
             </AppModal>
