@@ -58,10 +58,12 @@ test("expedientes internos exige numero, deja descripcion opcional y usa codigo 
   assert.match(expedientActionsSource, /description: optionalSentenceText\(formData, "description"\) \?\? ""/);
 
   assert.match(expedientCodeSource, /<input type="hidden" name="codigo" value=\{selectedCode\}/);
-  assert.match(expedientCodeSource, /showResults && filteredOptions\[0\]/);
+  assert.match(expedientCodeSource, /Todos los codigos \(\$\{CODIGOS_EXPEDIENTES\.length\}\)/);
+  assert.match(expedientCodeSource, /setQuery\(\(current\) => `\$\{current\}\$\{event\.key\}`\)/);
+  assert.match(expedientCodeSource, /codeDigits\(normalizedCode\)\.includes\(queryDigits\)/);
   assert.match(expedientCodeSource, /onClick=\{\(\) => selectOption\(item\)\}/);
   assert.doesNotMatch(expedientCodeSource, /<select\s+name="codigo"/);
-  assert.match(expedientCodeSource, /normalizeName\(item\.descripcion\)\.startsWith\(normalizedQuery\)/);
+  assert.match(expedientCodeSource, /normalizedDescription\.startsWith\(normalizedQuery\)/);
   assert.doesNotMatch(expedientCodeSource, /slice\(0,\s*12\)/);
 });
 
