@@ -22,7 +22,7 @@ const dispatchSchema = z.object({
 });
 
 const expedientSchema = z.object({
-  expedienteNumber: z.string().optional().nullable(),
+  expedienteNumber: z.string().trim().min(1, "El numero de expediente es obligatorio."),
   codigo: z
     .string()
     .optional()
@@ -30,7 +30,11 @@ const expedientSchema = z.object({
     .refine((value) => !value || CODIGOS_EXPEDIENTES_SET.has(value), "Código de expediente inválido."),
   category: z.string().min(1),
   area: z.string().refine((value) => EXPEDIENT_AREAS.some((item) => item.value === value)),
-  description: z.string().min(1),
+  description: z
+    .string()
+    .optional()
+    .nullable()
+    .transform((value) => value ?? ""),
   observation: z.string().optional().nullable(),
   status: z.string().refine((value) => EXPEDIENT_STATUSES.includes(value)),
 });
@@ -658,7 +662,7 @@ export async function createExpedient(formData: FormData) {
     codigo: optionalText(formData, "codigo"),
     category: text(formData, "category"),
     area: text(formData, "area"),
-    description: sentenceText(formData, "description"),
+    description: optionalSentenceText(formData, "description") ?? "",
     observation: optionalSentenceText(formData, "observation"),
     status: text(formData, "status") || "INICIADO",
   });
@@ -704,7 +708,7 @@ export async function updateExpedient(expedientId: string, formData: FormData) {
     codigo: optionalText(formData, "codigo"),
     category: text(formData, "category"),
     area: text(formData, "area"),
-    description: sentenceText(formData, "description"),
+    description: optionalSentenceText(formData, "description") ?? "",
     observation: optionalSentenceText(formData, "observation"),
     status: text(formData, "status") || "INICIADO",
   });

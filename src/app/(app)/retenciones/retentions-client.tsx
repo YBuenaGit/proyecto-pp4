@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
-import { Edit3, Eye, Plus, Trash2, Upload } from "lucide-react";
+import { Edit3, Eye, Plus, Trash2 } from "lucide-react";
 import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { FilterBar, FilterInput, FilterSelect } from "@/components/ui/filter-bar";
@@ -11,6 +11,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Table, Td } from "@/components/ui/table";
 import { cn } from "@/components/ui/cn";
+import { SelectedFilesInput } from "@/components/ui/selected-files-input";
 import { sortByLabel } from "@/lib/text";
 import {
   ACT_TYPES,
@@ -79,6 +80,11 @@ function formatFileSize(size: number) {
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function formatDateOnly(value: string) {
+  if (!value) return "-";
+  return new Intl.DateTimeFormat("es-AR", { dateStyle: "short" }).format(new Date(`${value}T00:00:00-03:00`));
+}
+
 function textFromForm(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value.trim() : "";
@@ -95,6 +101,8 @@ function cleanFilters(formData: FormData) {
 
 function retentionInputFromForm(formData: FormData): RetentionInput {
   return {
+    actCreatedAt: textFromForm(formData, "actCreatedAt"),
+    sentToTribunalAt: textFromForm(formData, "sentToTribunalAt"),
     actNumber: textFromForm(formData, "actNumber"),
     actType: textFromForm(formData, "actType"),
     recordNumber: textFromForm(formData, "recordNumber"),
@@ -204,6 +212,12 @@ function RetentionForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       {error ? <div className="rounded-sm border border-[#f5c6cb] bg-[#f8d7da] px-3 py-2 text-sm font-semibold text-[#721c24]">{error}</div> : null}
       <FormGrid>
+        <FormField label="Fecha de creacion del acta">
+          <input name="actCreatedAt" type="date" defaultValue={initial?.actCreatedAt} className={inputClass} />
+        </FormField>
+        <FormField label="Fecha de envio al tribunal de falta">
+          <input name="sentToTribunalAt" type="date" defaultValue={initial?.sentToTribunalAt} className={inputClass} />
+        </FormField>
         <FormField label="Nro de acta">
           <input name="actNumber" type="number" min="0" step="1" defaultValue={initial?.actNumber} required className={inputClass} />
         </FormField>
@@ -250,8 +264,8 @@ function RetentionForm({
           </select>
         </FormField>
         <FormField label="Color">
-          <select name="color" defaultValue={initial?.color ?? ""} required className={inputClass}>
-            <option value="">Seleccione color</option>
+          <select name="color" defaultValue={initial?.color ?? ""} className={inputClass}>
+            <option value="">Sin especificar</option>
             {sortedColors.map((color) => (
               <option key={color} value={color}>
                 {color}
@@ -269,23 +283,14 @@ function RetentionForm({
           </select>
         </FormField>
         <FormField label="Observaciones" className="md:col-span-2">
-          <textarea name="description" defaultValue={initial?.description} required className={textareaClass} />
+          <textarea name="description" defaultValue={initial?.description} className={textareaClass} />
         </FormField>
         <FormField label="Adjuntos" className="md:col-span-2">
-          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-sm border border-dashed border-[#17a2b8] bg-[#d1ecf1]/40 px-3 py-3 text-sm font-semibold text-[#0c5460] transition hover:bg-[#d1ecf1] focus-within:ring-2 focus-within:ring-[#80bdff]">
-            <Upload className="h-4 w-4" />
-            Seleccionar imagenes o archivos
-            <input
-              type="file"
-              multiple
-              accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
-              className="sr-only"
-              onChange={(event) => setSelectedFiles(Array.from(event.currentTarget.files ?? []))}
-            />
-          </label>
-          <p className="mt-1 text-xs font-medium text-[#6c757d]">
-            {selectedFiles.length ? `${selectedFiles.length} archivo(s) listo(s) para guardar.` : "Puedes seleccionar mas de un archivo."}
-          </p>
+          <SelectedFilesInput
+            name="files"
+            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+            onFilesChange={setSelectedFiles}
+          />
         </FormField>
       </FormGrid>
       {existingAttachments.length ? (
@@ -344,6 +349,12 @@ function RetentionDetailsPanel({ record }: { record: RetentionRecord }) {
           <strong>Legajo:</strong> {current.recordNumber}
         </p>
         <p>
+          <strong>Fecha de creacion del acta:</strong> {formatDateOnly(current.actCreatedAt)}
+        </p>
+        <p>
+          <strong>Fecha de envio al tribunal de falta:</strong> {formatDateOnly(current.sentToTribunalAt)}
+        </p>
+        <p>
           <strong>Dominio:</strong> {current.domain || "N/A"}
         </p>
         <p>
@@ -353,7 +364,7 @@ function RetentionDetailsPanel({ record }: { record: RetentionRecord }) {
           <strong>Chasis:</strong> {current.chassisNumber || "N/A"}
         </p>
         <p>
-          <strong>Vehiculo:</strong> {optionLabel(VEHICLE_TYPES, current.vehicleType)} / {current.brand} / {current.color}
+          <strong>Vehiculo:</strong> {optionLabel(VEHICLE_TYPES, current.vehicleType)} / {current.brand} / {current.color || "Sin color"}
         </p>
         <p>
           <strong>Cargado por:</strong> {current.createdBy}
@@ -362,7 +373,7 @@ function RetentionDetailsPanel({ record }: { record: RetentionRecord }) {
           <strong>Fecha:</strong> {formatDateTime(current.dateTime)}
         </p>
         <p className="md:col-span-2">
-          <strong>Observaciones:</strong> {current.description}
+          <strong>Observaciones:</strong> {current.description || "-"}
         </p>
         <div className="md:col-span-2">
           <strong className="mr-2">Estado:</strong>
@@ -630,7 +641,7 @@ export function RetentionsClient() {
             </Td>
             <Td>
               <div className="font-medium">{optionLabel(VEHICLE_TYPES, record.vehicleType)}</div>
-              <div className="mt-1 text-xs text-[#6c757d]">{record.brand} - {record.color}</div>
+              <div className="mt-1 text-xs text-[#6c757d]">{record.brand} - {record.color || "Sin color"}</div>
             </Td>
             <Td>
               <StatusBadge value={record.status} />

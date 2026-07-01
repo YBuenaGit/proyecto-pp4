@@ -405,23 +405,25 @@ model Attachment {
 }
 
 model Retention {
-  id             String   @id @default(cuid())
-  internalNumber String   @unique
-  dateTime       DateTime @default(now())
-  actNumber      String
-  actType        String
-  recordNumber   String
-  domain         String?
-  engineNumber   String?
-  chassisNumber  String?
-  vehicleType    String
-  brand          String
-  color          String
-  description    String
-  status         String   @default("PENDIENTE")
-  createdById    String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id               String    @id @default(cuid())
+  internalNumber   String    @unique
+  dateTime         DateTime  @default(now())
+  actCreatedAt     DateTime?
+  sentToTribunalAt DateTime?
+  actNumber        String
+  actType          String
+  recordNumber     String
+  domain           String?
+  engineNumber     String?
+  chassisNumber    String?
+  vehicleType      String
+  brand            String
+  color            String
+  description      String
+  status           String    @default("PENDIENTE")
+  createdById      String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   createdBy   User                  @relation("RetentionCreatedBy", fields: [createdById], references: [id])
   histories   RetentionHistory[]

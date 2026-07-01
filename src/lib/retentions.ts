@@ -86,6 +86,8 @@ export const RETENTION_FILTER_KEYS = [
 ] as const;
 
 export const RETENTION_FIELD_LABELS = {
+  actCreatedAt: "Fecha de creacion del acta",
+  sentToTribunalAt: "Fecha de envio al tribunal de falta",
   actNumber: "Nro de acta",
   actType: "Tipo de acta",
   recordNumber: "Legajo",
@@ -103,6 +105,8 @@ export type RetentionStatus = (typeof RETENTION_STATUSES)[number][0];
 export type RetentionField = keyof typeof RETENTION_FIELD_LABELS;
 
 export type RetentionInput = {
+  actCreatedAt: string;
+  sentToTribunalAt: string;
   actNumber: string;
   actType: string;
   recordNumber: string;
@@ -131,6 +135,9 @@ export function normalizeOptionalIdentifier(value: string | null | undefined) {
 
 export function displayRetentionValue(field: RetentionField, value: string | null | undefined) {
   if (!value) return "N/A";
+  if (field === "actCreatedAt" || field === "sentToTribunalAt") {
+    return new Intl.DateTimeFormat("es-AR", { dateStyle: "short" }).format(new Date(`${value}T00:00:00-03:00`));
+  }
   if (field === "actType") return optionLabel(ACT_TYPES, value);
   if (field === "vehicleType") return optionLabel(VEHICLE_TYPES, value);
   if (field === "status") return optionLabel(RETENTION_STATUSES, value);

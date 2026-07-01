@@ -16,6 +16,8 @@ import {
 import { capitalizeFirstLetter } from "./text";
 
 const retentionFields = [
+  "actCreatedAt",
+  "sentToTribunalAt",
   "actNumber",
   "actType",
   "recordNumber",
@@ -30,16 +32,37 @@ const retentionFields = [
 ] as const satisfies RetentionField[];
 
 const requiredText = z.string().trim().min(1);
-const naturalText = requiredText.transform(capitalizeFirstLetter);
+const optionalNaturalText = z
+  .string()
+  .trim()
+  .optional()
+  .nullable()
+  .transform((value) => (value ? capitalizeFirstLetter(value) : ""));
 const optionalIdentifier = z
   .string()
   .trim()
   .optional()
   .nullable()
   .transform((value) => normalizeOptionalIdentifier(value));
+const optionalDate = z
+  .string()
+  .trim()
+  .optional()
+  .nullable()
+  .transform((value) => (value ? new Date(`${value}T00:00:00.000-03:00`) : null))
+  .refine((value) => value === null || !Number.isNaN(value.getTime()), "Fecha invalida.");
+const optionalColor = z
+  .string()
+  .trim()
+  .optional()
+  .nullable()
+  .transform((value) => value ?? "")
+  .refine((value) => !value || (COLORS as readonly string[]).includes(value), "Color invalido.");
 
 export const retentionInputSchema = z
   .object({
+    actCreatedAt: optionalDate,
+    sentToTribunalAt: optionalDate,
     actNumber: requiredText,
     actType: z.enum(["ALCOHOLEMIA", "INFRACCION"]),
     recordNumber: requiredText,
@@ -48,8 +71,8 @@ export const retentionInputSchema = z
     chassisNumber: optionalIdentifier,
     vehicleType: z.enum(["AUTO", "CAMION", "CAMIONETA", "COLECTIVO", "CUATRICICLO", "MOTO", "OTRO"]),
     brand: requiredText.refine((value) => (BRANDS as readonly string[]).includes(value), "Marca invalida."),
-    color: requiredText.refine((value) => (COLORS as readonly string[]).includes(value), "Color invalido."),
-    description: naturalText,
+    color: optionalColor,
+    description: optionalNaturalText,
     status: z.enum(["PENDIENTE", "ENTREGADO"]).default("PENDIENTE"),
   })
   .refine((value) => Boolean(value.domain || value.engineNumber || value.chassisNumber), {
@@ -79,10 +102,17 @@ export const retentionDetailInclude = {
 export type RetentionListRecord = Prisma.RetentionGetPayload<{ include: typeof retentionListInclude }>;
 export type RetentionDetailRecord = Prisma.RetentionGetPayload<{ include: typeof retentionDetailInclude }>;
 
+function dateKey(value: Date | string | null | undefined) {
+  if (!value) return "";
+  return new Date(value).toISOString().slice(0, 10);
+}
+
 function serializeBase(record: {
   id: string;
   internalNumber: string;
   dateTime: Date;
+  actCreatedAt: Date | null;
+  sentToTribunalAt: Date | null;
   actNumber: string;
   actType: string;
   recordNumber: string;
@@ -100,6 +130,8 @@ function serializeBase(record: {
     id: record.id,
     internalNumber: record.internalNumber,
     dateTime: record.dateTime.toISOString(),
+    actCreatedAt: dateKey(record.actCreatedAt),
+    sentToTribunalAt: dateKey(record.sentToTribunalAt),
     actNumber: record.actNumber,
     actType: record.actType,
     recordNumber: record.recordNumber,
@@ -157,11 +189,14 @@ export async function getRetentionDetail(id: string) {
 
 function fieldValue(record: ParsedRetentionInput | Prisma.RetentionGetPayload<object>, field: RetentionField) {
   const value = record[field];
+  if (value instanceof Date) return dateKey(value);
   return typeof value === "string" ? value : value ?? "";
 }
 
 function retentionData(input: ParsedRetentionInput) {
   return {
+    actCreatedAt: input.actCreatedAt,
+    sentToTribunalAt: input.sentToTribunalAt,
     actNumber: input.actNumber,
     actType: input.actType,
     recordNumber: input.recordNumber,

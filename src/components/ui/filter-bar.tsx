@@ -1,28 +1,60 @@
 "use client";
 
-import type { FormEvent, FormEventHandler, ReactNode } from "react";
+import type { FormEvent, FormEventHandler, MouseEvent, ReactNode } from "react";
 import { Search } from "lucide-react";
 import { sortByLabel } from "@/lib/text";
 import { AppModal } from "./app-modal";
 import { Button, LinkButton } from "./button";
 
+function clearFormControls(form: HTMLFormElement | null) {
+  if (!form) return;
+  for (const element of Array.from(form.elements)) {
+    if (element instanceof HTMLInputElement) {
+      if (element.type === "checkbox" || element.type === "radio") {
+        element.checked = false;
+      } else {
+        element.value = "";
+      }
+    }
+    if (element instanceof HTMLSelectElement) element.selectedIndex = 0;
+    if (element instanceof HTMLTextAreaElement) element.value = "";
+  }
+}
+
 function ClearControl({
   onClear,
   resetHref,
+  onReset,
 }: {
   onClear?: () => void;
   resetHref: string;
+  onReset?: () => void;
 }) {
   if (onClear) {
     return (
-      <Button type="button" variant="secondary" onClick={onClear}>
+      <Button
+        type="button"
+        variant="secondary"
+        onClick={(event) => {
+          clearFormControls(event.currentTarget.form);
+          onClear();
+          onReset?.();
+        }}
+      >
         Limpiar
       </Button>
     );
   }
 
   return (
-    <LinkButton href={resetHref} variant="secondary">
+    <LinkButton
+      href={resetHref}
+      variant="secondary"
+      onClick={(event: MouseEvent<HTMLAnchorElement>) => {
+        clearFormControls(event.currentTarget.closest("form"));
+        onReset?.();
+      }}
+    >
       Limpiar
     </LinkButton>
   );
@@ -47,6 +79,8 @@ export function FilterBar({
     return (
       <form
         className="p-3"
+        action={onSubmit ? undefined : resetHref}
+        method={onSubmit ? undefined : "get"}
         onSubmit={(event: FormEvent<HTMLFormElement>) => {
           onSubmit?.(event);
           if (onSubmit) close?.();
@@ -54,7 +88,7 @@ export function FilterBar({
       >
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">{children}</div>
         <div className="mt-3 flex flex-wrap items-center justify-end gap-2 border-t border-[#c7d2de] pt-3">
-          <ClearControl resetHref={resetHref} onClear={onClear} />
+          <ClearControl resetHref={resetHref} onClear={onClear} onReset={close} />
           <Button type="submit" variant="success">
             <Search className="h-4 w-4" />
             {label}

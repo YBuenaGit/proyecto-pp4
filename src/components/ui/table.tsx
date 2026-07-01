@@ -166,7 +166,6 @@ export function Table({
   rowClick = true,
 }: TableProps) {
   const router = useRouter();
-  const pathname = usePathname();
   const displayed = rowCount(children);
   const resolvedTotal = total ?? displayed;
   const shouldPaginate = showPagination ?? resolvedTotal > pageSize;
@@ -206,7 +205,6 @@ export function Table({
                 return;
               }
 
-              router.replace(pathname);
               router.refresh();
             }}
             className="absolute left-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-sm text-[#0667b0] transition duration-150 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8ec5ff]"

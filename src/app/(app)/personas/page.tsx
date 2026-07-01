@@ -20,12 +20,11 @@ export default async function PeoplePage({ searchParams }: { searchParams?: Prom
   const firstName = param(params, "firstName");
   const lastName = param(params, "lastName");
   const name = param(params, "name");
-  const caseQuery = param(params, "case");
   const { page, pageSize, skip, take } = pagination(params);
 
   const allPeople = await getPeopleIndex({
     permissions: { canDispatch, canJuridical },
-    filters: { dni, firstName, lastName, name, caseQuery },
+    filters: { dni, firstName, lastName, name },
   });
   const people = allPeople.slice(skip, skip + take);
 
@@ -42,7 +41,6 @@ export default async function PeoplePage({ searchParams }: { searchParams?: Prom
           <FilterInput label="Apellido" name="lastName" defaultValue={lastName} />
           <FilterInput label="Nombre" name="firstName" defaultValue={firstName} />
           <FilterInput label="Apellido y nombre" name="name" defaultValue={name} />
-          <FilterInput label="Caso" name="case" defaultValue={caseQuery} />
         </FilterBar>
       </ListToolbar>
 

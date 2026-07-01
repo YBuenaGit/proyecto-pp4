@@ -25,6 +25,9 @@ export type PeopleIndexEntry = {
   dni: string | null;
   firstName: string | null;
   lastName: string | null;
+  firstNameSearchText: string;
+  lastNameSearchText: string;
+  nameSearchText: string;
   displayName: string;
   phone1: string | null;
   phone2: string | null;
@@ -42,7 +45,6 @@ export type PeopleIndexFilters = {
   firstName?: string;
   lastName?: string;
   name?: string;
-  caseQuery?: string;
 };
 
 export type PeopleIndexPermissions = {
@@ -50,9 +52,15 @@ export type PeopleIndexPermissions = {
   canJuridical: boolean;
 };
 
-type MutablePeopleEntry = Omit<PeopleIndexEntry, "roles" | "cases" | "caseCount" | "latestCase"> & {
+type MutablePeopleEntry = Omit<
+  PeopleIndexEntry,
+  "roles" | "cases" | "caseCount" | "latestCase" | "firstNameSearchText" | "lastNameSearchText" | "nameSearchText"
+> & {
   roles: Set<PeopleRole>;
   cases: PeopleCase[];
+  firstNameSearchValues: Set<string>;
+  lastNameSearchValues: Set<string>;
+  nameSearchValues: Set<string>;
 };
 
 type PersonSource = {
@@ -90,6 +98,11 @@ function decodePeopleId(id: string) {
 function clean(value: string | null | undefined) {
   const trimmed = value?.trim();
   return trimmed || null;
+}
+
+function addSearchValue(values: Set<string>, value: string | null | undefined) {
+  const cleaned = clean(value);
+  if (cleaned) values.add(cleaned);
 }
 
 function personName(firstName: string | null | undefined, lastName: string | null | undefined) {
@@ -134,6 +147,9 @@ function addSource(entries: Map<string, MutablePeopleEntry>, source: PersonSourc
       address: clean(source.address),
       roles: new Set([source.role]),
       cases: [],
+      firstNameSearchValues: new Set(firstName ? [firstName] : []),
+      lastNameSearchValues: new Set(lastName ? [lastName] : []),
+      nameSearchValues: new Set(displayName !== "Sin nombre" ? [displayName] : []),
       updatedAt: source.updatedAt ?? null,
       externalPersonIds: source.externalPersonId ? [source.externalPersonId] : [],
     };
@@ -150,6 +166,9 @@ function addSource(entries: Map<string, MutablePeopleEntry>, source: PersonSourc
   existing.phone2 ??= clean(source.phone2);
   existing.address ??= clean(source.address);
   existing.roles.add(source.role);
+  addSearchValue(existing.firstNameSearchValues, firstName);
+  addSearchValue(existing.lastNameSearchValues, lastName);
+  addSearchValue(existing.nameSearchValues, displayName !== "Sin nombre" ? displayName : null);
   if (source.updatedAt && (!existing.updatedAt || source.updatedAt > existing.updatedAt)) existing.updatedAt = source.updatedAt;
   if (source.externalPersonId && !existing.externalPersonIds.includes(source.externalPersonId)) {
     existing.externalPersonIds.push(source.externalPersonId);
@@ -158,12 +177,23 @@ function addSource(entries: Map<string, MutablePeopleEntry>, source: PersonSourc
 }
 
 function finalizeEntry(entry: MutablePeopleEntry): PeopleIndexEntry {
-  const cases = [...entry.cases].sort((a, b) => b.attendedAt.getTime() - a.attendedAt.getTime());
+  const {
+    roles: roleValues,
+    cases: caseValues,
+    firstNameSearchValues,
+    lastNameSearchValues,
+    nameSearchValues,
+    ...baseEntry
+  } = entry;
+  const cases = [...caseValues].sort((a, b) => b.attendedAt.getTime() - a.attendedAt.getTime());
   const uniqueCases = new Set(cases.map((item) => `${item.module}:${item.id}`));
-  const roles = [...entry.roles].sort((a, b) => roleLabel(a).localeCompare(roleLabel(b), "es"));
+  const roles = [...roleValues].sort((a, b) => roleLabel(a).localeCompare(roleLabel(b), "es"));
 
   return {
-    ...entry,
+    ...baseEntry,
+    firstNameSearchText: [...firstNameSearchValues].join(" "),
+    lastNameSearchText: [...lastNameSearchValues].join(" "),
+    nameSearchText: [...nameSearchValues].join(" "),
     roles,
     cases,
     caseCount: uniqueCases.size,
@@ -181,12 +211,20 @@ function matchesNormalized(value: string, query: string | undefined) {
   return normalizeName(value).includes(normalizeName(query));
 }
 
-function matchesFilters(entry: PeopleIndexEntry, filters: PeopleIndexFilters) {
+function matchesNormalizedWords(value: string, query: string | undefined) {
+  if (!query) return true;
+  const normalizedValue = normalizeName(value);
+  const normalizedQuery = normalizeName(query);
+  const words = normalizedQuery.split(" ").filter(Boolean);
+  if (!words.length) return true;
+  return words.every((word) => normalizedValue.includes(word));
+}
+
+export function matchesPeopleFilters(entry: PeopleIndexEntry, filters: PeopleIndexFilters) {
   if (!matchesText(entry.dni, filters.dni)) return false;
-  if (!matchesText(entry.firstName, filters.firstName)) return false;
-  if (!matchesText(entry.lastName, filters.lastName)) return false;
-  if (filters.name && !matchesNormalized(entry.displayName, filters.name)) return false;
-  if (filters.caseQuery && !entry.cases.some((item) => matchesNormalized(item.searchText, filters.caseQuery))) return false;
+  if (!matchesNormalized(entry.firstNameSearchText || entry.firstName || "", filters.firstName)) return false;
+  if (!matchesNormalized(entry.lastNameSearchText || entry.lastName || "", filters.lastName)) return false;
+  if (!matchesNormalizedWords(entry.nameSearchText || entry.displayName, filters.name)) return false;
   return true;
 }
 
@@ -367,7 +405,7 @@ export async function getPeopleIndex({
 
   return [...entries.values()]
     .map(finalizeEntry)
-    .filter((entry) => matchesFilters(entry, filters))
+    .filter((entry) => matchesPeopleFilters(entry, filters))
     .sort((a, b) => {
       const byCreatedAt = (b.updatedAt?.getTime() ?? 0) - (a.updatedAt?.getTime() ?? 0);
       return byCreatedAt || a.displayName.localeCompare(b.displayName, "es");

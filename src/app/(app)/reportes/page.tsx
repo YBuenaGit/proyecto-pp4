@@ -1,7 +1,6 @@
 import { CalendarRange, RefreshCw } from "lucide-react";
 import { AppModal } from "@/components/ui/app-modal";
 import { Button, LinkButton } from "@/components/ui/button";
-import { DetailSection } from "@/components/ui/detail-section";
 import { FormField, inputClass } from "@/components/ui/form-controls";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -39,19 +38,17 @@ function formatDateKey(value: string) {
 
 function CountTable({ title, rows, badgeValues }: { title: string; rows: Array<{ key: string | null; count: number }>; badgeValues?: boolean }) {
   return (
-    <DetailSection title={title}>
-      <Table title={title} itemLabel="conceptos" total={rows.length} showPagination={false} headers={["Concepto", "Cantidad"]} empty={!rows.length}>
-        {rows.map((row) => {
-          const concept = row.key ?? "Sin dato";
-          return (
-            <tr key={row.key ?? "sin-dato"}>
-              <Td>{badgeValues && row.key ? <StatusBadge value={row.key} /> : labelFromValue(concept)}</Td>
-              <Td className="whitespace-nowrap">{row.count}</Td>
-            </tr>
-          );
-        })}
-      </Table>
-    </DetailSection>
+    <Table title={title} itemLabel="conceptos" total={rows.length} showPagination={false} headers={["Concepto", "Cantidad"]} empty={!rows.length}>
+      {rows.map((row) => {
+        const concept = row.key ?? "Sin dato";
+        return (
+          <tr key={row.key ?? "sin-dato"}>
+            <Td>{badgeValues && row.key ? <StatusBadge value={row.key} /> : labelFromValue(concept)}</Td>
+            <Td className="whitespace-nowrap">{row.count}</Td>
+          </tr>
+        );
+      })}
+    </Table>
   );
 }
 
@@ -121,7 +118,7 @@ export default async function ReportsPage({ searchParams }: { searchParams?: Pro
             Mes actual
           </LinkButton>
           <AppModal title="Filtrar reporte" trigger={<><CalendarRange className="h-4 w-4" />Filtrar reporte</>} size="md">
-            <form className="space-y-4">
+            <form action="/reportes" method="get" className="space-y-4">
               <div className="grid gap-3 sm:grid-cols-2">
                 <FormField label="Desde">
                   <input className={inputClass} type="date" name="from" defaultValue={from} />
