@@ -26,6 +26,10 @@ const expedientCodeSource = readFileSync(
   new URL("../../src/app/(app)/despacho/expedientes/expedient-code-combobox.tsx", import.meta.url),
   "utf8",
 );
+const expedientCodesSource = readFileSync(
+  new URL("../../src/lib/constants/codigosExpedientes.ts", import.meta.url),
+  "utf8",
+);
 
 test("retenciones permite fechas nuevas, color/observacion opcionales y adjuntos removibles", () => {
   assert.match(retentionClientSource, /name="actCreatedAt" type="date"/);
@@ -47,12 +51,24 @@ test("expedientes internos exige numero, deja descripcion opcional y usa codigo 
   assert.doesNotMatch(expedientFormSource, /name="description"[^>]*required/);
   assert.match(expedientFormSource, /<ExpedientCodeCombobox defaultValue=\{record\?\.codigo\}/);
   assert.match(expedientFormSource, /<SelectedFilesInput name="attachments" \/>/);
+  assert.doesNotMatch(expedientFormSource, /DetailSection title="Expediente interno"/);
 
   assert.match(expedientActionsSource, /expedienteNumber: z\.string\(\)\.trim\(\)\.min\(1/);
   assert.match(expedientActionsSource, /description: z\s*\.\s*string\(\)\s*\.\s*optional\(\)\s*\.\s*nullable\(\)\s*\.\s*transform\(\(value\) => value \?\? ""\)/);
   assert.match(expedientActionsSource, /description: optionalSentenceText\(formData, "description"\) \?\? ""/);
 
-  assert.match(expedientCodeSource, /name="codigo" value=\{selectedCode\}/);
-  assert.match(expedientCodeSource, /normalizedDescription\.startsWith\(normalizedQuery\)/);
-  assert.match(expedientCodeSource, /normalizedDescription\.includes\(normalizedQuery\)/);
+  assert.match(expedientCodeSource, /<input type="hidden" name="codigo" value=\{selectedCode\}/);
+  assert.match(expedientCodeSource, /showResults && filteredOptions\[0\]/);
+  assert.match(expedientCodeSource, /onClick=\{\(\) => selectOption\(item\)\}/);
+  assert.doesNotMatch(expedientCodeSource, /<select\s+name="codigo"/);
+  assert.match(expedientCodeSource, /normalizeName\(item\.descripcion\)\.startsWith\(normalizedQuery\)/);
+  assert.doesNotMatch(expedientCodeSource, /slice\(0,\s*12\)/);
+});
+
+test("mantiene completos los codigos de expediente del PDF", () => {
+  const codes = [...expedientCodesSource.matchAll(/codigo: "(GENE\d+)"/g)].map((match) => match[1]);
+
+  assert.equal(codes.length, 177);
+  assert.equal(codes[0], "GENE00001");
+  assert.equal(codes.at(-1), "GENE00177");
 });

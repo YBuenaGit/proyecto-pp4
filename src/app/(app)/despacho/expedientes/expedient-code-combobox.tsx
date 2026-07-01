@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
 import { inputClass } from "@/components/ui/form-controls";
-import { CODIGOS_EXPEDIENTES, codigoExpedienteLabel } from "@/lib/constants/codigosExpedientes";
+import { CODIGOS_EXPEDIENTES } from "@/lib/constants/codigosExpedientes";
 import { normalizeName } from "@/lib/format";
 
 function optionText(item: (typeof CODIGOS_EXPEDIENTES)[number]) {
@@ -12,65 +12,81 @@ function optionText(item: (typeof CODIGOS_EXPEDIENTES)[number]) {
 
 function matchesOption(item: (typeof CODIGOS_EXPEDIENTES)[number], query: string) {
   const normalizedQuery = normalizeName(query);
-  if (!normalizedQuery) return true;
-  const normalizedCode = normalizeName(item.codigo);
-  const normalizedDescription = normalizeName(item.descripcion);
-  return normalizedDescription.startsWith(normalizedQuery) || normalizedDescription.includes(normalizedQuery) || normalizedCode.includes(normalizedQuery);
+  if (!normalizedQuery) return false;
+  return normalizeName(item.descripcion).startsWith(normalizedQuery) || normalizeName(item.codigo).startsWith(normalizedQuery);
+}
+
+function codeOption(code: string) {
+  return CODIGOS_EXPEDIENTES.find((item) => item.codigo === code) ?? null;
 }
 
 export function ExpedientCodeCombobox({ defaultValue }: { defaultValue?: string | null }) {
-  const initialLabel = codigoExpedienteLabel(defaultValue);
   const [selectedCode, setSelectedCode] = useState(defaultValue ?? "");
-  const [query, setQuery] = useState(defaultValue ? initialLabel : "");
+  const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
 
-  const filteredOptions = useMemo(() => CODIGOS_EXPEDIENTES.filter((item) => matchesOption(item, query)).slice(0, 12), [query]);
-  const selectOption = (item: (typeof CODIGOS_EXPEDIENTES)[number]) => {
+  const selectedOption = selectedCode ? codeOption(selectedCode) : null;
+  const filteredOptions = useMemo(() => CODIGOS_EXPEDIENTES.filter((item) => matchesOption(item, query)), [query]);
+  const showResults = open && query.trim().length > 0;
+
+  function selectOption(item: (typeof CODIGOS_EXPEDIENTES)[number]) {
     setSelectedCode(item.codigo);
     setQuery(optionText(item));
     setOpen(false);
-  };
+  }
+
+  function clearFilter() {
+    setQuery("");
+    setSelectedCode("");
+    setOpen(false);
+  }
 
   return (
-    <div className="relative">
+    <div className="relative space-y-2">
       <input type="hidden" name="codigo" value={selectedCode} />
       <div className="relative">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#6c757d]" />
         <input
           type="text"
           value={query}
-          onFocus={() => setOpen(true)}
+          onFocus={() => {
+            if (query.trim()) setOpen(true);
+          }}
           onChange={(event) => {
             setQuery(event.currentTarget.value);
             setSelectedCode("");
             setOpen(true);
           }}
           onKeyDown={(event) => {
-            if (event.key === "Enter" && open && filteredOptions[0]) {
+            if (event.key === "Enter" && showResults && filteredOptions[0]) {
               event.preventDefault();
               selectOption(filteredOptions[0]);
             }
+            if (event.key === "Escape") setOpen(false);
           }}
-          placeholder="Buscar por codigo o descripcion"
+          placeholder="Escribi la primera letra del tramite"
           className={`${inputClass} pl-8 pr-9`}
         />
         {query ? (
           <button
             type="button"
-            aria-label="Limpiar codigo"
-            onClick={() => {
-              setQuery("");
-              setSelectedCode("");
-              setOpen(true);
-            }}
+            aria-label="Limpiar filtro de codigo"
+            onClick={clearFilter}
             className="absolute right-2 top-1/2 inline-flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-sm text-[#6c757d] hover:bg-[#e9ecef] hover:text-[#212529]"
           >
             <X className="h-4 w-4" />
           </button>
         ) : null}
       </div>
-      {open ? (
-        <div className="absolute z-20 mt-1 max-h-72 w-full overflow-y-auto rounded-sm border border-[#ced4da] bg-white shadow-lg">
+
+      {selectedOption ? (
+        <p className="rounded-sm border border-[#c7d2de] bg-[#edf5fb] px-2.5 py-1.5 text-xs font-semibold text-[#263544]">
+          Seleccionado: {optionText(selectedOption)}
+        </p>
+      ) : null}
+
+      {showResults ? (
+        <div className="absolute z-30 max-h-80 w-full overflow-y-auto rounded-sm border border-[#ced4da] bg-white shadow-lg">
           {filteredOptions.length ? (
             filteredOptions.map((item) => (
               <button
@@ -80,8 +96,7 @@ export function ExpedientCodeCombobox({ defaultValue }: { defaultValue?: string 
                 onClick={() => selectOption(item)}
                 className="block w-full px-3 py-2 text-left text-sm text-[#212529] transition hover:bg-[#e9ecef] focus:bg-[#e9ecef] focus:outline-none"
               >
-                <span className="block font-semibold">{item.descripcion}</span>
-                <span className="text-xs font-medium text-[#6c757d]">{item.codigo}</span>
+                {optionText(item)}
               </button>
             ))
           ) : (
@@ -89,9 +104,6 @@ export function ExpedientCodeCombobox({ defaultValue }: { defaultValue?: string 
           )}
         </div>
       ) : null}
-      <p className="mt-1 text-xs font-medium text-[#6c757d]">
-        Escribe una letra o palabra de la descripcion para encontrar el codigo.
-      </p>
     </div>
   );
 }
