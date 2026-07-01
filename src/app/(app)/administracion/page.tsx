@@ -12,17 +12,22 @@ import { formatDateTime, labelFromValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { sortByLabel } from "@/lib/text";
 import { assertAccess, canAccessAdmin } from "@/lib/rbac";
-import { createCatalogItem, createUser, toggleUserActive } from "./actions";
+import { createCatalogItem, toggleUserActive } from "./actions";
+import { CreateUserModal, ResetUserPasswordModal } from "./create-user-modal";
 
 export default async function AdminPage() {
   const user = await requireUser();
   assertAccess(canAccessAdmin(user));
 
   const [users, catalogItems, auditLogs] = await Promise.all([
-    prisma.user.findMany({ orderBy: [{ role: "asc" }, { name: "asc" }] }),
+    prisma.user.findMany({ orderBy: [{ createdAt: "desc" }, { name: "asc" }] }),
     prisma.catalogItem.findMany({ orderBy: [{ type: "asc" }, { sortOrder: "asc" }], take: 80 }),
     prisma.auditLog.findMany({ include: { createdBy: true }, orderBy: { createdAt: "desc" }, take: 40 }),
   ]);
+  const roleOptions = sortByLabel(Object.values(ROLES), (role) => ROLE_LABELS[role]).map((role) => ({
+    value: role,
+    label: ROLE_LABELS[role],
+  }));
 
   return (
     <>
@@ -34,39 +39,9 @@ export default async function AdminPage() {
       <div className="space-y-5">
         <DetailSection
           title="Usuarios"
-          action={
-            <AppModal title="Crear usuario" trigger={<><Plus className="h-4 w-4" />Nuevo usuario</>} size="lg">
-              <form action={createUser} className="space-y-4">
-                <FormGrid>
-                  <FormField label="Nombre">
-                    <input name="name" className={inputClass} required />
-                  </FormField>
-                  <FormField label="Usuario">
-                    <input name="username" className={inputClass} required />
-                  </FormField>
-                  <FormField label="Email">
-                    <input name="email" type="email" className={inputClass} />
-                  </FormField>
-                  <FormField label="Rol">
-                    <select name="role" className={inputClass} defaultValue="despacho">
-                      {sortByLabel(Object.values(ROLES), (role) => ROLE_LABELS[role]).map((role) => (
-                        <option key={role} value={role}>{ROLE_LABELS[role]}</option>
-                      ))}
-                    </select>
-                  </FormField>
-                  <FormField label="Contrasena inicial">
-                    <input name="password" type="password" minLength={6} className={inputClass} required />
-                  </FormField>
-                </FormGrid>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Button type="submit">Crear</Button>
-                  <Button type="button" variant="secondary" data-modal-close>Cancelar</Button>
-                </div>
-              </form>
-            </AppModal>
-          }
+          action={<CreateUserModal roles={roleOptions} />}
         >
-          <Table title="Usuarios" itemLabel="usuarios" total={users.length} showPagination={false} headers={["Nombre", "Usuario", "Rol", "Estado", "Creado", "Accion"]} empty={!users.length}>
+          <Table title="Usuarios" itemLabel="usuarios" total={users.length} showPagination={false} headers={["Nombre", "Usuario", "Rol", "Estado", "Creado", "Acciones"]} empty={!users.length}>
             {users.map((item) => (
               <tr key={item.id}>
                 <Td>
@@ -78,11 +53,14 @@ export default async function AdminPage() {
                 <Td><StatusBadge value={item.active ? "ACTIVO" : "INACTIVO"} /></Td>
                 <Td>{formatDateTime(item.createdAt)}</Td>
                 <Td>
-                  <form action={toggleUserActive.bind(null, item.id)}>
-                    <Button type="submit" variant="secondary" className="h-8 px-3">
-                      {item.active ? "Desactivar" : "Activar"}
-                    </Button>
-                  </form>
+                  <div className="flex flex-wrap items-center justify-center gap-2">
+                    <ResetUserPasswordModal user={{ id: item.id, name: item.name, username: item.username }} />
+                    <form action={toggleUserActive.bind(null, item.id)}>
+                      <Button type="submit" variant="secondary" className="h-8 px-3">
+                        {item.active ? "Desactivar" : "Activar"}
+                      </Button>
+                    </form>
+                  </div>
                 </Td>
               </tr>
             ))}

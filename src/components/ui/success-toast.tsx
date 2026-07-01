@@ -7,8 +7,12 @@ import { cn } from "./cn";
 
 export function SuccessToast({
   message = "Se derivo correctamente.",
+  placement = "corner",
+  clearQueryParam = "derivacion",
 }: {
   message?: string;
+  placement?: "corner" | "center";
+  clearQueryParam?: string | null;
 }) {
   const [visible, setVisible] = useState(true);
   const pathname = usePathname();
@@ -18,8 +22,9 @@ export function SuccessToast({
   useEffect(() => {
     const hideTimer = window.setTimeout(() => setVisible(false), 4200);
     const cleanTimer = window.setTimeout(() => {
+      if (!clearQueryParam) return;
       const nextParams = new URLSearchParams(searchParams.toString());
-      nextParams.delete("derivacion");
+      nextParams.delete(clearQueryParam);
       const nextQuery = nextParams.toString();
       router.replace(nextQuery ? `${pathname}?${nextQuery}` : pathname, { scroll: false });
     }, 4600);
@@ -28,7 +33,7 @@ export function SuccessToast({
       window.clearTimeout(hideTimer);
       window.clearTimeout(cleanTimer);
     };
-  }, [pathname, router, searchParams]);
+  }, [clearQueryParam, pathname, router, searchParams]);
 
   if (!visible) return null;
 
@@ -37,7 +42,10 @@ export function SuccessToast({
       role="status"
       aria-live="polite"
       className={cn(
-        "fixed right-3 top-3 z-[70] flex max-w-[calc(100vw-1.5rem)] items-start gap-2 rounded-sm border border-[#1f7a34] bg-[#28a745] px-3 py-2.5 text-sm font-semibold text-white shadow-lg sm:right-5 sm:top-5",
+        "fixed z-[70] flex max-w-[calc(100vw-1.5rem)] items-start gap-2 border border-[#1f7a34] bg-[#28a745] px-3 py-2.5 text-sm font-semibold text-white shadow-lg",
+        placement === "center"
+          ? "left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-xl px-4 py-3 text-center"
+          : "right-3 top-3 rounded-sm sm:right-5 sm:top-5",
       )}
     >
       <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />

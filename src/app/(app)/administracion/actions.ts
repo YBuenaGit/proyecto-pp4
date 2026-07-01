@@ -1,45 +1,97 @@
 "use server";
 
 import bcrypt from "bcryptjs";
+import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
-import { ROLES } from "@/lib/constants";
+import {
+  CREATE_USER_DUPLICATE_EMAIL_MESSAGE,
+  CREATE_USER_DUPLICATE_MESSAGE,
+  CREATE_USER_DUPLICATE_USERNAME_MESSAGE,
+  CREATE_USER_SUCCESS_MESSAGE,
+  RESET_USER_PASSWORD_SUCCESS_MESSAGE,
+  createUserErrorState,
+  createUserSchema,
+  resetUserPasswordErrorState,
+  resetUserPasswordSchema,
+  type CreateUserActionState,
+  type CreateUserFieldErrors,
+  type ResetUserPasswordActionState,
+  type ResetUserPasswordFieldErrors,
+} from "@/lib/admin-users";
 import { optionalText, sentenceText, text } from "@/lib/form";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessAdmin } from "@/lib/rbac";
 
-const userSchema = z.object({
-  name: z.string().min(3),
-  username: z.string().min(3),
-  email: z.string().email().optional().nullable(),
-  role: z.string().refine((value) => Object.values(ROLES).includes(value as keyof typeof ROLES)),
-  password: z.string().min(6),
-});
+function uniqueUserErrorState(error: unknown): CreateUserActionState | null {
+  if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== "P2002") return null;
 
-export async function createUser(formData: FormData) {
+  const target = error.meta?.target;
+  const fields = Array.isArray(target) ? target.map(String) : typeof target === "string" ? [target] : [];
+  const fieldErrors: CreateUserFieldErrors = {};
+
+  if (fields.includes("username")) fieldErrors.username = [CREATE_USER_DUPLICATE_USERNAME_MESSAGE];
+  if (fields.includes("email")) fieldErrors.email = [CREATE_USER_DUPLICATE_EMAIL_MESSAGE];
+
+  return createUserErrorState(
+    fieldErrors,
+    Object.keys(fieldErrors).length ? CREATE_USER_DUPLICATE_MESSAGE : "No se pudo crear el usuario.",
+  );
+}
+
+export async function createUser(_prevState: CreateUserActionState, formData: FormData): Promise<CreateUserActionState> {
   const currentUser = await requireUser();
   assertAccess(canAccessAdmin(currentUser));
-  const parsed = userSchema.parse({
+  const parsed = createUserSchema.safeParse({
     name: sentenceText(formData, "name"),
     username: text(formData, "username"),
-    email: optionalText(formData, "email"),
+    email: text(formData, "email"),
     role: text(formData, "role"),
     password: text(formData, "password"),
+    passwordConfirm: text(formData, "passwordConfirm"),
   });
 
-  const user = await prisma.user.create({
-    data: {
-      name: parsed.name,
-      username: parsed.username,
-      email: parsed.email,
-      role: parsed.role,
-      passwordHash: await bcrypt.hash(parsed.password, 10),
-      active: true,
+  if (!parsed.success) {
+    return createUserErrorState(parsed.error.flatten().fieldErrors as CreateUserFieldErrors);
+  }
+
+  const existingUsers = await prisma.user.findMany({
+    where: {
+      OR: [
+        { username: { equals: parsed.data.username, mode: "insensitive" } },
+        { email: { equals: parsed.data.email, mode: "insensitive" } },
+      ],
     },
+    select: { username: true, email: true },
   });
+  const fieldErrors: CreateUserFieldErrors = {};
+  if (existingUsers.some((user) => user.username.toLowerCase() === parsed.data.username.toLowerCase())) {
+    fieldErrors.username = [CREATE_USER_DUPLICATE_USERNAME_MESSAGE];
+  }
+  if (existingUsers.some((user) => user.email?.toLowerCase() === parsed.data.email.toLowerCase())) {
+    fieldErrors.email = [CREATE_USER_DUPLICATE_EMAIL_MESSAGE];
+  }
+  if (Object.keys(fieldErrors).length) return createUserErrorState(fieldErrors, CREATE_USER_DUPLICATE_MESSAGE);
+
+  let user;
+  try {
+    user = await prisma.user.create({
+      data: {
+        name: parsed.data.name,
+        username: parsed.data.username,
+        email: parsed.data.email,
+        role: parsed.data.role,
+        passwordHash: await bcrypt.hash(parsed.data.password, 10),
+        active: true,
+      },
+    });
+  } catch (error) {
+    const uniqueState = uniqueUserErrorState(error);
+    if (uniqueState) return uniqueState;
+    throw error;
+  }
   await writeAuditLog({
     module: "ADMIN",
     entityType: "User",
@@ -49,7 +101,65 @@ export async function createUser(formData: FormData) {
     after: { id: user.id, username: user.username, role: user.role },
   });
   revalidatePath("/administracion");
-  redirect("/administracion");
+  return {
+    status: "success",
+    message: CREATE_USER_SUCCESS_MESSAGE,
+    fieldErrors: {},
+    toastKey: user.id,
+  };
+}
+
+export async function resetUserPassword(
+  userId: string,
+  _prevState: ResetUserPasswordActionState,
+  formData: FormData,
+): Promise<ResetUserPasswordActionState> {
+  const currentUser = await requireUser();
+  assertAccess(canAccessAdmin(currentUser));
+  const parsed = resetUserPasswordSchema.safeParse({
+    password: text(formData, "password"),
+    passwordConfirm: text(formData, "passwordConfirm"),
+  });
+
+  if (!parsed.success) {
+    return resetUserPasswordErrorState(parsed.error.flatten().fieldErrors as ResetUserPasswordFieldErrors);
+  }
+
+  const before = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { id: true, username: true, role: true, active: true },
+  });
+
+  if (!before) {
+    return resetUserPasswordErrorState({}, "No se encontro el usuario.");
+  }
+
+  const passwordHash = await bcrypt.hash(parsed.data.password, 10);
+  const [, closedSessions] = await prisma.$transaction([
+    prisma.user.update({
+      where: { id: userId },
+      data: { passwordHash },
+      select: { id: true },
+    }),
+    prisma.session.deleteMany({ where: { userId } }),
+  ]);
+
+  await writeAuditLog({
+    module: "ADMIN",
+    entityType: "User",
+    entityId: userId,
+    action: "UPDATE",
+    createdById: currentUser.id,
+    before: { id: before.id, username: before.username, role: before.role, active: before.active },
+    after: { passwordReset: true, closedSessions: closedSessions.count },
+  });
+  revalidatePath("/administracion");
+  return {
+    status: "success",
+    message: RESET_USER_PASSWORD_SUCCESS_MESSAGE,
+    fieldErrors: {},
+    toastKey: `${userId}-${Date.now()}`,
+  };
 }
 
 export async function toggleUserActive(userId: string) {
