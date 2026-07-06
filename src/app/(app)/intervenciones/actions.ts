@@ -538,14 +538,10 @@ export async function deleteJuridicalAttachment(interventionId: string, formData
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
   if (!canBypassLegajoRestriction(user) && (await isJuridicalLegajoDerivedOut(interventionId))) {
-    revalidatePath(`/intervenciones/${interventionId}`);
-    redirect(`/intervenciones/${interventionId}`);
+    return;
   }
   const attachmentId = text(formData, "attachmentId");
-  if (!attachmentId) {
-    revalidatePath(`/intervenciones/${interventionId}`);
-    redirect(`/intervenciones/${interventionId}`);
-  }
+  if (!attachmentId) return;
   const attachment = await prisma.attachment.findUnique({ where: { id: attachmentId } });
   const belongsToLegajo =
     attachment &&
@@ -556,10 +552,7 @@ export async function deleteJuridicalAttachment(interventionId: string, formData
           where: { id: attachment.entityId },
           select: { juridicalInterventionId: true },
         }))?.juridicalInterventionId === interventionId));
-  if (!attachment || !belongsToLegajo) {
-    revalidatePath(`/intervenciones/${interventionId}`);
-    redirect(`/intervenciones/${interventionId}`);
-  }
+  if (!attachment || !belongsToLegajo) return;
 
   await prisma.attachment.delete({ where: { id: attachment.id } });
   await writeAuditLog({
@@ -571,7 +564,6 @@ export async function deleteJuridicalAttachment(interventionId: string, formData
     before: attachment,
   });
   revalidatePath(`/intervenciones/${interventionId}`);
-  redirect(`/intervenciones/${interventionId}`);
 }
 
 export async function addJuridicalAction(interventionId: string, formData: FormData) {

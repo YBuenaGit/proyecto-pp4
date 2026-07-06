@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { KeyRound, Plus } from "lucide-react";
 import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/components/ui/cn";
 import { FormField, FormGrid, inputClass } from "@/components/ui/form-controls";
 import { SuccessToast } from "@/components/ui/success-toast";
@@ -195,7 +196,14 @@ function CreateUserForm({
       </FormGrid>
       <div className="flex flex-wrap items-center gap-2">
         <Button type="submit" disabled={pending}>
-          {pending ? "Creando..." : "Crear"}
+          {pending ? (
+            <>
+              <Spinner />
+              Creando...
+            </>
+          ) : (
+            "Crear"
+          )}
         </Button>
         <Button type="button" variant="secondary" data-modal-close disabled={pending}>
           Cancelar
@@ -306,7 +314,14 @@ function ResetUserPasswordForm({
       </FormGrid>
       <div className="flex flex-wrap items-center gap-2">
         <Button type="submit" disabled={pending}>
-          {pending ? "Guardando..." : "Guardar contrasena"}
+          {pending ? (
+            <>
+              <Spinner />
+              Guardando...
+            </>
+          ) : (
+            "Guardar contrasena"
+          )}
         </Button>
         <Button type="button" variant="secondary" data-modal-close disabled={pending}>
           Cancelar

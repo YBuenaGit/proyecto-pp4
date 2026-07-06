@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { MouseEvent, ReactElement, ReactNode } from "react";
-import { Children, cloneElement, isValidElement } from "react";
+import { Children, cloneElement, isValidElement, useState } from "react";
 import { ChevronLeft, ChevronRight, RefreshCw } from "lucide-react";
 import { cn } from "./cn";
 
@@ -192,6 +192,8 @@ export function Table({
   rowClick = true,
 }: TableProps) {
   const router = useRouter();
+  const pathname = usePathname();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const displayed = rowCount(children);
   const resolvedTotal = total ?? displayed;
   const shouldPaginate = showPagination ?? resolvedTotal > pageSize;
@@ -237,13 +239,18 @@ export function Table({
                 return;
               }
 
-              router.refresh();
+              // Recarga completa hacia la URL sin filtros: limpia los campos de
+              // busqueda (que quedan guardados en la URL y en el formulario) y
+              // vuelve a renderizar toda la tabla desde cero.
+              setIsRefreshing(true);
+              window.location.assign(pathname);
             }}
-            className="absolute left-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-sm text-[#0667b0] transition duration-150 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8ec5ff]"
+            disabled={isRefreshing}
+            className="absolute left-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-sm text-[#0667b0] transition duration-150 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8ec5ff] disabled:cursor-not-allowed"
             aria-label="Recargar"
             title="Recargar"
           >
-            <RefreshCw className="h-4 w-4" />
+            <RefreshCw className={cn("h-4 w-4", isRefreshing && "animate-spin")} />
           </button>
 
           <h2 className="text-center text-base md:text-lg font-semibold tracking-normal text-[#263544] p-2">

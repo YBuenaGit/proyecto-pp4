@@ -9,6 +9,7 @@ import {
 } from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { FormField, textareaClass } from "@/components/ui/form-controls";
 import {
   ExistingAttachmentsEditor,
@@ -171,7 +172,14 @@ export function EditInitialNarrativeForm({
           Cancelar
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Guardando..." : "Guardar cambios"}
+          {isSubmitting ? (
+            <>
+              <Spinner />
+              Guardando...
+            </>
+          ) : (
+            "Guardar cambios"
+          )}
         </Button>
       </div>
     </form>

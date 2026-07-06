@@ -1,5 +1,6 @@
 import { CalendarPlus, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { FormField, FormGrid, inputClass, textareaClass } from "@/components/ui/form-controls";
 import {
   APPOINTMENT_TYPE_LABELS,
@@ -81,10 +82,13 @@ export function AppointmentForm({
             Cancelar
           </Button>
         ) : null}
-        <Button type="submit" className="w-full sm:w-auto">
+        <SubmitButton
+          className="w-full sm:w-auto"
+          pendingLabel={appointment ? "Guardando..." : "Creando cita..."}
+        >
           {appointment ? <Save className="h-4 w-4" /> : <CalendarPlus className="h-4 w-4" />}
           {submitLabel ?? (appointment ? "Guardar cambios" : "Crear cita")}
-        </Button>
+        </SubmitButton>
       </div>
     </form>
   );

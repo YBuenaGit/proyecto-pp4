@@ -697,14 +697,10 @@ export async function deleteDispatchAttachment(
     !canBypassLegajoRestriction(user) &&
     (await isDispatchLegajoDerivedOut(recordId))
   ) {
-    revalidatePath(`/despacho/${recordId}`);
-    redirect(`/despacho/${recordId}`);
+    return;
   }
   const attachmentId = text(formData, "attachmentId");
-  if (!attachmentId) {
-    revalidatePath(`/despacho/${recordId}`);
-    redirect(`/despacho/${recordId}`);
-  }
+  if (!attachmentId) return;
   const attachment = await prisma.attachment.findUnique({
     where: { id: attachmentId },
   });
@@ -720,10 +716,7 @@ export async function deleteDispatchAttachment(
             select: { dispatchRecordId: true },
           })
         )?.dispatchRecordId === recordId));
-  if (!attachment || !belongsToLegajo) {
-    revalidatePath(`/despacho/${recordId}`);
-    redirect(`/despacho/${recordId}`);
-  }
+  if (!attachment || !belongsToLegajo) return;
 
   await prisma.attachment.delete({ where: { id: attachment.id } });
   await writeAuditLog({
@@ -735,7 +728,6 @@ export async function deleteDispatchAttachment(
     before: attachment,
   });
   revalidatePath(`/despacho/${recordId}`);
-  redirect(`/despacho/${recordId}`);
 }
 
 export async function updateDispatchFollowUp(

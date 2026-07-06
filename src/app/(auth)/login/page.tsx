@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { LoginForm } from "./login-form";
 
 export default async function LoginPage({
   searchParams,
@@ -31,32 +32,7 @@ export default async function LoginPage({
           </div>
         ) : null}
 
-        <form action="/api/auth/session" method="post" className="space-y-4">
-          <label className="block">
-            <span className="mb-1 block text-sm font-semibold text-[#495057]">Usuario</span>
-            <input
-              name="username"
-              autoComplete="username"
-              className="h-9 w-full rounded-sm border border-[#ced4da] bg-white px-2.5 text-sm text-[#212529] outline-none transition duration-150 focus:border-[#80bdff] focus:ring-2 focus:ring-[rgba(0,123,255,.25)]"
-              placeholder="despacho1"
-              required
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-sm font-semibold text-[#495057]">Contrasena</span>
-            <input
-              name="password"
-              type="password"
-              autoComplete="current-password"
-              className="h-9 w-full rounded-sm border border-[#ced4da] bg-white px-2.5 text-sm text-[#212529] outline-none transition duration-150 focus:border-[#80bdff] focus:ring-2 focus:ring-[rgba(0,123,255,.25)]"
-              placeholder="seguridad123"
-              required
-            />
-          </label>
-          <button className="h-9 w-full rounded-sm border border-[#0667b0] bg-[#0667b0] px-4 text-sm font-semibold text-white shadow-sm transition duration-150 hover:bg-[#0a61b9] active:translate-y-px focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff]">
-            Ingresar
-          </button>
-        </form>
+        <LoginForm />
 
         {/* <div className="mt-6 rounded-xl bg-[#f3f8fb] p-3 text-xs leading-5 text-[#607589] ring-1 ring-[#d7e4ee]">
           Usuarios seed: <strong>despacho1</strong>, <strong>juridico1</strong>, <strong>directivo</strong>,{" "}

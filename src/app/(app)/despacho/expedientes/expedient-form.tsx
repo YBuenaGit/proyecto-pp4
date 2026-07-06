@@ -1,4 +1,5 @@
 import { Button, LinkButton } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { FormField, FormGrid, inputClass, textareaClass } from "@/components/ui/form-controls";
 import { SelectedFilesInput } from "@/components/ui/selected-files-input";
 import { EXPEDIENT_AREAS, EXPEDIENT_STATUSES } from "@/lib/constants";
@@ -82,7 +83,9 @@ export function ExpedientForm({
         ) : null}
       </FormGrid>
       <div className="flex items-center justify-end gap-2">
-        <Button type="submit">{submitLabel ?? (record ? "Guardar cambios" : "Crear")}</Button>
+        <SubmitButton pendingLabel={record ? "Guardando..." : "Creando..."}>
+          {submitLabel ?? (record ? "Guardar cambios" : "Crear")}
+        </SubmitButton>
         {modal ? (
           <Button type="button" variant="secondary" data-modal-close>
             Cancelar

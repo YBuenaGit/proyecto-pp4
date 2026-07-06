@@ -9,7 +9,7 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { Table, Td } from "@/components/ui/table";
 import { JURIDICAL_STATUSES, PRIORITIES } from "@/lib/constants";
 import { requireUser } from "@/lib/auth";
-import { formatDateTime, labelFromValue, normalizeName } from "@/lib/format";
+import { formatDateTime, labelFromValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessJuridical } from "@/lib/rbac";
 import { dateRangeWhere, pagination, param } from "@/lib/search";
@@ -28,7 +28,8 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
   const status = param(params, "status");
   const urgency = param(params, "urgency");
   const dni = param(params, "dni");
-  const name = param(params, "name");
+  const apellido = param(params, "apellido");
+  const nombre = param(params, "nombre");
   const oficioNumber = param(params, "oficioNumber");
   const expedienteNumber = param(params, "expedienteNumber");
   const createdById = param(params, "createdById");
@@ -45,15 +46,23 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
       ],
     });
   }
-  if (name) {
+  if (apellido) {
     andFilters.push({
       OR: [
-        { nameSnapshot: { contains: name } },
-        { person: { fullNameNormalized: { contains: normalizeName(name) } } },
-        { complainants: { some: { firstName: { contains: name } } } },
-        { complainants: { some: { lastName: { contains: name } } } },
-        { linkedPersons: { some: { firstName: { contains: name } } } },
-        { linkedPersons: { some: { apellidoApodoManual: { contains: name } } } },
+        { nameSnapshot: { contains: apellido, mode: "insensitive" } },
+        { person: { lastName: { contains: apellido, mode: "insensitive" } } },
+        { complainants: { some: { lastName: { contains: apellido, mode: "insensitive" } } } },
+        { linkedPersons: { some: { apellidoApodoManual: { contains: apellido, mode: "insensitive" } } } },
+      ],
+    });
+  }
+  if (nombre) {
+    andFilters.push({
+      OR: [
+        { nameSnapshot: { contains: nombre, mode: "insensitive" } },
+        { person: { firstName: { contains: nombre, mode: "insensitive" } } },
+        { complainants: { some: { firstName: { contains: nombre, mode: "insensitive" } } } },
+        { linkedPersons: { some: { firstName: { contains: nombre, mode: "insensitive" } } } },
       ],
     });
   }
@@ -63,8 +72,8 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
     ...(type ? { type } : {}),
     ...(status ? { status } : {}),
     ...(urgency ? { urgency } : {}),
-    ...(oficioNumber ? { oficioNumber: { contains: oficioNumber } } : {}),
-    ...(expedienteNumber ? { expedienteNumber: { contains: expedienteNumber } } : {}),
+    ...(oficioNumber ? { oficioNumber: { contains: oficioNumber, mode: "insensitive" } } : {}),
+    ...(expedienteNumber ? { expedienteNumber: { contains: expedienteNumber, mode: "insensitive" } } : {}),
     ...(createdById ? { createdById } : {}),
     ...(andFilters.length ? { AND: andFilters } : {}),
   };
@@ -116,7 +125,8 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
           <FilterSelect label="Estado" name="status" defaultValue={status} options={JURIDICAL_STATUSES.map((s) => [s, labelFromValue(s)])} />
           <FilterSelect label="Urgencia" name="urgency" defaultValue={urgency} options={PRIORITIES.map((p) => [p, labelFromValue(p)])} />
           <FilterInput label="DNI" name="dni" defaultValue={dni} />
-          <FilterInput label="Apellido y nombre" name="name" defaultValue={name} />
+          <FilterInput label="Apellido" name="apellido" defaultValue={apellido} />
+          <FilterInput label="Nombre" name="nombre" defaultValue={nombre} />
           <FilterInput label="Oficio" name="oficioNumber" defaultValue={oficioNumber} />
           <FilterInput label="Expediente" name="expedienteNumber" defaultValue={expedienteNumber} />
           <FilterSelect label="Usuario" name="createdById" defaultValue={createdById} options={users.map((item) => [item.id, item.name])} />

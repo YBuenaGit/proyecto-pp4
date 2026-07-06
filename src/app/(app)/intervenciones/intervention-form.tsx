@@ -23,6 +23,7 @@ import {
   UploadCloud,
 } from "lucide-react";
 import { Button, LinkButton } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/components/ui/cn";
 import {
   JURIDICAL_DERIVED_AREAS,
@@ -2330,7 +2331,14 @@ export function InterventionForm({
                 }}
                 className="border-[#0667b0] bg-[#0667b0] hover:bg-blue-700"
               >
-                {isSubmitting ? "Guardando..." : "Confirmar"}
+                {isSubmitting ? (
+                  <>
+                    <Spinner />
+                    Guardando...
+                  </>
+                ) : (
+                  "Confirmar"
+                )}
               </Button>
             </div>
           </div>

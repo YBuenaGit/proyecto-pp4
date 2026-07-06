@@ -23,6 +23,7 @@ import {
   UploadCloud,
 } from "lucide-react";
 import { Button, LinkButton } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/components/ui/cn";
 import {
   DISPATCH_INTERNAL_DERIVED_AREAS,
@@ -2141,11 +2142,16 @@ export function DispatchWizardForm({
                       }}
                       className="border-[#0667b0] bg-[#0667b0] hover:bg-blue-700"
                     >
-                      {isSubmitting
-                        ? "Guardando..."
-                        : submitLabel === "Crear"
-                          ? "Confirmar creacion"
-                          : submitLabel}
+                      {isSubmitting ? (
+                        <>
+                          <Spinner />
+                          Guardando...
+                        </>
+                      ) : submitLabel === "Crear" ? (
+                        "Confirmar creacion"
+                      ) : (
+                        submitLabel
+                      )}
                     </Button>
                   </div>
                 </StepCard>

@@ -9,6 +9,7 @@ import {
 } from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import {
   FormField,
   inputClass,
@@ -250,7 +251,14 @@ export function AddJuridicalActionForm({
           Cancelar
         </Button>
         <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Guardando..." : submitLabel}
+          {isSubmitting ? (
+            <>
+              <Spinner />
+              Guardando...
+            </>
+          ) : (
+            submitLabel
+          )}
         </Button>
       </div>
     </form>

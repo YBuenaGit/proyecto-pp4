@@ -1,6 +1,7 @@
 import { Plus } from "lucide-react";
 import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import { DetailSection } from "@/components/ui/detail-section";
 import { FormField, FormGrid, inputClass } from "@/components/ui/form-controls";
 import { PageHeader } from "@/components/ui/page-header";
@@ -90,7 +91,7 @@ export default async function AdminPage() {
                   </FormField>
                 </FormGrid>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Button type="submit">Crear</Button>
+                  <SubmitButton pendingLabel="Creando...">Crear</SubmitButton>
                   <Button type="button" variant="secondary" data-modal-close>Cancelar</Button>
                 </div>
               </form>

@@ -6,6 +6,7 @@ import { Download, Edit, FileText, Plus, Send } from "lucide-react";
 import { AppModal } from "@/components/ui/app-modal";
 import { AuditTimeline } from "@/components/ui/audit-timeline";
 import { Button, LinkButton } from "@/components/ui/button";
+import { SubmitButton } from "@/components/ui/submit-button";
 import {
   DetailField,
   DetailSection,
@@ -1349,7 +1350,9 @@ export default async function InterventionDetailPage({
                       </select>
                     </FormField>
                     <div className="flex flex-wrap items-center gap-2">
-                      <Button type="submit">Guardar</Button>
+                      <SubmitButton pendingLabel="Derivando...">
+                        Guardar
+                      </SubmitButton>
                       <Button
                         type="button"
                         variant="secondary"

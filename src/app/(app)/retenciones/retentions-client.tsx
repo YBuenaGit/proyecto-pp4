@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react
 import { Edit3, Eye, Plus, Trash2 } from "lucide-react";
 import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
 import { FilterBar, FilterInput, FilterSelect } from "@/components/ui/filter-bar";
 import { FormField, FormGrid, inputClass, textareaClass } from "@/components/ui/form-controls";
 import { ListToolbar } from "@/components/ui/list-toolbar";
@@ -308,7 +309,14 @@ function RetentionForm({
           Cancelar
         </Button>
         <Button type="submit" variant="success" disabled={saving}>
-          {saving ? "Guardando..." : submitLabel}
+          {saving ? (
+            <>
+              <Spinner />
+              Guardando...
+            </>
+          ) : (
+            submitLabel
+          )}
         </Button>
       </div>
     </form>

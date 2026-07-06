@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { FileText, Upload } from "lucide-react";
 import { Button } from "./button";
+import { SubmitButton } from "./submit-button";
 import { formatDateTime } from "@/lib/format";
 
 export function AttachmentList({
@@ -66,10 +67,10 @@ export function UploadForm({
         />
       </label>
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="submit" variant="secondary" className="w-fit">
+        <SubmitButton variant="secondary" className="w-fit" pendingLabel="Subiendo...">
           <Upload className="h-4 w-4" />
           Subir
-        </Button>
+        </SubmitButton>
         {modal ? (
           <Button type="button" variant="secondary" data-modal-close>
             Cancelar
