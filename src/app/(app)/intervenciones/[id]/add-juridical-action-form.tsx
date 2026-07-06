@@ -18,6 +18,7 @@ const actionStatuses = JURIDICAL_STATUSES.filter((status) => status !== "DERIVAD
 type ActionSheetFormValues = {
   actionType: string;
   createdAt: Date | string;
+  deadlineAt: Date | string | null;
   description: string;
   guidanceProvided: string;
   statusAfter: string;
@@ -100,6 +101,14 @@ export function AddJuridicalActionForm({
             type="datetime-local"
             className={inputClass}
             defaultValue={initialValues?.createdAt ? toDateInputValue(initialValues.createdAt) : nowInputValue()}
+          />
+        </FormField>
+        <FormField label="Plazo">
+          <input
+            name="deadlineAt"
+            type="datetime-local"
+            className={inputClass}
+            defaultValue={initialValues?.deadlineAt ? toDateInputValue(initialValues.deadlineAt) : ""}
           />
         </FormField>
         <FormField label="Estado">

@@ -71,6 +71,7 @@ export default async function ExpedientDetailPage({ params }: { params: Promise<
               <DetailField label="Código" value={codigoExpedienteLabel(expedient.codigo)} />
               <DetailField label="Descripcion" value={expedient.description} />
               <DetailField label="Numero expediente" value={expedient.expedienteNumber} />
+              <DetailField label="Plazo" value={expedient.deadlineAt ? formatDateTime(expedient.deadlineAt) : "Sin plazo"} />
               <DetailField label="Creado" value={formatDateTime(expedient.createdAt)} />
               <DetailField label="Actualizado" value={formatDateTime(expedient.updatedAt)} />
               <DetailField label="Usuario" value={expedient.createdBy.name} />

@@ -17,6 +17,7 @@ const followUpStatuses = DISPATCH_STATUSES.filter((status) => status !== "DERIVA
 
 type DispatchFollowUpFormValues = {
   createdAt: Date | string;
+  deadlineAt: Date | string;
   description: string;
   guidanceProvided: string;
   statusAfter: string;
@@ -96,6 +97,14 @@ export function AddDispatchFollowUpForm({
             type="datetime-local"
             className={inputClass}
             defaultValue={initialValues?.createdAt ? toDateInputValue(initialValues.createdAt) : nowInputValue()}
+          />
+        </FormField>
+        <FormField label="Plazo">
+          <input
+            name="deadlineAt"
+            type="datetime-local"
+            className={inputClass}
+            defaultValue={initialValues?.deadlineAt ? toDateInputValue(initialValues.deadlineAt) : ""}
           />
         </FormField>
         <FormField label="Estado">

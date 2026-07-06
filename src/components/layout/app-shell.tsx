@@ -1,8 +1,10 @@
 import Link from "next/link";
 import Image from "next/image";
 import { ROLE_LABELS } from "@/lib/constants";
+import type { NavbarNotificationPayload } from "@/lib/deadline-notifications";
 import { visibleModules } from "@/lib/rbac";
 import type { CurrentUser } from "@/lib/types";
+import { NotificationBell } from "./notification-bell";
 import { SidebarNav, type NavItem } from "./sidebar-nav";
 
 function buildNav(user: CurrentUser): NavItem[] {
@@ -47,7 +49,15 @@ function buildNav(user: CurrentUser): NavItem[] {
   return items;
 }
 
-export function AppShell({ user, children }: { user: CurrentUser; children: React.ReactNode }) {
+export function AppShell({
+  user,
+  notifications,
+  children,
+}: {
+  user: CurrentUser;
+  notifications: NavbarNotificationPayload;
+  children: React.ReactNode;
+}) {
   return (
     <div className="min-h-screen bg-[#f8f9fa] text-[#212529]">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r border-[#dee2e6] bg-white shadow-sm lg:block">
@@ -82,6 +92,7 @@ export function AppShell({ user, children }: { user: CurrentUser; children: Reac
             </Link>
             <div className="hidden text-sm font-medium text-[#212529] lg:block">Sistema interno de gestion juridica y operativa</div>
             <div className="flex items-center gap-2.5">
+              <NotificationBell notifications={notifications} />
               <div className="text-right">
                 <p className="text-sm font-semibold text-[#212529]">{user.name}</p>
                 <p className="text-xs font-medium text-[#212529]">{ROLE_LABELS[user.role] ?? user.role}</p>

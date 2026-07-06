@@ -8,6 +8,7 @@ import {
   canAccessPeople,
   canAccessReports,
   canAccessRetentions,
+  canBypassLegajoRestriction,
   visibleModules,
 } from "../../src/lib/rbac";
 
@@ -26,6 +27,24 @@ const adminUser = {
   username: "admin",
   email: "admin@example.test",
   role: "admin",
+  active: true,
+};
+
+const dispatchUser = {
+  id: "despacho-1",
+  name: "Despacho",
+  username: "despacho",
+  email: "despacho@example.test",
+  role: "despacho",
+  active: true,
+};
+
+const juridicalUser = {
+  id: "juridico-1",
+  name: "Juridico",
+  username: "juridico",
+  email: "juridico@example.test",
+  role: "juridico",
   active: true,
 };
 
@@ -67,4 +86,12 @@ test("admin accede a todos los modulos operativos y a administracion", () => {
     retenciones: true,
     administracion: true,
   });
+});
+
+test("solo directivo y admin saltean restricciones de legajos derivados", () => {
+  assert.equal(canBypassLegajoRestriction(executiveUser), true);
+  assert.equal(canBypassLegajoRestriction(adminUser), true);
+  assert.equal(canBypassLegajoRestriction(dispatchUser), false);
+  assert.equal(canBypassLegajoRestriction(juridicalUser), false);
+  assert.equal(canBypassLegajoRestriction(null), false);
 });

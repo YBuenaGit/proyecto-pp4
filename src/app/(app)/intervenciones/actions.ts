@@ -10,7 +10,7 @@ import { saveAttachments } from "@/lib/files";
 import { nextInternalNumber, optionalDate, optionalSentenceText, optionalText, sentenceText, text } from "@/lib/form";
 import { buildJuridicalActionContent } from "@/lib/juridical-action-content";
 import { prisma } from "@/lib/prisma";
-import { assertAccess, canAccessJuridical } from "@/lib/rbac";
+import { assertAccess, canAccessJuridical, canBypassLegajoRestriction } from "@/lib/rbac";
 import { capitalizeOptionalText, personDisplayName } from "@/lib/text";
 
 const interventionSchema = z.object({
@@ -340,8 +340,12 @@ export async function createJuridicalIntervention(formData: FormData) {
   const firstLinkedPerson = linkedPersons[0];
   const derivedArea = optionalText(formData, "derivedArea");
   const attendedAt = optionalDate(formData, "attendedAt") ?? new Date();
+  const deadlineAt = optionalDate(formData, "deadlineAt");
   if (Number.isNaN(attendedAt.getTime())) {
     throw new Error("La fecha y hora de atencion no es valida.");
+  }
+  if (deadlineAt && Number.isNaN(deadlineAt.getTime())) {
+    throw new Error("El plazo no es valido.");
   }
 
   const intervention = await prisma.juridicalIntervention.create({
@@ -372,6 +376,7 @@ export async function createJuridicalIntervention(formData: FormData) {
       referredToAgency: optionalSentenceText(formData, "referredToAgency"),
       derivedArea,
       confidentialNotes: optionalSentenceText(formData, "confidentialNotes"),
+      deadlineAt,
       lastStatusAt: attendedAt,
       complainants: {
         create: complainants.map(complainantCreateData),
@@ -421,8 +426,12 @@ export async function updateJuridicalIntervention(interventionId: string, formDa
   const firstComplainant = complainants[0];
   const firstLinkedPerson = linkedPersons[0];
   const attendedAt = optionalDate(formData, "attendedAt") ?? before.attendedAt;
+  const deadlineAt = optionalDate(formData, "deadlineAt");
   if (Number.isNaN(attendedAt.getTime())) {
     throw new Error("La fecha y hora de atencion no es valida.");
+  }
+  if (deadlineAt && Number.isNaN(deadlineAt.getTime())) {
+    throw new Error("El plazo no es valido.");
   }
 
   const after = await prisma.juridicalIntervention.update({
@@ -452,6 +461,7 @@ export async function updateJuridicalIntervention(interventionId: string, formDa
       referredToAgency: optionalSentenceText(formData, "referredToAgency"),
       derivedArea: before.derivedArea,
       confidentialNotes: optionalSentenceText(formData, "confidentialNotes"),
+      deadlineAt,
       lastStatusAt: before.status !== parsed.status ? new Date() : before.lastStatusAt,
       complainants: {
         deleteMany: {},
@@ -483,7 +493,7 @@ export async function updateJuridicalIntervention(interventionId: string, formDa
 export async function addJuridicalAction(interventionId: string, formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
-  if (await isJuridicalLegajoDerivedOut(interventionId)) {
+  if (!canBypassLegajoRestriction(user) && (await isJuridicalLegajoDerivedOut(interventionId))) {
     revalidatePath(`/intervenciones/${interventionId}`);
     redirect(`/intervenciones/${interventionId}`);
   }
@@ -495,7 +505,15 @@ export async function addJuridicalAction(interventionId: string, formData: FormD
     nextStepDescription: optionalSentenceText(formData, "nextStepDescription") ?? "",
   });
   const statusAfter = optionalText(formData, "statusAfter");
+  const createdAt = optionalDate(formData, "createdAt") ?? new Date();
+  const deadlineAt = optionalDate(formData, "deadlineAt");
   if (!ACTION_TYPES.includes(actionType) || description.length < 3) return;
+  if (Number.isNaN(createdAt.getTime())) {
+    throw new Error("La fecha y hora de atencion no es valida.");
+  }
+  if (deadlineAt && Number.isNaN(deadlineAt.getTime())) {
+    throw new Error("El plazo no es valido.");
+  }
 
   const before = await juridicalAuditSnapshot(interventionId);
   const action = await prisma.juridicalAction.create({
@@ -503,7 +521,8 @@ export async function addJuridicalAction(interventionId: string, formData: FormD
       juridicalInterventionId: interventionId,
       actionType,
       content,
-      createdAt: optionalDate(formData, "createdAt") ?? new Date(),
+      createdAt,
+      deadlineAt,
       createdById: user.id,
     },
   });
@@ -544,7 +563,7 @@ export async function updateJuridicalAction(actionId: string, formData: FormData
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
   const existingAction = await prisma.juridicalAction.findUniqueOrThrow({ where: { id: actionId } });
-  if (await isJuridicalLegajoDerivedOut(existingAction.juridicalInterventionId)) {
+  if (!canBypassLegajoRestriction(user) && (await isJuridicalLegajoDerivedOut(existingAction.juridicalInterventionId))) {
     revalidatePath(`/intervenciones/${existingAction.juridicalInterventionId}`);
     redirect(`/intervenciones/${existingAction.juridicalInterventionId}`);
   }
@@ -556,7 +575,15 @@ export async function updateJuridicalAction(actionId: string, formData: FormData
     nextStepDescription: optionalSentenceText(formData, "nextStepDescription") ?? "",
   });
   const statusAfter = optionalText(formData, "statusAfter");
+  const createdAt = optionalDate(formData, "createdAt") ?? existingAction.createdAt;
+  const deadlineAt = optionalDate(formData, "deadlineAt");
   if (!ACTION_TYPES.includes(actionType) || description.length < 3) return;
+  if (Number.isNaN(createdAt.getTime())) {
+    throw new Error("La fecha y hora de atencion no es valida.");
+  }
+  if (deadlineAt && Number.isNaN(deadlineAt.getTime())) {
+    throw new Error("El plazo no es valido.");
+  }
 
   const before = await juridicalAuditSnapshot(existingAction.juridicalInterventionId);
   const action = await prisma.juridicalAction.update({
@@ -564,7 +591,8 @@ export async function updateJuridicalAction(actionId: string, formData: FormData
     data: {
       actionType,
       content,
-      createdAt: optionalDate(formData, "createdAt") ?? existingAction.createdAt,
+      createdAt,
+      deadlineAt,
     },
   });
 
@@ -603,6 +631,10 @@ export async function updateJuridicalAction(actionId: string, formData: FormData
 export async function deriveJuridicalToDispatch(interventionId: string, formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
+  if (await isJuridicalLegajoDerivedOut(interventionId)) {
+    revalidatePath(`/intervenciones/${interventionId}`);
+    redirect(`/intervenciones/${interventionId}`);
+  }
   const source = await prisma.juridicalIntervention.findUniqueOrThrow({
     where: { id: interventionId },
     include: {
@@ -754,7 +786,7 @@ export async function referJuridicalToArea(interventionId: string, formData: For
 export async function uploadJuridicalAttachment(interventionId: string, formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
-  if (await isJuridicalLegajoDerivedOut(interventionId)) {
+  if (!canBypassLegajoRestriction(user) && (await isJuridicalLegajoDerivedOut(interventionId))) {
     revalidatePath(`/intervenciones/${interventionId}`);
     redirect(`/intervenciones/${interventionId}`);
   }

@@ -11,6 +11,10 @@ export function isAdmin(user: CurrentUser | null) {
   return user?.role === ROLES.admin;
 }
 
+export function canBypassLegajoRestriction(user: CurrentUser | null) {
+  return isDirectivo(user) || isAdmin(user);
+}
+
 export function canAccessDispatch(user: CurrentUser | null) {
   return user?.role === ROLES.despacho || isDirectivo(user) || isAdmin(user);
 }

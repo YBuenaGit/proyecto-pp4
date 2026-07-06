@@ -4,6 +4,7 @@ import { DispatchWizardForm, type DispatchWizardValues, type LinkedPersonDraft }
 type DispatchFormRecord = {
   createdAt?: Date | null;
   attendedAt?: Date | null;
+  deadlineAt?: Date | null;
   usesHistoricalDate?: boolean | null;
   dniSnapshot?: string | null;
   nameSnapshot?: string | null;
@@ -100,6 +101,7 @@ export function DispatchForm({
   const initialValues: DispatchWizardValues = {
     attendedAt: toDateInputValue(record?.attendedAt ?? new Date()),
     usesHistoricalDate: record ? Boolean(record.usesHistoricalDate) : false,
+    deadlineAt: toDateInputValue(record?.deadlineAt),
     category: record?.category ?? "",
     priority: record?.priority ?? "MEDIA",
     status: record?.status ?? "RECIBIDO",

@@ -11,6 +11,7 @@ import { sortByLabel } from "@/lib/text";
 export type DispatchWizardValues = {
   attendedAt: string;
   usesHistoricalDate: boolean;
+  deadlineAt: string;
   category: string;
   priority: string;
   status: string;
@@ -256,6 +257,9 @@ function validateStep(index: number, values: DispatchWizardValues): StepError[] 
     }
     if (values.attendedAt && Number.isNaN(new Date(values.attendedAt).getTime())) {
       errors.push({ field: "attendedAt", message: "Ingresá una fecha y hora válida." });
+    }
+    if (values.deadlineAt && Number.isNaN(new Date(values.deadlineAt).getTime())) {
+      errors.push({ field: "deadlineAt", message: "Ingresá un plazo válido." });
     }
     return errors;
   }
@@ -887,6 +891,15 @@ export function DispatchWizardForm({
                   </div>
                 </details>
               </Field>
+              <Field label="Plazo" error={errorFor("deadlineAt")}>
+                <input
+                  name="deadlineAt"
+                  type="datetime-local"
+                  value={values.deadlineAt}
+                  onChange={(event) => setValue("deadlineAt", event.target.value)}
+                  className={inputClass}
+                />
+              </Field>
               <Field label="Categoría" error={errorFor("category")}>
                 <select
                   name="category"
@@ -1333,6 +1346,7 @@ export function DispatchWizardForm({
               <SummaryBlock title="Situación" actionLabel="Editar situación" onEdit={() => goToStep(0)}>
                 <SummaryGrid>
                   <SummaryItem label="Fecha y hora" value={values.attendedAt ? formatDateTime(values.attendedAt) : "Fecha y hora actual al crear"} />
+                  <SummaryItem label="Plazo" value={values.deadlineAt ? formatDateTime(values.deadlineAt) : "Sin plazo"} />
                   <SummaryItem label="Categoría" value={selectedLabel(sortedCategories, values.category)} />
                   <SummaryItem label="Prioridad" value={labelFromValue(values.priority)} />
                 </SummaryGrid>

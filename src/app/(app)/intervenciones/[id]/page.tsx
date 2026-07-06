@@ -19,7 +19,7 @@ import { chunkForBookPages, paginateBookTextSections } from "@/lib/book-paginati
 import { parseJuridicalActionContent } from "@/lib/juridical-action-content";
 import { prisma } from "@/lib/prisma";
 import { earliestDate, isVisibleBeforeReferralCutoff } from "@/lib/referral-privacy";
-import { assertAccess, canAccessJuridical } from "@/lib/rbac";
+import { assertAccess, canAccessJuridical, canBypassLegajoRestriction } from "@/lib/rbac";
 import { personDisplayName, sortByLabel } from "@/lib/text";
 import {
   addJuridicalAction,
@@ -189,7 +189,7 @@ function SheetAttachments({ attachments }: { attachments: LegajoAttachment[] }) 
             <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[#0667b0]" />
             <span className="min-w-0 flex-1">
               <span className="block truncate font-semibold">{attachment.originalName}</span>
-              <span className="block text-xs text-[#212529]">{Math.ceil(attachment.size / 1024)} KB · {attachment.uploadedBy.name}</span>
+              <span className="block text-xs text-[#212529]">{Math.ceil(attachment.size / 1024)} KB Â· {attachment.uploadedBy.name}</span>
               <span className="mt-2 block">
                 <AttachmentPreviewButton href={`/adjuntos/${attachment.id}`} name={attachment.originalName} mimeType={attachment.mimeType} compact />
               </span>
@@ -252,7 +252,7 @@ function LegajoCoverSheet({
             </div>
           </div>
           <div className="rounded-sm border border-[#86cfdf] bg-white px-3 py-2 text-right">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#0c5460]">N° de legajo</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#0c5460]">NÂ° de legajo</p>
             <p className="mt-1 text-base font-semibold text-[#212529]">{internalNumber}</p>
           </div>
         </div>
@@ -260,7 +260,7 @@ function LegajoCoverSheet({
 
       <div className="book-leaf-body space-y-5 px-5 py-5">
         <div className="rounded-sm border border-[#b7dfee] bg-white/80 px-4 py-3">
-          <CoverField label="Tipo / contexto" value={`${type} · ${context}`} />
+          <CoverField label="Tipo / contexto" value={`${type} Â· ${context}`} />
           <CoverField label="Fecha de apertura" value={formatDateTime(attendedAt)} />
           <CoverField label="Usuario que inicio" value={createdBy} />
         </div>
@@ -284,7 +284,7 @@ function LegajoAttachmentSheet({ attachments, pageNumber, pageCount }: { attachm
     <article className="book-leaf rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_12px_34px_rgba(0,0,0,0.22)]">
       <div className="border-b border-[#b7dfee] bg-[#dff3fb] px-4 py-4 sm:px-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Archivos</p>
-        <h3 className="mt-1 text-lg font-semibold text-[#212529]">Archivos generales del legajo{pageCount && pageCount > 1 ? ` � hoja ${pageNumber} de ${pageCount}` : ""}</h3>
+        <h3 className="mt-1 text-lg font-semibold text-[#212529]">Archivos generales del legajo{pageCount && pageCount > 1 ? ` · hoja ${pageNumber} de ${pageCount}` : ""}</h3>
         <p className="mt-1 text-sm text-[#212529]">Documentacion adjunta disponible para abrir o descargar.</p>
       </div>
       <div className="book-leaf-body grid gap-3 px-4 py-4 sm:grid-cols-2 sm:px-5">
@@ -294,7 +294,7 @@ function LegajoAttachmentSheet({ attachments, pageNumber, pageCount }: { attachm
               <FileText className="mt-1 h-4 w-4 shrink-0 text-[#0667b0]" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-[#212529]">{attachment.originalName}</p>
-                <p className="text-xs text-[#212529]">{Math.ceil(attachment.size / 1024)} KB · {attachment.uploadedBy.name}</p>
+                <p className="text-xs text-[#212529]">{Math.ceil(attachment.size / 1024)} KB Â· {attachment.uploadedBy.name}</p>
                 <div className="mt-3">
                   <AttachmentPreviewButton href={`/adjuntos/${attachment.id}`} name={attachment.originalName} mimeType={attachment.mimeType} />
                 </div>
@@ -309,6 +309,7 @@ function LegajoAttachmentSheet({ attachments, pageNumber, pageCount }: { attachm
 
 function InterventionReadContent({
   date,
+  deadlineAt,
   actor,
   role,
   actionType,
@@ -321,6 +322,7 @@ function InterventionReadContent({
   attachments,
 }: {
   date: Date;
+  deadlineAt?: Date | null;
   actor: string;
   role: string;
   actionType?: string | null;
@@ -336,6 +338,7 @@ function InterventionReadContent({
     <div className="space-y-4">
       <div className="grid gap-3 rounded-sm border border-[#b7dfee] bg-[#eefaff] p-3 sm:grid-cols-2">
         <CoverField label="Fecha y hora" value={formatDateTime(date)} />
+        <CoverField label="Plazo" value={deadlineAt ? formatDateTime(deadlineAt) : "-"} />
         <CoverField label="Quien cargo" value={`${actor} (${labelFromValue(role)})`} />
         <CoverField label="Tipo de actuacion" value={actionType ? labelFromValue(actionType) : "-"} />
         <CoverField label="Estado / seguimiento" value={statusText ?? (nextStepDate ? `Seguimiento: ${formatDate(nextStepDate)}` : "-")} />
@@ -367,6 +370,22 @@ function attentionLabel(position: number) {
   return word ? `${word} atencion` : `Atencion ${position}`;
 }
 
+function interventionDerivationDestination(intervention: {
+  derivedArea: string | null;
+  originReferrals: { destinationModule: string }[];
+}) {
+  if (intervention.derivedArea) return intervention.derivedArea;
+  const destinationModule = intervention.originReferrals[0]?.destinationModule;
+  if (destinationModule === "DESPACHO") return "Despacho";
+  if (destinationModule === "DIRECTIVO") return "Directivo";
+  if (destinationModule === "JURIDICO") return "Intervenciones Juridico-Institucionales";
+  return destinationModule ? labelFromValue(destinationModule) : "area derivada";
+}
+
+function isDispatchDerivationFollowUp(followUp: { content: string; statusAfter: string | null }) {
+  return followUp.statusAfter === "DERIVADO" || followUp.content.toLocaleLowerCase("es-AR").startsWith("deriv");
+}
+
 export default async function InterventionDetailPage({
   params,
   searchParams,
@@ -389,7 +408,15 @@ export default async function InterventionDetailPage({
         createdBy: true,
         actions: { include: { createdBy: true }, orderBy: { createdAt: "asc" } },
         destinationReferrals: {
-          include: { originDispatchRecord: true, referredBy: true },
+          include: {
+            originDispatchRecord: {
+              include: {
+                createdBy: true,
+                followUps: { include: { createdBy: true }, orderBy: { createdAt: "asc" } },
+              },
+            },
+            referredBy: true,
+          },
           orderBy: { referredAt: "desc" },
         },
         originReferrals: {
@@ -408,7 +435,20 @@ export default async function InterventionDetailPage({
   const derivationActionAt = earliestDate(intervention.actions.filter(isDerivationAction).map((action) => action.createdAt));
   const privacyCutoffAt = earliestDate([outgoingReferralAt, derivationActionAt]);
   const isOriginRestricted = Boolean(intervention.derivedArea || intervention.originReferrals.length);
-  const visibleActions = intervention.actions.filter((action) => isVisibleBeforeReferralCutoff(action, privacyCutoffAt, isDerivationAction));
+  const derivationDestination = isOriginRestricted ? interventionDerivationDestination(intervention) : null;
+  const canBypassOriginRestriction = canBypassLegajoRestriction(user);
+  const canMutateOriginLegajo = canBypassOriginRestriction || !isOriginRestricted;
+  const visibleActions = canBypassOriginRestriction
+    ? intervention.actions
+    : intervention.actions.filter((action) => isVisibleBeforeReferralCutoff(action, privacyCutoffAt, isDerivationAction));
+  const auditLogWhere =
+    canBypassOriginRestriction || !privacyCutoffAt
+      ? { entityType: "JuridicalIntervention", entityId: id }
+      : {
+          entityType: "JuridicalIntervention",
+          entityId: id,
+          OR: [{ createdAt: { lte: privacyCutoffAt } }, { action: "REFERRAL" }],
+        };
   const actionIds = visibleActions.map((action) => action.id);
   const [attachments, auditLogs] = await Promise.all([
     prisma.attachment.findMany({
@@ -422,11 +462,7 @@ export default async function InterventionDetailPage({
       include: { uploadedBy: true },
       orderBy: { createdAt: "desc" },
     }),
-    prisma.auditLog.findMany({
-      where: { entityType: "JuridicalIntervention", entityId: id },
-      include: { createdBy: true },
-      orderBy: { createdAt: "desc" },
-    }),
+    prisma.auditLog.findMany({ where: auditLogWhere, include: { createdBy: true }, orderBy: { createdAt: "desc" } }),
   ]);
 
   const generalAttachments = attachments.filter((attachment) => attachment.entityType === "JuridicalIntervention");
@@ -490,6 +526,67 @@ export default async function InterventionDetailPage({
   });
   const displayActionSheets = [...actionSheets].sort((a, b) => b.action.createdAt.getTime() - a.action.createdAt.getTime());
   const initialStatusText = `Estado inicial: ${labelFromValue(initialStatusFromAudit(auditLogs, intervention.status))}`;
+  const originDispatchEntries = intervention.destinationReferrals
+    .flatMap((referral) => {
+      const origin = referral.originDispatchRecord;
+      if (!origin) return [];
+
+      const firstEntry = {
+        id: `dispatch-origin-${origin.id}-initial`,
+        internalNumber: origin.internalNumber,
+        sequence: 1,
+        recordLabel: "Atencion N° 1",
+        title: labelFromValue(origin.category),
+        subtitle: "Primera atencion",
+        date: origin.attendedAt,
+        deadlineAt: origin.deadlineAt,
+        actor: origin.createdBy.name,
+        role: origin.createdBy.role,
+        description: origin.description,
+        guidance: origin.initialGuidance,
+        statusText: `Legajo origen ${origin.internalNumber}`,
+        actionType: "ATENCION_DESPACHO",
+        isDerivation: false,
+      };
+
+      const followUpEntries = origin.followUps
+        .filter((followUp) => followUp.createdAt.getTime() <= referral.referredAt.getTime() || isDispatchDerivationFollowUp(followUp))
+        .map((followUp, followUpIndex) => {
+          const parsed = parseJuridicalActionContent(followUp.content);
+          const isDerivation = isDispatchDerivationFollowUp(followUp);
+          return {
+            id: `dispatch-origin-${origin.id}-followup-${followUp.id}`,
+            internalNumber: origin.internalNumber,
+            sequence: followUpIndex + 2,
+            recordLabel: `Seguimiento N° ${followUpIndex + 2}`,
+            title: isDerivation ? "Derivacion a intervenciones" : "Seguimiento de atencion",
+            subtitle: "Registro agregado",
+            date: followUp.createdAt,
+            deadlineAt: followUp.deadlineAt,
+            actor: followUp.createdBy.name,
+            role: followUp.createdBy.role,
+            description: parsed.description,
+            guidance: parsed.guidanceProvided,
+            statusText: isDerivation
+              ? `Derivado a ${intervention.internalNumber}`
+              : followUp.statusAfter
+                ? `Estado posterior: ${labelFromValue(followUp.statusAfter)}`
+                : `Legajo origen ${origin.internalNumber}`,
+            actionType: isDerivation ? "DERIVACION_DESPACHO" : "SEGUIMIENTO_DESPACHO",
+            isDerivation,
+          };
+        });
+
+      return [firstEntry, ...followUpEntries].sort((a, b) => a.date.getTime() - b.date.getTime());
+    })
+    .sort((a, b) => a.date.getTime() - b.date.getTime())
+    .map((entry, index) => ({ ...entry, sequence: index + 1 }));
+  const showInitialInterventionRow = originDispatchEntries.length === 0;
+  const legajoTimelineRows = [
+    ...originDispatchEntries.map((entry) => ({ kind: "dispatch" as const, date: entry.date, entry })),
+    ...displayActionSheets.map((sheet) => ({ kind: "action" as const, date: sheet.action.createdAt, sheet })),
+    ...(showInitialInterventionRow ? [{ kind: "initial" as const, date: intervention.attendedAt }] : []),
+  ].sort((a, b) => b.date.getTime() - a.date.getTime());
   const bookEntries: Array<{ item: LegajoBookItem; node: ReactNode }> = [
     {
       item: {
@@ -532,6 +629,64 @@ export default async function InterventionDetailPage({
   const interventionEyebrow = `Legajo ${intervention.internalNumber}`;
   const firstAttentionType = labelFromValue(intervention.type);
 
+  originDispatchEntries.forEach((entry) => {
+    const sectionLabel = entry.recordLabel;
+    const textPages = paginateBookTextSections(
+      [
+        { label: "Descripcion del relato", text: entry.description },
+        { label: "Lo que se instruyo", text: entry.guidance },
+      ],
+      { firstPageLines: 24, continuationPageLines: 28 },
+    );
+
+    bookEntries.push({
+      item: {
+        sheetNumber: entry.sequence,
+        label: sectionLabel,
+        title: entry.title,
+        dateText: formatDateTime(entry.date),
+        statusText: entry.statusText,
+        searchText: [entry.internalNumber, entry.title, entry.actor, entry.description, entry.guidance].filter(Boolean).join(" "),
+      },
+      node: (
+        <BookSectionCover
+          key={`dispatch-origin-cover-${entry.id}`}
+          eyebrow={interventionEyebrow}
+          ordinal={sectionLabel}
+          subtitle={entry.title}
+          meta={[
+            { label: "Legajo origen", value: entry.internalNumber },
+            { label: "Fecha", value: formatDateTime(entry.date) },
+            { label: "Registrado por", value: `${entry.actor} (${labelFromValue(entry.role)})` },
+            { label: "Estado", value: entry.statusText },
+          ]}
+        />
+      ),
+    });
+
+    textPages.forEach((textPage, pageIndex) => {
+      bookEntries.push({
+        item: {
+          sheetNumber: entry.sequence,
+          label: pageIndex > 0 ? `${sectionLabel} · cont. ${pageIndex + 1}` : `${sectionLabel} · contenido`,
+          title: entry.title,
+          dateText: formatDateTime(entry.date),
+          statusText: entry.statusText,
+          searchText: [entry.description, entry.guidance].filter(Boolean).join(" "),
+        },
+        node: (
+          <BookContentSheet
+            key={`dispatch-origin-content-${entry.id}-${pageIndex}`}
+            sectionLabel={sectionLabel}
+            textBlocks={textPage.blocks}
+            pageNumber={pageIndex + 1}
+            pageCount={textPages.length}
+          />
+        ),
+      });
+    });
+  });
+
   bookEntries.push({
     item: {
       sheetNumber: 1,
@@ -570,7 +725,7 @@ export default async function InterventionDetailPage({
     bookEntries.push({
       item: {
         sheetNumber: 1,
-        label: pageIndex > 0 ? `Primera atencion � cont. ${pageIndex + 1}` : "Primera atencion � contenido",
+        label: pageIndex > 0 ? `Primera atencion · cont. ${pageIndex + 1}` : "Primera atencion · contenido",
         title: firstAttentionType,
         dateText: formatDateTime(intervention.attendedAt),
         statusText: initialStatusText,
@@ -630,7 +785,7 @@ export default async function InterventionDetailPage({
       bookEntries.push({
         item: {
           sheetNumber,
-          label: pageIndex > 0 ? `${sectionLabel} � cont. ${pageIndex + 1}` : `${sectionLabel} � contenido`,
+          label: pageIndex > 0 ? `${sectionLabel} · cont. ${pageIndex + 1}` : `${sectionLabel} · contenido`,
           title: actionTitle,
           dateText: formatDateTime(action.createdAt),
           statusText,
@@ -657,7 +812,7 @@ export default async function InterventionDetailPage({
       bookEntries.push({
         item: {
           sheetNumber: displayActionSheets.length + 2,
-          label: attachmentPages.length > 1 ? `Archivos � hoja ${pageIndex + 1}` : "Archivos",
+          label: attachmentPages.length > 1 ? `Archivos · hoja ${pageIndex + 1}` : "Archivos",
           title: "Archivos del legajo",
           dateText: formatDateTime(generalAttachments[0]?.createdAt ?? intervention.createdAt),
           statusText: `${generalAttachments.length} archivo${generalAttachments.length === 1 ? "" : "s"}`,
@@ -685,7 +840,7 @@ export default async function InterventionDetailPage({
       >
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Expediente virtual · Legajo de intervencion</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Expediente virtual Â· Legajo de intervencion</p>
             <h1 className="mt-1 text-2xl font-semibold text-[#212529] sm:text-3xl">Legajo de la intervencion {intervention.internalNumber}</h1>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <span className="rounded-sm border border-[#b7dfee] bg-white px-2.5 py-1 text-sm font-semibold text-[#0c5460]">{labelFromValue(intervention.type)}</span>
@@ -694,6 +849,11 @@ export default async function InterventionDetailPage({
               <span className="rounded-sm border border-[#b7dfee] bg-white px-2.5 py-1 text-sm font-semibold text-[#0c5460]">
                 Apertura: {formatDateTime(intervention.attendedAt)}
               </span>
+              {derivationDestination ? (
+                <span className="rounded-sm border border-[#f1aeb5] bg-[#f8d7da] px-2.5 py-1 text-sm font-bold uppercase text-[#842029]">
+                  Derivado al area: {derivationDestination}
+                </span>
+              ) : null}
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -708,11 +868,13 @@ export default async function InterventionDetailPage({
                 submitLabel="Guardar cambios"
               />
             </AppModal>
+            {canMutateOriginLegajo ? (
+              <AppModal title="Nuevo registro de intervencion" description="Crea una nueva intervencion documental dentro de este legajo." trigger={<><Plus className="h-4 w-4" />Nueva intervencion</>} size="md">
+                <AddJuridicalActionForm action={addJuridicalAction.bind(null, intervention.id)} submitLabel="Crear intervencion" showFollowUp={false} />
+              </AppModal>
+            ) : null}
             {!isOriginRestricted ? (
               <>
-                <AppModal title="Nuevo registro de intervencion" description="Crea una nueva intervencion documental dentro de este legajo." trigger={<><Plus className="h-4 w-4" />Nueva intervencion</>} size="md">
-                  <AddJuridicalActionForm action={addJuridicalAction.bind(null, intervention.id)} submitLabel="Crear intervencion" showFollowUp={false} />
-                </AppModal>
                 <AppModal title="Derivaciones" trigger={<><Send className="h-4 w-4" />Derivar</>} triggerVariant="secondary" size="md">
                   <form action={referJuridicalToArea.bind(null, intervention.id)} className="space-y-4">
                     <FormField label="Area a derivar">
@@ -754,6 +916,7 @@ export default async function InterventionDetailPage({
             <DetailField label="Expediente / legajo" value={intervention.expedienteNumber} />
             <DetailField label="Area derivada" value={intervention.derivedArea} />
             <DetailField label="Fecha inicial" value={formatDateTime(intervention.attendedAt)} />
+            <DetailField label="Plazo" value={intervention.deadlineAt ? formatDateTime(intervention.deadlineAt) : "Sin plazo"} />
             <DetailField label="Carga en sistema" value={formatDateTime(intervention.createdAt)} />
             <DetailField label="Usuario que inicio" value={intervention.createdBy.name} />
             <DetailField label="Origen" value={labelFromValue(intervention.origin)} />
@@ -783,21 +946,77 @@ export default async function InterventionDetailPage({
         <Table
           title="Intervenciones del legajo"
           itemLabel="intervenciones"
-          total={displayActionSheets.length + 1}
+          total={legajoTimelineRows.length}
           showPagination={false}
           rowClick={false}
           headers={["Intervencion", "Fecha / usuario", "Actuacion", "Estado / seguimiento", "Archivo"]}
           minWidth={980}
         >
-          {displayActionSheets.map(({ action, sheetNumber, parsed, statusText }) => {
-            const rowAttachments = attachmentsByActionId.get(action.id) ?? [];
-            return (
+          {legajoTimelineRows.map((row) => {
+            if (row.kind === "dispatch") {
+              const { entry } = row;
+              return (
+            <LegajoInterventionRow
+              key={entry.id}
+              modalTitle={`${entry.title} - ${entry.internalNumber}`}
+              modalContent={
+                <InterventionReadContent
+                  date={entry.date}
+                  deadlineAt={entry.deadlineAt}
+                  actor={entry.actor}
+                  role={entry.role}
+                  actionType={entry.actionType}
+                  statusText={entry.statusText}
+                  description={entry.description}
+                  guidance={entry.guidance}
+                  nextStepDescription={null}
+                  nextStepDate={null}
+                  attachments={[]}
+                />
+              }
+            >
+              <Td className="w-[150px]">
+                <span className="block font-semibold text-[#0667b0]">{entry.recordLabel}</span>
+                <span className="mt-0.5 block text-xs text-[#212529]">{entry.subtitle}</span>
+              </Td>
+              <Td className="w-[210px]">
+                <span className="block font-semibold">{formatDateTime(entry.date)}</span>
+                <span className="mt-0.5 block text-xs text-[#212529]">{entry.actor} · {labelFromValue(entry.role)}</span>
+              </Td>
+              <Td>
+                <span className="block font-semibold">{entry.title}</span>
+                <span className="mt-1 block text-xs font-medium text-[#0667b0]">Clic para ver el detalle</span>
+              </Td>
+              <Td className="w-[230px]">
+                <div className="flex flex-wrap gap-1.5">
+                  <span className={entry.isDerivation ? "rounded-sm border border-[#f1aeb5] bg-[#f8d7da] px-2 py-0.5 text-xs font-semibold text-[#842029]" : "rounded-sm border border-[#c3e6cb] bg-[#d4edda] px-2 py-0.5 text-xs font-semibold text-[#155724]"}>
+                    {entry.statusText}
+                  </span>
+                  {entry.deadlineAt ? (
+                    <span className="rounded-sm border border-[#ffeeba] bg-[#fff3cd] px-2 py-0.5 text-xs font-semibold text-[#856404]">
+                      Plazo: {formatDateTime(entry.deadlineAt)}
+                    </span>
+                  ) : null}
+                </div>
+              </Td>
+              <Td className="w-[180px]">
+                <span className="text-sm text-[#212529]">-</span>
+              </Td>
+            </LegajoInterventionRow>
+              );
+            }
+
+            if (row.kind === "action") {
+              const { action, sheetNumber, parsed, statusText } = row.sheet;
+              const rowAttachments = attachmentsByActionId.get(action.id) ?? [];
+              return (
               <LegajoInterventionRow
                 key={action.id}
-                modalTitle={`Intervencion N° ${sheetNumber}`}
+                modalTitle={`Intervencion NÂ° ${sheetNumber}`}
                 modalContent={
                   <InterventionReadContent
                     date={action.createdAt}
+                    deadlineAt={action.deadlineAt}
                     actor={action.createdBy.name}
                     role={action.createdBy.role}
                     actionType={action.actionType}
@@ -811,24 +1030,25 @@ export default async function InterventionDetailPage({
                 }
               >
                 <Td className="w-[150px]">
-                  <span className="block font-semibold text-[#0667b0]">Intervencion N° {sheetNumber}</span>
+                  <span className="block font-semibold text-[#0667b0]">Intervencion NÂ° {sheetNumber}</span>
                   <span className="mt-0.5 block text-xs text-[#212529]">Registro agregado</span>
                 </Td>
                 <Td className="w-[210px]">
                   <span className="block font-semibold">{formatDateTime(action.createdAt)}</span>
-                  <span className="mt-0.5 block text-xs text-[#212529]">{action.createdBy.name} · {labelFromValue(action.createdBy.role)}</span>
+                  <span className="mt-0.5 block text-xs text-[#212529]">{action.createdBy.name} Â· {labelFromValue(action.createdBy.role)}</span>
                 </Td>
                 <Td>
                   <span className="block font-semibold">{labelFromValue(action.actionType)}</span>
                   <span className="mt-1 block text-xs font-medium text-[#0667b0]">Clic para ver el detalle</span>
-                  {!isOriginRestricted ? (
+                  {canMutateOriginLegajo ? (
                     <div className="mt-2">
-                      <LegajoActionEditButton title={`Editar intervencion N� ${sheetNumber}`}>
+                      <LegajoActionEditButton title={`Editar intervencion N° ${sheetNumber}`}>
                         <AddJuridicalActionForm
                           action={updateJuridicalAction.bind(null, action.id)}
                           initialValues={{
                             actionType: action.actionType,
                             createdAt: action.createdAt,
+                            deadlineAt: action.deadlineAt,
                             description: parsed.description,
                             guidanceProvided: parsed.guidanceProvided,
                             nextStepDescription: parsed.nextStepDescription,
@@ -847,7 +1067,12 @@ export default async function InterventionDetailPage({
                         Seguimiento: {formatDate(action.nextStepDate)}
                       </span>
                     ) : null}
-                    {!statusText && !action.nextStepDate ? <span className="text-sm text-[#212529]">Sin seguimiento</span> : null}
+                    {action.deadlineAt ? (
+                      <span className="rounded-sm border border-[#ffeeba] bg-[#fff3cd] px-2 py-0.5 text-xs font-semibold text-[#856404]">
+                        Plazo: {formatDateTime(action.deadlineAt)}
+                      </span>
+                    ) : null}
+                    {!statusText && !action.nextStepDate && !action.deadlineAt ? <span className="text-sm text-[#212529]">Sin seguimiento</span> : null}
                   </div>
                 </Td>
                 <Td className="w-[180px]">
@@ -862,14 +1087,17 @@ export default async function InterventionDetailPage({
                   </div>
                 </Td>
               </LegajoInterventionRow>
-            );
-          })}
+              );
+            }
 
+            return (
           <LegajoInterventionRow
-            modalTitle="Intervencion N° 1"
+            key="initial-intervention"
+            modalTitle="Intervencion NÂ° 1"
             modalContent={
               <InterventionReadContent
                 date={intervention.attendedAt}
+                deadlineAt={intervention.deadlineAt}
                 actor={intervention.createdBy.name}
                 role={intervention.createdBy.role}
                 actionType={intervention.type}
@@ -884,19 +1112,26 @@ export default async function InterventionDetailPage({
             }
           >
             <Td className="w-[150px]">
-              <span className="block font-semibold text-[#0667b0]">Intervencion N° 1</span>
+              <span className="block font-semibold text-[#0667b0]">Intervencion NÂ° 1</span>
               <span className="mt-0.5 block text-xs text-[#212529]">Primera atencion</span>
             </Td>
             <Td className="w-[210px]">
               <span className="block font-semibold">{formatDateTime(intervention.attendedAt)}</span>
-              <span className="mt-0.5 block text-xs text-[#212529]">{intervention.createdBy.name} · {labelFromValue(intervention.createdBy.role)}</span>
+              <span className="mt-0.5 block text-xs text-[#212529]">{intervention.createdBy.name} Â· {labelFromValue(intervention.createdBy.role)}</span>
             </Td>
             <Td>
               <span className="block font-semibold">{labelFromValue(intervention.type)}</span>
               <span className="mt-1 block text-xs font-medium text-[#0667b0]">Clic para ver el detalle</span>
             </Td>
             <Td className="w-[230px]">
-              <span className="rounded-sm border border-[#c3e6cb] bg-[#d4edda] px-2 py-0.5 text-xs font-semibold text-[#155724]">{initialStatusText}</span>
+              <div className="flex flex-wrap gap-1.5">
+                <span className="rounded-sm border border-[#c3e6cb] bg-[#d4edda] px-2 py-0.5 text-xs font-semibold text-[#155724]">{initialStatusText}</span>
+                {intervention.deadlineAt ? (
+                  <span className="rounded-sm border border-[#ffeeba] bg-[#fff3cd] px-2 py-0.5 text-xs font-semibold text-[#856404]">
+                    Plazo: {formatDateTime(intervention.deadlineAt)}
+                  </span>
+                ) : null}
+              </div>
             </Td>
             <Td className="w-[180px]">
               <div className="flex flex-col items-start gap-2">
@@ -910,6 +1145,8 @@ export default async function InterventionDetailPage({
               </div>
             </Td>
           </LegajoInterventionRow>
+            );
+          })}
         </Table>
       </DetailSection>
     </main>

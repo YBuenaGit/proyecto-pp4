@@ -17,7 +17,7 @@ import { formatDateTime, labelFromValue } from "@/lib/format";
 import { parseJuridicalActionContent } from "@/lib/juridical-action-content";
 import { prisma } from "@/lib/prisma";
 import { earliestDate, isVisibleBeforeReferralCutoff } from "@/lib/referral-privacy";
-import { assertAccess, canAccessDispatch } from "@/lib/rbac";
+import { assertAccess, canAccessDispatch, canBypassLegajoRestriction } from "@/lib/rbac";
 import { personDisplayName, sortByLabel } from "@/lib/text";
 import type { SearchParams } from "@/lib/types";
 import {
@@ -95,7 +95,7 @@ function DispatchBookAttachments({ attachments }: { attachments: DispatchAttachm
             <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[#0667b0]" />
             <span className="min-w-0 flex-1">
               <span className="block truncate font-semibold">{attachment.originalName}</span>
-              <span className="block text-xs text-[#212529]">{Math.ceil(attachment.size / 1024)} KB Â· {attachment.uploadedBy.name}</span>
+              <span className="block text-xs text-[#212529]">{Math.ceil(attachment.size / 1024)} KB Ã‚Â· {attachment.uploadedBy.name}</span>
             </span>
           </Link>
         ))}
@@ -109,7 +109,7 @@ function DispatchAttachmentSheet({ attachments, pageNumber, pageCount }: { attac
     <article className="book-leaf rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_12px_34px_rgba(0,0,0,0.22)]">
       <div className="border-b border-[#b7dfee] bg-[#dff3fb] px-4 py-4 sm:px-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Archivos</p>
-        <h3 className="mt-1 text-lg font-semibold text-[#212529]">Archivos del legajo{pageCount && pageCount > 1 ? ` · hoja ${pageNumber} de ${pageCount}` : ""}</h3>
+        <h3 className="mt-1 text-lg font-semibold text-[#212529]">Archivos del legajo{pageCount && pageCount > 1 ? ` Â· hoja ${pageNumber} de ${pageCount}` : ""}</h3>
         <p className="mt-1 text-sm text-[#212529]">Documentacion adjunta disponible para abrir o descargar.</p>
       </div>
       <div className="book-leaf-body px-4 py-4 sm:px-5">
@@ -121,6 +121,7 @@ function DispatchAttachmentSheet({ attachments, pageNumber, pageCount }: { attac
 
 function DispatchReadContent({
   date,
+  deadlineAt,
   actor,
   statusAfter,
   description,
@@ -129,6 +130,7 @@ function DispatchReadContent({
   attachments,
 }: {
   date: Date;
+  deadlineAt?: Date | null;
   actor: string;
   statusAfter?: string | null;
   description: string;
@@ -140,6 +142,7 @@ function DispatchReadContent({
     <div className="space-y-4">
       <div className="grid gap-3 rounded-sm border border-[#b7dfee] bg-[#eefaff] p-3 sm:grid-cols-2">
         <BookField label="Fecha y hora" value={formatDateTime(date)} />
+        <BookField label="Plazo" value={deadlineAt ? formatDateTime(deadlineAt) : "-"} />
         <BookField label="Quien cargo" value={actor} />
         <BookField label="Estado posterior" value={statusAfter ? <StatusBadge value={statusAfter} /> : "-"} />
       </div>
@@ -158,6 +161,18 @@ function DispatchReadContent({
       ) : null}
     </div>
   );
+}
+
+function dispatchDerivationDestination(record: {
+  referredArea: string | null;
+  originReferrals: { destinationModule: string }[];
+}) {
+  if (record.referredArea) return record.referredArea;
+  const destinationModule = record.originReferrals[0]?.destinationModule;
+  if (destinationModule === "JURIDICO") return "Intervenciones Juridico-Institucionales";
+  if (destinationModule === "DIRECTIVO") return "Directivo";
+  if (destinationModule === "DESPACHO") return "Despacho";
+  return destinationModule ? labelFromValue(destinationModule) : "area derivada";
 }
 
 export default async function DispatchDetailPage({
@@ -204,9 +219,20 @@ export default async function DispatchDetailPage({
   const derivationFollowUpAt = earliestDate(record.followUps.filter(isDerivationFollowUp).map((followUp) => followUp.createdAt));
   const privacyCutoffAt = earliestDate([outgoingReferralAt, derivationFollowUpAt]);
   const isOriginRestricted = Boolean(record.originReferrals.length || (record.referredArea && record.status === "DERIVADO"));
-  const visibleFollowUps = record.followUps.filter((followUp) =>
-    isVisibleBeforeReferralCutoff(followUp, privacyCutoffAt, isDerivationFollowUp),
-  );
+  const derivationDestination = isOriginRestricted ? dispatchDerivationDestination(record) : null;
+  const canBypassOriginRestriction = canBypassLegajoRestriction(user);
+  const canMutateOriginLegajo = canBypassOriginRestriction || !isOriginRestricted;
+  const visibleFollowUps = canBypassOriginRestriction
+    ? record.followUps
+    : record.followUps.filter((followUp) => isVisibleBeforeReferralCutoff(followUp, privacyCutoffAt, isDerivationFollowUp));
+  const auditLogWhere =
+    canBypassOriginRestriction || !privacyCutoffAt
+      ? { entityType: "DispatchRecord", entityId: id }
+      : {
+          entityType: "DispatchRecord",
+          entityId: id,
+          OR: [{ createdAt: { lte: privacyCutoffAt } }, { action: "REFERRAL" }],
+        };
   const referralAreas = sortByLabel(
     [...areas.map((item) => ({ value: item.value, label: item.label })), ...DISPATCH_INTERNAL_DERIVED_AREAS].filter(
       (item, index, items) => items.findIndex((candidate) => candidate.label.toLocaleLowerCase("es-AR") === item.label.toLocaleLowerCase("es-AR")) === index,
@@ -226,11 +252,7 @@ export default async function DispatchDetailPage({
       include: { uploadedBy: true },
       orderBy: { createdAt: "desc" },
     }),
-    prisma.auditLog.findMany({
-      where: { entityType: "DispatchRecord", entityId: id },
-      include: { createdBy: true },
-      orderBy: { createdAt: "desc" },
-    }),
+    prisma.auditLog.findMany({ where: auditLogWhere, include: { createdBy: true }, orderBy: { createdAt: "desc" } }),
   ]);
 
   const generalAttachments = attachments.filter((attachment) => attachment.entityType === "DispatchRecord");
@@ -302,7 +324,7 @@ export default async function DispatchDetailPage({
     bookEntries.push({
       item: {
         sheetNumber: 1,
-        label: pageIndex > 0 ? `Primera atencion · cont. ${pageIndex + 1}` : "Primera atencion · contenido",
+        label: pageIndex > 0 ? `Primera atencion Â· cont. ${pageIndex + 1}` : "Primera atencion Â· contenido",
         title: categoryLabel,
         dateText: formatDateTime(record.attendedAt),
         statusText: record.status,
@@ -324,7 +346,7 @@ export default async function DispatchDetailPage({
     const sheetNumber = index + 2;
     const parsed = parseJuridicalActionContent(followUp.content);
     const followUpAttachments = attachmentsByFollowUpId.get(followUp.id) ?? [];
-    const sectionLabel = `Seguimiento N° ${sheetNumber}`;
+    const sectionLabel = `Seguimiento NÂ° ${sheetNumber}`;
     const followUpPages = paginateBookTextSections(
       [
         { label: "Descripcion / relato", text: parsed.description },
@@ -361,7 +383,7 @@ export default async function DispatchDetailPage({
       bookEntries.push({
         item: {
           sheetNumber,
-          label: pageIndex > 0 ? `${sectionLabel} · cont. ${pageIndex + 1}` : `${sectionLabel} · contenido`,
+          label: pageIndex > 0 ? `${sectionLabel} Â· cont. ${pageIndex + 1}` : `${sectionLabel} Â· contenido`,
           title: "Seguimiento de atencion",
           dateText: formatDateTime(followUp.createdAt),
           statusText: followUp.statusAfter,
@@ -388,7 +410,7 @@ export default async function DispatchDetailPage({
       bookEntries.push({
         item: {
           sheetNumber: displayFollowUpRows.length + 2,
-          label: attachmentPages.length > 1 ? `Archivos · hoja ${pageIndex + 1}` : "Archivos",
+          label: attachmentPages.length > 1 ? `Archivos Â· hoja ${pageIndex + 1}` : "Archivos",
           title: "Archivos del legajo",
           dateText: formatDateTime(generalAttachments[0]?.createdAt ?? record.createdAt),
           statusText: `${generalAttachments.length} archivo${generalAttachments.length === 1 ? "" : "s"}`,
@@ -416,7 +438,7 @@ export default async function DispatchDetailPage({
       >
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Expediente virtual Â· Atencion / reclamo</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Expediente virtual Ã‚Â· Atencion / reclamo</p>
             <h1 className="mt-1 text-2xl font-semibold text-[#212529] sm:text-3xl">Legajo de despacho {record.internalNumber}</h1>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <span className="rounded-sm border border-[#b7dfee] bg-white px-2.5 py-1 text-sm font-semibold text-[#0c5460]">{categoryLabel}</span>
@@ -425,6 +447,11 @@ export default async function DispatchDetailPage({
               <span className="rounded-sm border border-[#b7dfee] bg-white px-2.5 py-1 text-sm font-semibold text-[#0c5460]">
                 Atencion: {formatDateTime(record.attendedAt)}
               </span>
+              {derivationDestination ? (
+                <span className="rounded-sm border border-[#f1aeb5] bg-[#f8d7da] px-2.5 py-1 text-sm font-bold uppercase text-[#842029]">
+                  Derivado al area: {derivationDestination}
+                </span>
+              ) : null}
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -439,11 +466,13 @@ export default async function DispatchDetailPage({
                 submitLabel="Guardar cambios"
               />
             </AppModal>
+            {canMutateOriginLegajo ? (
+              <AppModal title="Nuevo registro de atencion" description="Crea un nuevo seguimiento documental dentro de este legajo." trigger={<><Plus className="h-4 w-4" />Nueva intervencion</>} size="md">
+                <AddDispatchFollowUpForm action={addDispatchFollowUp.bind(null, record.id)} submitLabel="Crear intervencion" />
+              </AppModal>
+            ) : null}
             {!isOriginRestricted ? (
               <>
-                <AppModal title="Nuevo registro de atencion" description="Crea un nuevo seguimiento documental dentro de este legajo." trigger={<><Plus className="h-4 w-4" />Nueva intervencion</>} size="md">
-                  <AddDispatchFollowUpForm action={addDispatchFollowUp.bind(null, record.id)} submitLabel="Crear intervencion" />
-                </AppModal>
                 <AppModal title="Derivaciones" trigger={<><Send className="h-4 w-4" />Derivar</>} triggerVariant="secondary" size="md">
                   <form action={referDispatchToArea.bind(null, record.id)} className="space-y-4">
                     <FormField label="Area a derivar">
@@ -481,6 +510,7 @@ export default async function DispatchDetailPage({
             <DetailField label="Prioridad" value={<StatusBadge value={record.priority} />} />
             <DetailField label="Categoria" value={categoryLabel} />
             <DetailField label="Fecha de atencion" value={formatDateTime(record.attendedAt)} />
+            <DetailField label="Plazo" value={record.deadlineAt ? formatDateTime(record.deadlineAt) : "Sin plazo"} />
             <DetailField label="Carga en sistema" value={formatDateTime(record.createdAt)} />
             <DetailField label="Usuario que atendio" value={record.createdBy.name} />
             <DetailField label="Origen" value={labelFromValue(record.origin)} />
@@ -536,7 +566,7 @@ export default async function DispatchDetailPage({
         action={
           <LegajoBookViewer
             items={bookItems}
-            title="Expediente virtual · Atencion / reclamo"
+            title="Expediente virtual Â· Atencion / reclamo"
             itemLabel="Seguimiento"
           >
             {bookEntries.map((entry) => entry.node)}
@@ -558,10 +588,11 @@ export default async function DispatchDetailPage({
             return (
               <LegajoInterventionRow
                 key={followUp.id}
-                modalTitle={`Seguimiento N° ${sheetNumber}`}
+                modalTitle={`Seguimiento NÂ° ${sheetNumber}`}
                 modalContent={
                   <DispatchReadContent
                     date={followUp.createdAt}
+                    deadlineAt={followUp.deadlineAt}
                     actor={followUp.createdBy.name}
                     statusAfter={followUp.statusAfter}
                     description={parsed.description}
@@ -571,7 +602,7 @@ export default async function DispatchDetailPage({
                 }
               >
                 <Td className="w-[150px]">
-                  <span className="block font-semibold text-[#0667b0]">Seguimiento N° {sheetNumber}</span>
+                  <span className="block font-semibold text-[#0667b0]">Seguimiento NÂ° {sheetNumber}</span>
                   <span className="mt-0.5 block text-xs text-[#212529]">Registro agregado</span>
                 </Td>
                 <Td className="w-[210px]">
@@ -583,7 +614,14 @@ export default async function DispatchDetailPage({
                   <span className="mt-1 block text-xs font-medium text-[#0667b0]">Clic para ver el detalle</span>
                 </Td>
                 <Td className="w-[230px]">
-                  {followUp.statusAfter ? <StatusBadge value={followUp.statusAfter} /> : <span className="text-sm text-[#212529]">Sin cambio de estado</span>}
+                  <div className="flex flex-wrap gap-1.5">
+                    {followUp.statusAfter ? <StatusBadge value={followUp.statusAfter} /> : <span className="text-sm text-[#212529]">Sin cambio de estado</span>}
+                    {followUp.deadlineAt ? (
+                      <span className="rounded-sm border border-[#ffeeba] bg-[#fff3cd] px-2 py-0.5 text-xs font-semibold text-[#856404]">
+                        Plazo: {formatDateTime(followUp.deadlineAt)}
+                      </span>
+                    ) : null}
+                  </div>
                 </Td>
                 <Td className="w-[180px]">
                   <div className="flex flex-col items-start gap-2">
@@ -598,10 +636,11 @@ export default async function DispatchDetailPage({
           })}
 
           <LegajoInterventionRow
-            modalTitle="Atencion N° 1"
+            modalTitle="Atencion NÂ° 1"
             modalContent={
               <DispatchReadContent
                 date={record.attendedAt}
+                deadlineAt={record.deadlineAt}
                 actor={record.createdBy.name}
                 statusAfter={record.status}
                 description={record.description}
@@ -612,7 +651,7 @@ export default async function DispatchDetailPage({
             }
           >
             <Td className="w-[150px]">
-              <span className="block font-semibold text-[#0667b0]">Atencion N° 1</span>
+              <span className="block font-semibold text-[#0667b0]">Atencion NÂ° 1</span>
               <span className="mt-0.5 block text-xs text-[#212529]">Primera atencion</span>
             </Td>
             <Td className="w-[210px]">
@@ -623,7 +662,16 @@ export default async function DispatchDetailPage({
               <span className="block font-semibold">{categoryLabel}</span>
               <span className="mt-1 block text-xs font-medium text-[#0667b0]">Clic para ver el detalle</span>
             </Td>
-            <Td className="w-[230px]"><StatusBadge value={record.status} /></Td>
+            <Td className="w-[230px]">
+              <div className="flex flex-wrap gap-1.5">
+                <StatusBadge value={record.status} />
+                {record.deadlineAt ? (
+                  <span className="rounded-sm border border-[#ffeeba] bg-[#fff3cd] px-2 py-0.5 text-xs font-semibold text-[#856404]">
+                    Plazo: {formatDateTime(record.deadlineAt)}
+                  </span>
+                ) : null}
+              </div>
+            </Td>
             <Td className="w-[180px]">
               <div className="flex flex-col items-start gap-2">
                 {generalAttachments.map((attachment) => (

@@ -36,9 +36,24 @@ model User {
   retentionsCreated      Retention[]             @relation("RetentionCreatedBy")
   retentionHistories     RetentionHistory[]      @relation("RetentionEditedBy")
   retentionAttachments   RetentionAttachment[]   @relation("RetentionAttachmentUploadedBy")
+  notificationReads      NotificationRead[]
 
   @@index([role])
   @@index([active])
+}
+
+model NotificationRead {
+  id              String   @id @default(cuid())
+  userId          String
+  notificationKey String
+  readAt          DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, notificationKey])
+  @@index([userId])
+  @@index([notificationKey])
+  @@index([readAt])
 }
 
 model Session {
@@ -88,6 +103,7 @@ model DispatchRecord {
   description         String
   initialGuidance     String?
   confidentialNotes   String?
+  deadlineAt          DateTime?
   category            String
   priority            String   @default("MEDIA")
   status              String   @default("RECIBIDO")
@@ -110,6 +126,7 @@ model DispatchRecord {
   @@index([priority])
   @@index([createdById])
   @@index([personId])
+  @@index([deadlineAt])
 }
 
 model DispatchComplainant {
@@ -158,6 +175,7 @@ model DispatchFollowUp {
   dispatchRecordId String
   content          String
   statusAfter      String?
+  deadlineAt       DateTime?
   createdById      String
   createdAt        DateTime @default(now())
 
@@ -167,6 +185,7 @@ model DispatchFollowUp {
   @@index([dispatchRecordId])
   @@index([createdById])
   @@index([createdAt])
+  @@index([deadlineAt])
 }
 
 model JuridicalIntervention {
@@ -199,6 +218,7 @@ model JuridicalIntervention {
   referredToAgency       String?
   derivedArea            String?
   confidentialNotes      String?
+  deadlineAt             DateTime?
   origin                 String   @default("DIRECT")
   lastStatusAt           DateTime @default(now())
 
@@ -220,6 +240,7 @@ model JuridicalIntervention {
   @@index([createdById])
   @@index([personId])
   @@index([complainantDni])
+  @@index([deadlineAt])
 }
 
 model JuridicalComplainant {
@@ -269,6 +290,7 @@ model JuridicalAction {
   actionType              String
   content                 String
   nextStepDate            DateTime?
+  deadlineAt              DateTime?
   createdById             String
   createdAt               DateTime  @default(now())
 
@@ -278,6 +300,7 @@ model JuridicalAction {
   @@index([juridicalInterventionId])
   @@index([actionType])
   @@index([nextStepDate])
+  @@index([deadlineAt])
   @@index([createdById])
   @@index([createdAt])
 }
@@ -324,6 +347,7 @@ model InternalExpedient {
   area             String?
   description      String
   observation      String?
+  deadlineAt       DateTime?
   status           String   @default("INICIADO")
   createdById      String
   createdAt        DateTime @default(now())
@@ -338,6 +362,7 @@ model InternalExpedient {
   @@index([createdById])
   @@index([createdAt])
   @@index([expedienteNumber])
+  @@index([deadlineAt])
 }
 
 model Appointment {

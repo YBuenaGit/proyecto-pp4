@@ -63,6 +63,7 @@ type DniLookupState = {
 
 type InterventionRecord = {
   attendedAt?: Date | null;
+  deadlineAt?: Date | null;
   dniSnapshot?: string | null;
   nameSnapshot?: string | null;
   complainantIsAnonymous?: boolean | null;
@@ -113,6 +114,7 @@ type InterventionRecord = {
 
 type InterventionWizardValues = {
   attendedAt: string;
+  deadlineAt: string;
   type: string;
   urgency: string;
   interventionContext: string;
@@ -339,6 +341,7 @@ function linkedPersonsFromRecord(record?: InterventionRecord): LinkedPersonDraft
 function valuesFromRecord(record?: InterventionRecord): InterventionWizardValues {
   return {
     attendedAt: record?.attendedAt ? toDateInputValue(record.attendedAt) : currentDateTimeInputValue(),
+    deadlineAt: toDateInputValue(record?.deadlineAt),
     type: record?.type ?? "",
     urgency: record?.urgency ?? "MEDIA",
     interventionContext: record?.interventionContext ?? "",
@@ -364,6 +367,9 @@ function validateStep(index: number, values: InterventionWizardValues): StepErro
     }
     if (values.attendedAt && Number.isNaN(new Date(values.attendedAt).getTime())) {
       errors.push({ field: "attendedAt", message: "Ingresa una fecha y hora valida." });
+    }
+    if (values.deadlineAt && Number.isNaN(new Date(values.deadlineAt).getTime())) {
+      errors.push({ field: "deadlineAt", message: "Ingresa un plazo valido." });
     }
     return errors;
   }
@@ -973,6 +979,15 @@ export function InterventionForm({
                   className={inputClass}
                 />
               </Field>
+              <Field label="Plazo" error={errorFor("deadlineAt")}>
+                <input
+                  name="deadlineAt"
+                  type="datetime-local"
+                  value={values.deadlineAt}
+                  onChange={(event) => setValue("deadlineAt", event.target.value)}
+                  className={inputClass}
+                />
+              </Field>
               <Field label="Tipo" error={errorFor("type")}>
                 <select name="type" value={values.type} onChange={(event) => setValue("type", event.target.value)} className={inputClass}>
                   <option value="">Seleccionar</option>
@@ -1465,6 +1480,7 @@ export function InterventionForm({
               <SummaryBlock title="Situacion" onEdit={() => goToStep(0)}>
                 <SummaryGrid>
                   <SummaryItem label="Fecha y hora" value={values.attendedAt ? formatDateTime(values.attendedAt) : "-"} />
+                  <SummaryItem label="Plazo" value={values.deadlineAt ? formatDateTime(values.deadlineAt) : "Sin plazo"} />
                   <SummaryItem label="Tipo" value={selectedLabel(sortedTypes, values.type)} />
                   <SummaryItem label="Urgencia" value={labelFromValue(values.urgency)} />
                   <SummaryItem label="Contexto" value={selectedLabel(sortedContexts, values.interventionContext)} />

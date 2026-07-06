@@ -9,7 +9,7 @@ import { checkbox, optionalDate, optionalSentenceText, optionalText, sentenceTex
 import { buildJuridicalActionContent } from "@/lib/juridical-action-content";
 import { saveAttachments } from "@/lib/files";
 import { prisma } from "@/lib/prisma";
-import { canAccessDispatch, canAccessExpedients, assertAccess } from "@/lib/rbac";
+import { canAccessDispatch, canAccessExpedients, assertAccess, canBypassLegajoRestriction } from "@/lib/rbac";
 import { requireUser } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { capitalizeOptionalText, personDisplayName } from "@/lib/text";
@@ -315,8 +315,12 @@ export async function createDispatchRecord(formData: FormData) {
   const referredArea = optionalText(formData, "referredArea");
   const usesHistoricalDate = checkbox(formData, "usesHistoricalDate");
   const attendedAt = usesHistoricalDate ? optionalDate(formData, "attendedAt") : new Date();
+  const deadlineAt = optionalDate(formData, "deadlineAt");
   if (!attendedAt || Number.isNaN(attendedAt.getTime())) {
     throw new Error("La fecha y hora de atención no es válida.");
+  }
+  if (deadlineAt && Number.isNaN(deadlineAt.getTime())) {
+    throw new Error("El plazo no es válido.");
   }
 
   const record = await prisma.dispatchRecord.create({
@@ -331,6 +335,7 @@ export async function createDispatchRecord(formData: FormData) {
       description: parsed.description,
       initialGuidance: optionalSentenceText(formData, "initialGuidance"),
       confidentialNotes: optionalSentenceText(formData, "confidentialNotes"),
+      deadlineAt,
       category: parsed.category,
       priority: parsed.priority,
       status: parsed.status,
@@ -387,8 +392,12 @@ export async function updateDispatchRecord(recordId: string, formData: FormData)
   const usesHistoricalDate = checkbox(formData, "usesHistoricalDate");
   const historicalDate = optionalDate(formData, "attendedAt");
   const attendedAt = usesHistoricalDate ? historicalDate : before.attendedAt;
+  const deadlineAt = optionalDate(formData, "deadlineAt");
   if (!attendedAt || Number.isNaN(attendedAt.getTime())) {
     throw new Error("La fecha y hora de atención no es válida.");
+  }
+  if (deadlineAt && Number.isNaN(deadlineAt.getTime())) {
+    throw new Error("El plazo no es válido.");
   }
 
   const after = await prisma.dispatchRecord.update({
@@ -402,6 +411,7 @@ export async function updateDispatchRecord(recordId: string, formData: FormData)
       description: parsed.description,
       initialGuidance: optionalSentenceText(formData, "initialGuidance"),
       confidentialNotes: optionalSentenceText(formData, "confidentialNotes"),
+      deadlineAt,
       category: parsed.category,
       priority: parsed.priority,
       status: parsed.status,
@@ -437,7 +447,7 @@ export async function updateDispatchRecord(recordId: string, formData: FormData)
 export async function addDispatchFollowUp(recordId: string, formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessDispatch(user));
-  if (await isDispatchLegajoDerivedOut(recordId)) {
+  if (!canBypassLegajoRestriction(user) && (await isDispatchLegajoDerivedOut(recordId))) {
     revalidatePath(`/despacho/${recordId}`);
     redirect(`/despacho/${recordId}`);
   }
@@ -449,8 +459,12 @@ export async function addDispatchFollowUp(recordId: string, formData: FormData) 
   });
   const statusAfter = optionalText(formData, "statusAfter");
   const createdAt = optionalDate(formData, "createdAt") ?? new Date();
+  const deadlineAt = optionalDate(formData, "deadlineAt");
   if (Number.isNaN(createdAt.getTime())) {
     throw new Error("La fecha y hora no es válida.");
+  }
+  if (deadlineAt && Number.isNaN(deadlineAt.getTime())) {
+    throw new Error("El plazo no es válido.");
   }
   const before = await prisma.dispatchRecord.findUniqueOrThrow({ where: { id: recordId } });
 
@@ -459,6 +473,7 @@ export async function addDispatchFollowUp(recordId: string, formData: FormData) 
       dispatchRecordId: recordId,
       content,
       statusAfter,
+      deadlineAt,
       createdAt,
       createdById: user.id,
     },
@@ -517,6 +532,10 @@ export async function referDispatchToArea(recordId: string, formData: FormData) 
 export async function deriveDispatchToJuridical(recordId: string, formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessDispatch(user));
+  if (await isDispatchLegajoDerivedOut(recordId)) {
+    revalidatePath(`/despacho/${recordId}`);
+    redirect(`/despacho/${recordId}`);
+  }
   const type = text(formData, "type") || "PRIMERA_INTERVENCION";
   const source = await prisma.dispatchRecord.findUniqueOrThrow({
     where: { id: recordId },
@@ -629,7 +648,7 @@ export async function deriveDispatchToJuridical(recordId: string, formData: Form
 export async function uploadDispatchAttachment(recordId: string, formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessDispatch(user));
-  if (await isDispatchLegajoDerivedOut(recordId)) {
+  if (!canBypassLegajoRestriction(user) && (await isDispatchLegajoDerivedOut(recordId))) {
     revalidatePath(`/despacho/${recordId}`);
     redirect(`/despacho/${recordId}`);
   }
@@ -666,6 +685,10 @@ export async function createExpedient(formData: FormData) {
     observation: optionalSentenceText(formData, "observation"),
     status: text(formData, "status") || "INICIADO",
   });
+  const deadlineAt = optionalDate(formData, "deadlineAt");
+  if (deadlineAt && Number.isNaN(deadlineAt.getTime())) {
+    throw new Error("El plazo no es válido.");
+  }
 
   const expedient = await prisma.internalExpedient.create({
     data: {
@@ -676,6 +699,7 @@ export async function createExpedient(formData: FormData) {
       area: parsed.area,
       description: parsed.description,
       observation: parsed.observation,
+      deadlineAt,
       status: parsed.status,
       createdById: user.id,
     },
@@ -712,10 +736,14 @@ export async function updateExpedient(expedientId: string, formData: FormData) {
     observation: optionalSentenceText(formData, "observation"),
     status: text(formData, "status") || "INICIADO",
   });
+  const deadlineAt = optionalDate(formData, "deadlineAt");
+  if (deadlineAt && Number.isNaN(deadlineAt.getTime())) {
+    throw new Error("El plazo no es válido.");
+  }
 
   const after = await prisma.internalExpedient.update({
     where: { id: expedientId },
-    data: parsed,
+    data: { ...parsed, deadlineAt },
   });
   await writeAuditLog({
     module: "DESPACHO",

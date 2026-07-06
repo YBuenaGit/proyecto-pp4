@@ -2,13 +2,14 @@ import { Button, LinkButton } from "@/components/ui/button";
 import { FormField, FormGrid, inputClass, textareaClass } from "@/components/ui/form-controls";
 import { SelectedFilesInput } from "@/components/ui/selected-files-input";
 import { EXPEDIENT_AREAS, EXPEDIENT_STATUSES } from "@/lib/constants";
-import { labelFromValue } from "@/lib/format";
+import { labelFromValue, toDateInputValue } from "@/lib/format";
 import { sortByLabel } from "@/lib/text";
 import { ExpedientCodeCombobox } from "./expedient-code-combobox";
 
 type ExpedientRecord = {
   expedienteNumber?: string | null;
   codigo?: string | null;
+  deadlineAt?: Date | null;
   category?: string | null;
   area?: string | null;
   description?: string | null;
@@ -41,6 +42,9 @@ export function ExpedientForm({
         </FormField>
         <FormField label="Codigo">
           <ExpedientCodeCombobox defaultValue={record?.codigo} />
+        </FormField>
+        <FormField label="Plazo">
+          <input name="deadlineAt" type="datetime-local" defaultValue={toDateInputValue(record?.deadlineAt)} className={inputClass} />
         </FormField>
         <FormField label="Categoria">
           <select name="category" defaultValue={record?.category ?? ""} className={inputClass} required>
