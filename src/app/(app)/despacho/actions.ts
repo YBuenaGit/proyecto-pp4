@@ -666,6 +666,14 @@ export async function updateDispatchInitialNarrative(
     },
   });
 
+  const savedAttachments = await saveAttachments({
+    files: formData.getAll("attachments"),
+    module: "DESPACHO",
+    entityType: "DispatchRecord",
+    entityId: recordId,
+    uploadedById: user.id,
+  });
+
   await writeAuditLog({
     module: "DESPACHO",
     entityType: "DispatchRecord",
@@ -673,7 +681,58 @@ export async function updateDispatchInitialNarrative(
     action: "UPDATE",
     createdById: user.id,
     before,
-    after,
+    after: savedAttachments.length ? { record: after, attachments: savedAttachments } : after,
+  });
+  revalidatePath(`/despacho/${recordId}`);
+  redirect(`/despacho/${recordId}`);
+}
+
+export async function deleteDispatchAttachment(
+  recordId: string,
+  formData: FormData,
+) {
+  const user = await requireUser();
+  assertAccess(canAccessDispatch(user));
+  if (
+    !canBypassLegajoRestriction(user) &&
+    (await isDispatchLegajoDerivedOut(recordId))
+  ) {
+    revalidatePath(`/despacho/${recordId}`);
+    redirect(`/despacho/${recordId}`);
+  }
+  const attachmentId = text(formData, "attachmentId");
+  if (!attachmentId) {
+    revalidatePath(`/despacho/${recordId}`);
+    redirect(`/despacho/${recordId}`);
+  }
+  const attachment = await prisma.attachment.findUnique({
+    where: { id: attachmentId },
+  });
+  const belongsToLegajo =
+    attachment &&
+    attachment.module === "DESPACHO" &&
+    ((attachment.entityType === "DispatchRecord" &&
+      attachment.entityId === recordId) ||
+      (attachment.entityType === "DispatchFollowUp" &&
+        (
+          await prisma.dispatchFollowUp.findUnique({
+            where: { id: attachment.entityId },
+            select: { dispatchRecordId: true },
+          })
+        )?.dispatchRecordId === recordId));
+  if (!attachment || !belongsToLegajo) {
+    revalidatePath(`/despacho/${recordId}`);
+    redirect(`/despacho/${recordId}`);
+  }
+
+  await prisma.attachment.delete({ where: { id: attachment.id } });
+  await writeAuditLog({
+    module: "DESPACHO",
+    entityType: "DispatchRecord",
+    entityId: recordId,
+    action: "ATTACHMENT_DELETE",
+    createdById: user.id,
+    before: attachment,
   });
   revalidatePath(`/despacho/${recordId}`);
   redirect(`/despacho/${recordId}`);

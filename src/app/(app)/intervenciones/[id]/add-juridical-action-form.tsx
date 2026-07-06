@@ -16,6 +16,10 @@ import {
 } from "@/components/ui/form-controls";
 import { JURIDICAL_STATUSES } from "@/lib/constants";
 import { labelFromValue, toDateInputValue } from "@/lib/format";
+import {
+  ExistingAttachmentsEditor,
+  type EditableAttachment,
+} from "./existing-attachments-editor";
 
 function resizeTextarea(textarea: HTMLTextAreaElement) {
   textarea.style.height = "auto";
@@ -54,11 +58,15 @@ export function AddJuridicalActionForm({
   initialValues,
   submitLabel = "Guardar",
   showFollowUp = true,
+  existingAttachments,
+  deleteAttachmentAction,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   initialValues?: Partial<ActionSheetFormValues>;
   submitLabel?: string;
   showFollowUp?: boolean;
+  existingAttachments?: EditableAttachment[];
+  deleteAttachmentAction?: (formData: FormData) => void | Promise<void>;
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -198,6 +206,10 @@ export function AddJuridicalActionForm({
       ) : null}
       <FormField label="Adjuntos de esta hoja">
         <div className="space-y-2 rounded-lg border border-dashed border-[#9bb8ca] bg-[#f3f8fb] p-3">
+          <ExistingAttachmentsEditor
+            attachments={existingAttachments ?? []}
+            deleteAction={deleteAttachmentAction}
+          />
           <input
             ref={fileInputRef}
             name="attachments"

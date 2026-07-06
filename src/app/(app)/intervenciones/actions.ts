@@ -512,6 +512,15 @@ export async function updateJuridicalInitialNarrative(interventionId: string, fo
     include: juridicalAuditInclude,
   });
 
+  const savedAttachments = await saveAttachments({
+    files: formData.getAll("attachments"),
+    module: "JURIDICO",
+    entityType: "JuridicalIntervention",
+    entityId: interventionId,
+    uploadedById: user.id,
+    isPrivate: true,
+  });
+
   await writeAuditLog({
     module: "JURIDICO",
     entityType: "JuridicalIntervention",
@@ -519,7 +528,47 @@ export async function updateJuridicalInitialNarrative(interventionId: string, fo
     action: "UPDATE",
     createdById: user.id,
     before,
-    after,
+    after: savedAttachments.length ? { intervention: after, attachments: savedAttachments } : after,
+  });
+  revalidatePath(`/intervenciones/${interventionId}`);
+  redirect(`/intervenciones/${interventionId}`);
+}
+
+export async function deleteJuridicalAttachment(interventionId: string, formData: FormData) {
+  const user = await requireUser();
+  assertAccess(canAccessJuridical(user));
+  if (!canBypassLegajoRestriction(user) && (await isJuridicalLegajoDerivedOut(interventionId))) {
+    revalidatePath(`/intervenciones/${interventionId}`);
+    redirect(`/intervenciones/${interventionId}`);
+  }
+  const attachmentId = text(formData, "attachmentId");
+  if (!attachmentId) {
+    revalidatePath(`/intervenciones/${interventionId}`);
+    redirect(`/intervenciones/${interventionId}`);
+  }
+  const attachment = await prisma.attachment.findUnique({ where: { id: attachmentId } });
+  const belongsToLegajo =
+    attachment &&
+    attachment.module === "JURIDICO" &&
+    ((attachment.entityType === "JuridicalIntervention" && attachment.entityId === interventionId) ||
+      (attachment.entityType === "JuridicalAction" &&
+        (await prisma.juridicalAction.findUnique({
+          where: { id: attachment.entityId },
+          select: { juridicalInterventionId: true },
+        }))?.juridicalInterventionId === interventionId));
+  if (!attachment || !belongsToLegajo) {
+    revalidatePath(`/intervenciones/${interventionId}`);
+    redirect(`/intervenciones/${interventionId}`);
+  }
+
+  await prisma.attachment.delete({ where: { id: attachment.id } });
+  await writeAuditLog({
+    module: "JURIDICO",
+    entityType: "JuridicalIntervention",
+    entityId: interventionId,
+    action: "ATTACHMENT_DELETE",
+    createdById: user.id,
+    before: attachment,
   });
   revalidatePath(`/intervenciones/${interventionId}`);
   redirect(`/intervenciones/${interventionId}`);

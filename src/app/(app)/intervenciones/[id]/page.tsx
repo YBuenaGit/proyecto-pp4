@@ -43,6 +43,7 @@ import {
 import { personDisplayName, sortByLabel } from "@/lib/text";
 import {
   addJuridicalAction,
+  deleteJuridicalAttachment,
   referJuridicalToArea,
   updateJuridicalInitialNarrative,
   updateJuridicalAction,
@@ -1688,6 +1689,11 @@ export default async function InterventionDetailPage({
                           }}
                           submitLabel="Guardar intervencion"
                           showFollowUp={false}
+                          existingAttachments={rowAttachments}
+                          deleteAttachmentAction={deleteJuridicalAttachment.bind(
+                            null,
+                            intervention.id,
+                          )}
                         />
                       </LegajoActionEditButton>
                     ) : (
@@ -1784,6 +1790,11 @@ export default async function InterventionDetailPage({
                           description: intervention.description,
                           guidanceProvided: intervention.guidanceProvided,
                         }}
+                        existingAttachments={generalAttachments}
+                        deleteAttachmentAction={deleteJuridicalAttachment.bind(
+                          null,
+                          intervention.id,
+                        )}
                       />
                     </LegajoActionEditButton>
                   ) : (

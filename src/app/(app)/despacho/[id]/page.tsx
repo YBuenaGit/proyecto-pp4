@@ -36,6 +36,7 @@ import { personDisplayName, sortByLabel } from "@/lib/text";
 import type { SearchParams } from "@/lib/types";
 import {
   addDispatchFollowUp,
+  deleteDispatchAttachment,
   referDispatchToArea,
   updateDispatchFollowUp,
   updateDispatchInitialNarrative,
@@ -1078,6 +1079,11 @@ export default async function DispatchDetailPage({
                           statusAfter: followUp.statusAfter ?? "",
                         }}
                         submitLabel="Guardar seguimiento"
+                        existingAttachments={rowAttachments}
+                        deleteAttachmentAction={deleteDispatchAttachment.bind(
+                          null,
+                          record.id,
+                        )}
                       />
                     </LegajoActionEditButton>
                   ) : (
@@ -1163,6 +1169,11 @@ export default async function DispatchDetailPage({
                       description: record.description,
                       guidanceProvided: record.initialGuidance,
                     }}
+                    existingAttachments={generalAttachments}
+                    deleteAttachmentAction={deleteDispatchAttachment.bind(
+                      null,
+                      record.id,
+                    )}
                   />
                 </LegajoActionEditButton>
               ) : (
