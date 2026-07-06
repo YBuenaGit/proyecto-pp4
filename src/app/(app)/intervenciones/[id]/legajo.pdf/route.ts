@@ -2,10 +2,18 @@ import { notFound } from "next/navigation";
 import { JURIDICAL_CONTEXT_LABELS } from "@/lib/constants";
 import { requireUser } from "@/lib/auth";
 import { formatDateTime, labelFromValue } from "@/lib/format";
-import { parseJuridicalActionContent } from "@/lib/juridical-action-content";
-import { renderLegajoPdf, type LegajoPdfPerson, type LegajoPdfReferral, type LegajoPdfSheet } from "@/lib/legajo-pdf";
+import { parseJuridicalActionContentForDisplay } from "@/lib/juridical-action-content";
+import {
+  renderLegajoPdf,
+  type LegajoPdfPerson,
+  type LegajoPdfReferral,
+  type LegajoPdfSheet,
+} from "@/lib/legajo-pdf";
 import { prisma } from "@/lib/prisma";
-import { earliestDate, isVisibleBeforeReferralCutoff } from "@/lib/referral-privacy";
+import {
+  earliestDate,
+  isVisibleBeforeReferralCutoff,
+} from "@/lib/referral-privacy";
 import { assertAccess, canAccessJuridical } from "@/lib/rbac";
 import { personDisplayName } from "@/lib/text";
 
@@ -21,12 +29,15 @@ function safeJson(value: string | null) {
 }
 
 function asRecord(value: unknown): JsonRecord | null {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as JsonRecord) : null;
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as JsonRecord)
+    : null;
 }
 
 function textValue(value: unknown) {
   if (typeof value === "string") return value.trim();
-  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (typeof value === "number" || typeof value === "boolean")
+    return String(value);
   return "";
 }
 
@@ -36,7 +47,9 @@ function interventionFromAudit(value: unknown) {
   return asRecord(record.intervention) ?? record;
 }
 
-function statusChangeByActionId(logs: Array<{ beforeJson: string | null; afterJson: string | null }>) {
+function statusChangeByActionId(
+  logs: Array<{ beforeJson: string | null; afterJson: string | null }>,
+) {
   const changes = new Map<string, { before: string; after: string }>();
   logs.forEach((log) => {
     const afterJson = safeJson(log.afterJson);
@@ -44,7 +57,9 @@ function statusChangeByActionId(logs: Array<{ beforeJson: string | null; afterJs
     const actionId = textValue(action?.id);
     if (!actionId) return;
 
-    const beforeStatus = textValue(interventionFromAudit(safeJson(log.beforeJson))?.status);
+    const beforeStatus = textValue(
+      interventionFromAudit(safeJson(log.beforeJson))?.status,
+    );
     const afterStatus = textValue(interventionFromAudit(afterJson)?.status);
     if (beforeStatus && afterStatus && beforeStatus !== afterStatus) {
       changes.set(actionId, { before: beforeStatus, after: afterStatus });
@@ -53,17 +68,27 @@ function statusChangeByActionId(logs: Array<{ beforeJson: string | null; afterJs
   return changes;
 }
 
-function initialStatusFromAudit(logs: Array<{ action: string; afterJson: string | null }>, fallback: string) {
+function initialStatusFromAudit(
+  logs: Array<{ action: string; afterJson: string | null }>,
+  fallback: string,
+) {
   const createLog = logs.find((log) => log.action === "CREATE");
-  const createdStatus = textValue(interventionFromAudit(safeJson(createLog?.afterJson ?? null))?.status);
+  const createdStatus = textValue(
+    interventionFromAudit(safeJson(createLog?.afterJson ?? null))?.status,
+  );
   return createdStatus || fallback;
 }
 
 function contextLabel(value: string | null) {
-  return value ? JURIDICAL_CONTEXT_LABELS[value] ?? labelFromValue(value) : "-";
+  return value
+    ? (JURIDICAL_CONTEXT_LABELS[value] ?? labelFromValue(value))
+    : "-";
 }
 
-export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
   const { id } = await params;
@@ -76,17 +101,35 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       linkedPersons: { orderBy: { sortOrder: "asc" } },
       createdBy: true,
       actions: { include: { createdBy: true }, orderBy: { createdAt: "asc" } },
-      destinationReferrals: { include: { referredBy: true }, orderBy: { referredAt: "asc" } },
-      originReferrals: { include: { referredBy: true }, orderBy: { referredAt: "asc" } },
+      destinationReferrals: {
+        include: { referredBy: true },
+        orderBy: { referredAt: "asc" },
+      },
+      originReferrals: {
+        include: { referredBy: true },
+        orderBy: { referredAt: "asc" },
+      },
     },
   });
   if (!intervention) notFound();
 
-  const isDerivationAction = (action: { actionType: string }) => action.actionType === "DERIVACION";
-  const outgoingReferralAt = earliestDate(intervention.originReferrals.map((referral) => referral.referredAt));
-  const derivationActionAt = earliestDate(intervention.actions.filter(isDerivationAction).map((action) => action.createdAt));
-  const privacyCutoffAt = earliestDate([outgoingReferralAt, derivationActionAt]);
-  const visibleActions = intervention.actions.filter((action) => isVisibleBeforeReferralCutoff(action, privacyCutoffAt, isDerivationAction));
+  const isDerivationAction = (action: { actionType: string }) =>
+    action.actionType === "DERIVACION";
+  const outgoingReferralAt = earliestDate(
+    intervention.originReferrals.map((referral) => referral.referredAt),
+  );
+  const derivationActionAt = earliestDate(
+    intervention.actions
+      .filter(isDerivationAction)
+      .map((action) => action.createdAt),
+  );
+  const privacyCutoffAt = earliestDate([
+    outgoingReferralAt,
+    derivationActionAt,
+  ]);
+  const visibleActions = intervention.actions.filter((action) =>
+    isVisibleBeforeReferralCutoff(action, privacyCutoffAt, isDerivationAction),
+  );
   const actionIds = visibleActions.map((action) => action.id);
   const [attachments, auditLogs] = await Promise.all([
     prisma.attachment.findMany({
@@ -94,7 +137,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         module: "JURIDICO",
         OR: [
           { entityType: "JuridicalIntervention", entityId: intervention.id },
-          ...(actionIds.length ? [{ entityType: "JuridicalAction", entityId: { in: actionIds } }] : []),
+          ...(actionIds.length
+            ? [{ entityType: "JuridicalAction", entityId: { in: actionIds } }]
+            : []),
         ],
       },
       orderBy: { createdAt: "asc" },
@@ -106,12 +151,18 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   ]);
 
   const statusChanges = statusChangeByActionId(auditLogs);
-  const attachmentsByActionId = new Map<string, Array<{ originalName: string; createdAt: Date }>>();
+  const attachmentsByActionId = new Map<
+    string,
+    Array<{ originalName: string; createdAt: Date }>
+  >();
   attachments
     .filter((attachment) => attachment.entityType === "JuridicalAction")
     .forEach((attachment) => {
       const current = attachmentsByActionId.get(attachment.entityId) ?? [];
-      current.push({ originalName: attachment.originalName, createdAt: attachment.createdAt });
+      current.push({
+        originalName: attachment.originalName,
+        createdAt: attachment.createdAt,
+      });
       attachmentsByActionId.set(attachment.entityId, current);
     });
 
@@ -128,7 +179,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       attachments: [],
     },
     ...visibleActions.map((action, index) => {
-      const parsed = parseJuridicalActionContent(action.content);
+      const parsed = parseJuridicalActionContentForDisplay(
+        action.content,
+        action.actionType,
+      );
       const statusChange = statusChanges.get(action.id);
       return {
         number: index + 2,
@@ -138,7 +192,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
         type: action.actionType,
         description: parsed.description,
         guidance: parsed.guidanceProvided,
-        statusText: statusChange ? `Estado: ${labelFromValue(statusChange.before)} -> ${labelFromValue(statusChange.after)}` : null,
+        statusText: statusChange
+          ? `Estado: ${labelFromValue(statusChange.before)} -> ${labelFromValue(statusChange.after)}`
+          : null,
         nextStepDescription: parsed.nextStepDescription,
         nextStepDate: action.nextStepDate,
         attachments: attachmentsByActionId.get(action.id) ?? [],
@@ -146,14 +202,24 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     }),
   ];
 
-  const requestedSheetRaw = Number(new URL(request.url).searchParams.get("hoja") ?? 0);
-  const requestedSheet = Number.isFinite(requestedSheetRaw) && requestedSheetRaw > 0 ? requestedSheetRaw : null;
-  const selectedSheets = requestedSheet ? sheets.filter((sheet) => sheet.number === requestedSheet) : sheets;
+  const requestedSheetRaw = Number(
+    new URL(request.url).searchParams.get("hoja") ?? 0,
+  );
+  const requestedSheet =
+    Number.isFinite(requestedSheetRaw) && requestedSheetRaw > 0
+      ? requestedSheetRaw
+      : null;
+  const selectedSheets = requestedSheet
+    ? sheets.filter((sheet) => sheet.number === requestedSheet)
+    : sheets;
   if (requestedSheet && !selectedSheets.length) notFound();
 
   const complainantsSource = intervention.complainants.length
     ? intervention.complainants
-    : intervention.complainantIsAnonymous || intervention.complainantDni || intervention.complainantFirstName || intervention.complainantLastName
+    : intervention.complainantIsAnonymous ||
+        intervention.complainantDni ||
+        intervention.complainantFirstName ||
+        intervention.complainantLastName
       ? [
           {
             isAnonymous: intervention.complainantIsAnonymous,
@@ -167,12 +233,15 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       : [];
   const linkedSource = intervention.linkedPersons.length
     ? intervention.linkedPersons
-    : intervention.person || intervention.dniSnapshot || intervention.nameSnapshot
+    : intervention.person ||
+        intervention.dniSnapshot ||
+        intervention.nameSnapshot
       ? [
           {
             dni: intervention.person?.dni ?? intervention.dniSnapshot,
             firstName: intervention.person?.firstName ?? null,
-            apellidoApodoManual: intervention.person?.lastName ?? intervention.nameSnapshot,
+            apellidoApodoManual:
+              intervention.person?.lastName ?? intervention.nameSnapshot,
             phone1: intervention.person?.phone1 ?? null,
             address: intervention.person?.address ?? null,
           },
@@ -180,7 +249,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       : [];
 
   const complainants: LegajoPdfPerson[] = complainantsSource.map((person) => ({
-    name: person.isAnonymous ? "Denunciante anonimo" : personDisplayName(person.lastName, person.firstName),
+    name: person.isAnonymous
+      ? "Denunciante anonimo"
+      : personDisplayName(person.lastName, person.firstName),
     dni: person.dni,
     phone: person.phone1,
     address: person.address,
@@ -194,8 +265,14 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   const generalAttachments = attachments
     .filter((attachment) => attachment.entityType === "JuridicalIntervention")
-    .map((attachment) => ({ originalName: attachment.originalName, createdAt: attachment.createdAt }));
-  const referrals: LegajoPdfReferral[] = [...intervention.destinationReferrals, ...intervention.originReferrals]
+    .map((attachment) => ({
+      originalName: attachment.originalName,
+      createdAt: attachment.createdAt,
+    }));
+  const referrals: LegajoPdfReferral[] = [
+    ...intervention.destinationReferrals,
+    ...intervention.originReferrals,
+  ]
     .sort((a, b) => a.referredAt.getTime() - b.referredAt.getTime())
     .map((referral) => ({
       origin: referral.originModule,
@@ -214,13 +291,25 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     generalFields: requestedSheet
       ? null
       : [
-          { label: "Estado actual", value: labelFromValue(intervention.status) },
+          {
+            label: "Estado actual",
+            value: labelFromValue(intervention.status),
+          },
           { label: "Urgencia", value: labelFromValue(intervention.urgency) },
           { label: "Tipo", value: labelFromValue(intervention.type) },
-          { label: "Contexto", value: contextLabel(intervention.interventionContext) },
-          { label: "Fecha inicial", value: formatDateTime(intervention.attendedAt) },
+          {
+            label: "Contexto",
+            value: contextLabel(intervention.interventionContext),
+          },
+          {
+            label: "Fecha inicial",
+            value: formatDateTime(intervention.attendedAt),
+          },
           { label: "Oficio", value: intervention.oficioNumber },
-          { label: "Expediente / legajo", value: intervention.expedienteNumber },
+          {
+            label: "Expediente / legajo",
+            value: intervention.expedienteNumber,
+          },
           { label: "Area derivada", value: intervention.derivedArea },
         ],
     complainants: requestedSheet ? null : complainants,
@@ -230,7 +319,9 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     sheets: selectedSheets,
   });
 
-  const filename = requestedSheet ? `hoja-${requestedSheet}-${intervention.internalNumber}.pdf` : `legajo-${intervention.internalNumber}.pdf`;
+  const filename = requestedSheet
+    ? `hoja-${requestedSheet}-${intervention.internalNumber}.pdf`
+    : `legajo-${intervention.internalNumber}.pdf`;
 
   return new Response(Buffer.from(pdf), {
     headers: {

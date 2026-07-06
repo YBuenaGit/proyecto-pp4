@@ -3,13 +3,31 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
-import { DISPATCH_STATUSES, EXPEDIENT_AREAS, EXPEDIENT_STATUSES, PRIORITIES } from "@/lib/constants";
+import {
+  DISPATCH_STATUSES,
+  EXPEDIENT_AREAS,
+  EXPEDIENT_STATUSES,
+  PRIORITIES,
+} from "@/lib/constants";
 import { CODIGOS_EXPEDIENTES_SET } from "@/lib/constants/codigosExpedientes";
-import { checkbox, optionalDate, optionalSentenceText, optionalText, sentenceText, text, nextInternalNumber } from "@/lib/form";
+import {
+  checkbox,
+  optionalDate,
+  optionalSentenceText,
+  optionalText,
+  sentenceText,
+  text,
+  nextInternalNumber,
+} from "@/lib/form";
 import { buildJuridicalActionContent } from "@/lib/juridical-action-content";
 import { saveAttachments } from "@/lib/files";
 import { prisma } from "@/lib/prisma";
-import { canAccessDispatch, canAccessExpedients, assertAccess, canBypassLegajoRestriction } from "@/lib/rbac";
+import {
+  canAccessDispatch,
+  canAccessExpedients,
+  assertAccess,
+  canBypassLegajoRestriction,
+} from "@/lib/rbac";
 import { requireUser } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { capitalizeOptionalText, personDisplayName } from "@/lib/text";
@@ -27,9 +45,14 @@ const expedientSchema = z.object({
     .string()
     .optional()
     .nullable()
-    .refine((value) => !value || CODIGOS_EXPEDIENTES_SET.has(value), "Código de expediente inválido."),
+    .refine(
+      (value) => !value || CODIGOS_EXPEDIENTES_SET.has(value),
+      "Código de expediente inválido.",
+    ),
   category: z.string().min(1),
-  area: z.string().refine((value) => EXPEDIENT_AREAS.some((item) => item.value === value)),
+  area: z
+    .string()
+    .refine((value) => EXPEDIENT_AREAS.some((item) => item.value === value)),
   description: z
     .string()
     .optional()
@@ -47,22 +70,34 @@ const addressPattern = /^[\p{L}\d .,\-/]+$/u;
 const optionalDniSchema = z
   .string()
   .trim()
-  .refine((value) => !value || dniPattern.test(value), "El DNI debe tener entre 7 y 8 numeros.");
+  .refine(
+    (value) => !value || dniPattern.test(value),
+    "El DNI debe tener entre 7 y 8 numeros.",
+  );
 
 const optionalPhoneSchema = z
   .string()
   .trim()
-  .refine((value) => !value || phonePattern.test(value), "El telefono debe tener entre 7 y 10 numeros.");
+  .refine(
+    (value) => !value || phonePattern.test(value),
+    "El telefono debe tener entre 7 y 10 numeros.",
+  );
 
 const optionalNameSchema = z
   .string()
   .trim()
-  .refine((value) => !value || namePattern.test(value), "El nombre y apellido solo pueden tener letras y espacios.");
+  .refine(
+    (value) => !value || namePattern.test(value),
+    "El nombre y apellido solo pueden tener letras y espacios.",
+  );
 
 const optionalAddressSchema = z
   .string()
   .trim()
-  .refine((value) => !value || addressPattern.test(value), "El domicilio contiene caracteres no permitidos.");
+  .refine(
+    (value) => !value || addressPattern.test(value),
+    "El domicilio contiene caracteres no permitidos.",
+  );
 
 const complainantPayloadSchema = z.object({
   isAnonymous: z.boolean().default(false),
@@ -87,11 +122,26 @@ type ComplainantPayload = z.infer<typeof complainantPayloadSchema>;
 type LinkedPersonPayload = z.infer<typeof linkedPersonPayloadSchema>;
 
 function hasLinkedPersonData(person: LinkedPersonPayload) {
-  return Boolean(person.dni || person.firstName || person.apellidoApodoManual || person.phone1 || person.phone2 || person.address);
+  return Boolean(
+    person.dni ||
+    person.firstName ||
+    person.apellidoApodoManual ||
+    person.phone1 ||
+    person.phone2 ||
+    person.address,
+  );
 }
 
 function hasComplainantData(person: ComplainantPayload) {
-  return Boolean(person.isAnonymous || person.dni || person.firstName || person.lastName || person.phone1 || person.phone2 || person.address);
+  return Boolean(
+    person.isAnonymous ||
+    person.dni ||
+    person.firstName ||
+    person.lastName ||
+    person.phone1 ||
+    person.phone2 ||
+    person.address,
+  );
 }
 
 function parseJsonArray(formData: FormData, key: string) {
@@ -102,23 +152,30 @@ function parseJsonArray(formData: FormData, key: string) {
 }
 
 function parseComplainants(formData: FormData) {
-  return z.array(complainantPayloadSchema).parse(parseJsonArray(formData, "complainantsPayload")).map((person) =>
-    person.isAnonymous
-      ? {
-          isAnonymous: true,
-          dni: "",
-          firstName: "",
-          lastName: "",
-          phone1: "",
-          phone2: "",
-          address: "",
-        }
-      : person,
-  ).filter(hasComplainantData);
+  return z
+    .array(complainantPayloadSchema)
+    .parse(parseJsonArray(formData, "complainantsPayload"))
+    .map((person) =>
+      person.isAnonymous
+        ? {
+            isAnonymous: true,
+            dni: "",
+            firstName: "",
+            lastName: "",
+            phone1: "",
+            phone2: "",
+            address: "",
+          }
+        : person,
+    )
+    .filter(hasComplainantData);
 }
 
 function parseLinkedPersons(formData: FormData) {
-  return z.array(linkedPersonPayloadSchema).parse(parseJsonArray(formData, "linkedPersonsPayload")).filter(hasLinkedPersonData);
+  return z
+    .array(linkedPersonPayloadSchema)
+    .parse(parseJsonArray(formData, "linkedPersonsPayload"))
+    .filter(hasLinkedPersonData);
 }
 
 function nullable(value: string) {
@@ -134,9 +191,14 @@ function normalizeReferralArea(value: string | null | undefined) {
     .trim();
 }
 
-function referralSummaryFrom(source: { description: string; internalNumber: string }, area: string) {
+function referralSummaryFrom(
+  source: { description: string; internalNumber: string },
+  area: string,
+) {
   const description = source.description.trim();
-  return description.length >= 8 ? description : `Derivacion a ${area} desde ${source.internalNumber}.`;
+  return description.length >= 8
+    ? description
+    : `Derivacion a ${area} desde ${source.internalNumber}.`;
 }
 
 function redirectWithReferralSuccess(path: string) {
@@ -147,10 +209,10 @@ function isJuridicalReferralArea(value: string | null | undefined) {
   const area = normalizeReferralArea(value);
   return Boolean(
     area &&
-      (area.startsWith("intervenciones") ||
-        area.includes("juridico") ||
-        area.includes("contencion a la victima") ||
-        area.includes("proteccion a la victima")),
+    (area.startsWith("intervenciones") ||
+      area.includes("juridico") ||
+      area.includes("contencion a la victima") ||
+      area.includes("proteccion a la victima")),
   );
 }
 
@@ -158,9 +220,15 @@ function isDirectivoReferralArea(value: string | null | undefined) {
   return normalizeReferralArea(value) === "directivo";
 }
 
-function linkedPersonName(person: { firstName: string | null; apellidoApodoManual: string | null } | undefined) {
+function linkedPersonName(
+  person:
+    | { firstName: string | null; apellidoApodoManual: string | null }
+    | undefined,
+) {
   if (!person) return null;
-  return personDisplayName(person.apellidoApodoManual, person.firstName) || null;
+  return (
+    personDisplayName(person.apellidoApodoManual, person.firstName) || null
+  );
 }
 
 function complainantCreateData(person: ComplainantPayload, index: number) {
@@ -168,8 +236,12 @@ function complainantCreateData(person: ComplainantPayload, index: number) {
     sortOrder: index,
     isAnonymous: person.isAnonymous,
     dni: person.isAnonymous ? null : nullable(person.dni),
-    firstName: person.isAnonymous ? null : capitalizeOptionalText(person.firstName),
-    lastName: person.isAnonymous ? null : capitalizeOptionalText(person.lastName),
+    firstName: person.isAnonymous
+      ? null
+      : capitalizeOptionalText(person.firstName),
+    lastName: person.isAnonymous
+      ? null
+      : capitalizeOptionalText(person.lastName),
     phone1: person.isAnonymous ? null : nullable(person.phone1),
     phone2: person.isAnonymous ? null : nullable(person.phone2),
     address: person.isAnonymous ? null : capitalizeOptionalText(person.address),
@@ -193,8 +265,12 @@ async function syncDispatchReferralSummary(recordId: string, status: string) {
     where: { destinationDispatchRecordId: recordId },
     data: {
       visibleStatusForOrigin: `Despacho: ${status}`,
-      status: ["RESUELTO", "CERRADO", "ARCHIVADO"].includes(status) ? "CERRADA" : "EN_GESTION",
-      closedAt: ["RESUELTO", "CERRADO", "ARCHIVADO"].includes(status) ? new Date() : null,
+      status: ["RESUELTO", "CERRADO", "ARCHIVADO"].includes(status)
+        ? "CERRADA"
+        : "EN_GESTION",
+      closedAt: ["RESUELTO", "CERRADO", "ARCHIVADO"].includes(status)
+        ? new Date()
+        : null,
     },
   });
 }
@@ -208,11 +284,20 @@ async function isDispatchLegajoDerivedOut(recordId: string) {
       _count: { select: { originReferrals: true } },
     },
   });
-  return Boolean(record._count.originReferrals || (record.referredArea && record.status === "DERIVADO"));
+  return Boolean(
+    record._count.originReferrals ||
+    (record.referredArea && record.status === "DERIVADO"),
+  );
 }
 
-async function createDispatchDirectivoReferral(recordId: string, summary: string, userId: string) {
-  const before = await prisma.dispatchRecord.findUniqueOrThrow({ where: { id: recordId } });
+async function createDispatchDirectivoReferral(
+  recordId: string,
+  summary: string,
+  userId: string,
+) {
+  const before = await prisma.dispatchRecord.findUniqueOrThrow({
+    where: { id: recordId },
+  });
   const referral = await prisma.referral.create({
     data: {
       originModule: "DESPACHO",
@@ -252,9 +337,19 @@ async function createDispatchDirectivoReferral(recordId: string, summary: string
   });
 }
 
-async function createDispatchExternalAreaReferral(recordId: string, area: string, summary: string, userId: string, updateStatus: boolean) {
-  const before = await prisma.dispatchRecord.findUniqueOrThrow({ where: { id: recordId } });
-  const statusData = updateStatus ? { status: "DERIVADO", lastStatusAt: new Date() } : {};
+async function createDispatchExternalAreaReferral(
+  recordId: string,
+  area: string,
+  summary: string,
+  userId: string,
+  updateStatus: boolean,
+) {
+  const before = await prisma.dispatchRecord.findUniqueOrThrow({
+    where: { id: recordId },
+  });
+  const statusData = updateStatus
+    ? { status: "DERIVADO", lastStatusAt: new Date() }
+    : {};
   const after = await prisma.dispatchRecord.update({
     where: { id: recordId },
     data: {
@@ -281,7 +376,13 @@ async function createDispatchExternalAreaReferral(recordId: string, area: string
   });
 }
 
-async function applyDispatchReferralFromArea(recordId: string, area: string, summary: string, userId: string, updateExternalStatus = true) {
+async function applyDispatchReferralFromArea(
+  recordId: string,
+  area: string,
+  summary: string,
+  userId: string,
+  updateExternalStatus = true,
+) {
   if (isJuridicalReferralArea(area)) {
     const referralData = new FormData();
     referralData.set("summary", summary);
@@ -295,7 +396,13 @@ async function applyDispatchReferralFromArea(recordId: string, area: string, sum
     return;
   }
 
-  await createDispatchExternalAreaReferral(recordId, area, summary, userId, updateExternalStatus);
+  await createDispatchExternalAreaReferral(
+    recordId,
+    area,
+    summary,
+    userId,
+    updateExternalStatus,
+  );
 }
 
 export async function createDispatchRecord(formData: FormData) {
@@ -314,7 +421,9 @@ export async function createDispatchRecord(formData: FormData) {
   const firstLinkedPerson = linkedPersons[0];
   const referredArea = optionalText(formData, "referredArea");
   const usesHistoricalDate = checkbox(formData, "usesHistoricalDate");
-  const attendedAt = usesHistoricalDate ? optionalDate(formData, "attendedAt") : new Date();
+  const attendedAt = usesHistoricalDate
+    ? optionalDate(formData, "attendedAt")
+    : new Date();
   const deadlineAt = optionalDate(formData, "deadlineAt");
   if (!attendedAt || Number.isNaN(attendedAt.getTime())) {
     throw new Error("La fecha y hora de atención no es válida.");
@@ -367,17 +476,27 @@ export async function createDispatchRecord(formData: FormData) {
   });
 
   if (referredArea) {
-    await applyDispatchReferralFromArea(record.id, referredArea, parsed.description, user.id);
+    await applyDispatchReferralFromArea(
+      record.id,
+      referredArea,
+      parsed.description,
+      user.id,
+    );
     redirectWithReferralSuccess(`/despacho/${record.id}`);
   }
 
   redirect(`/despacho/${record.id}`);
 }
 
-export async function updateDispatchRecord(recordId: string, formData: FormData) {
+export async function updateDispatchRecord(
+  recordId: string,
+  formData: FormData,
+) {
   const user = await requireUser();
   assertAccess(canAccessDispatch(user));
-  const before = await prisma.dispatchRecord.findUniqueOrThrow({ where: { id: recordId } });
+  const before = await prisma.dispatchRecord.findUniqueOrThrow({
+    where: { id: recordId },
+  });
 
   const parsed = dispatchSchema.parse({
     description: sentenceText(formData, "description"),
@@ -416,7 +535,8 @@ export async function updateDispatchRecord(recordId: string, formData: FormData)
       priority: parsed.priority,
       status: parsed.status,
       referredArea: before.referredArea,
-      lastStatusAt: before.status !== parsed.status ? new Date() : before.lastStatusAt,
+      lastStatusAt:
+        before.status !== parsed.status ? new Date() : before.lastStatusAt,
       complainants: {
         deleteMany: {},
         create: complainants.map(complainantCreateData),
@@ -444,14 +564,21 @@ export async function updateDispatchRecord(recordId: string, formData: FormData)
   redirect(`/despacho/${recordId}`);
 }
 
-export async function addDispatchFollowUp(recordId: string, formData: FormData) {
+export async function addDispatchFollowUp(
+  recordId: string,
+  formData: FormData,
+) {
   const user = await requireUser();
   assertAccess(canAccessDispatch(user));
-  if (!canBypassLegajoRestriction(user) && (await isDispatchLegajoDerivedOut(recordId))) {
+  if (
+    !canBypassLegajoRestriction(user) &&
+    (await isDispatchLegajoDerivedOut(recordId))
+  ) {
     revalidatePath(`/despacho/${recordId}`);
     redirect(`/despacho/${recordId}`);
   }
-  const description = sentenceText(formData, "description") || sentenceText(formData, "content");
+  const description =
+    sentenceText(formData, "description") || sentenceText(formData, "content");
   if (description.length < 3) return;
   const content = buildJuridicalActionContent({
     description,
@@ -466,7 +593,9 @@ export async function addDispatchFollowUp(recordId: string, formData: FormData) 
   if (deadlineAt && Number.isNaN(deadlineAt.getTime())) {
     throw new Error("El plazo no es válido.");
   }
-  const before = await prisma.dispatchRecord.findUniqueOrThrow({ where: { id: recordId } });
+  const before = await prisma.dispatchRecord.findUniqueOrThrow({
+    where: { id: recordId },
+  });
 
   const followUp = await prisma.dispatchFollowUp.create({
     data: {
@@ -509,7 +638,137 @@ export async function addDispatchFollowUp(recordId: string, formData: FormData) 
   redirect(`/despacho/${recordId}`);
 }
 
-export async function referDispatchToArea(recordId: string, formData: FormData) {
+export async function updateDispatchInitialNarrative(
+  recordId: string,
+  formData: FormData,
+) {
+  const user = await requireUser();
+  assertAccess(canAccessDispatch(user));
+  if (
+    !canBypassLegajoRestriction(user) &&
+    (await isDispatchLegajoDerivedOut(recordId))
+  ) {
+    revalidatePath(`/despacho/${recordId}`);
+    redirect(`/despacho/${recordId}`);
+  }
+
+  const description = sentenceText(formData, "description");
+  if (description.length < 3) return;
+  const initialGuidance = optionalSentenceText(formData, "guidanceProvided");
+  const before = await prisma.dispatchRecord.findUniqueOrThrow({
+    where: { id: recordId },
+  });
+  const after = await prisma.dispatchRecord.update({
+    where: { id: recordId },
+    data: {
+      description,
+      initialGuidance,
+    },
+  });
+
+  await writeAuditLog({
+    module: "DESPACHO",
+    entityType: "DispatchRecord",
+    entityId: recordId,
+    action: "UPDATE",
+    createdById: user.id,
+    before,
+    after,
+  });
+  revalidatePath(`/despacho/${recordId}`);
+  redirect(`/despacho/${recordId}`);
+}
+
+export async function updateDispatchFollowUp(
+  followUpId: string,
+  formData: FormData,
+) {
+  const user = await requireUser();
+  assertAccess(canAccessDispatch(user));
+  const existingFollowUp = await prisma.dispatchFollowUp.findUniqueOrThrow({
+    where: { id: followUpId },
+    include: { dispatchRecord: true },
+  });
+  const recordId = existingFollowUp.dispatchRecordId;
+  if (
+    existingFollowUp.statusAfter === "DERIVADO" ||
+    (!canBypassLegajoRestriction(user) &&
+      (await isDispatchLegajoDerivedOut(recordId)))
+  ) {
+    revalidatePath(`/despacho/${recordId}`);
+    redirect(`/despacho/${recordId}`);
+  }
+
+  const description =
+    sentenceText(formData, "description") || sentenceText(formData, "content");
+  if (description.length < 3) return;
+  const content = buildJuridicalActionContent({
+    description,
+    guidanceProvided: optionalSentenceText(formData, "guidanceProvided") ?? "",
+  });
+  const submittedStatus = optionalText(formData, "statusAfter");
+  const statusAfter =
+    submittedStatus &&
+    submittedStatus !== "DERIVADO" &&
+    DISPATCH_STATUSES.includes(submittedStatus)
+      ? submittedStatus
+      : null;
+  const createdAt =
+    optionalDate(formData, "createdAt") ?? existingFollowUp.createdAt;
+  const deadlineAt = optionalDate(formData, "deadlineAt");
+  if (Number.isNaN(createdAt.getTime())) {
+    throw new Error("La fecha y hora no es válida.");
+  }
+  if (deadlineAt && Number.isNaN(deadlineAt.getTime())) {
+    throw new Error("El plazo no es válido.");
+  }
+
+  const before = existingFollowUp.dispatchRecord;
+  const followUp = await prisma.dispatchFollowUp.update({
+    where: { id: followUpId },
+    data: {
+      content,
+      statusAfter,
+      deadlineAt,
+      createdAt,
+    },
+  });
+
+  let after = before;
+  if (statusAfter && statusAfter !== before.status) {
+    after = await prisma.dispatchRecord.update({
+      where: { id: recordId },
+      data: { status: statusAfter, lastStatusAt: new Date() },
+    });
+    await syncDispatchReferralSummary(recordId, statusAfter);
+  }
+
+  const savedAttachments = await saveAttachments({
+    files: formData.getAll("attachments"),
+    module: "DESPACHO",
+    entityType: "DispatchFollowUp",
+    entityId: followUp.id,
+    uploadedById: user.id,
+  });
+
+  await writeAuditLog({
+    module: "DESPACHO",
+    entityType: "DispatchRecord",
+    entityId: recordId,
+    action:
+      after.status !== before.status ? "STATUS_CHANGE" : "FOLLOW_UP_UPDATE",
+    createdById: user.id,
+    before: { record: before, followUp: existingFollowUp },
+    after: { record: after, followUp, attachments: savedAttachments },
+  });
+  revalidatePath(`/despacho/${recordId}`);
+  redirect(`/despacho/${recordId}`);
+}
+
+export async function referDispatchToArea(
+  recordId: string,
+  formData: FormData,
+) {
   const user = await requireUser();
   assertAccess(canAccessDispatch(user));
   if (await isDispatchLegajoDerivedOut(recordId)) {
@@ -529,7 +788,10 @@ export async function referDispatchToArea(recordId: string, formData: FormData) 
   redirectWithReferralSuccess(`/despacho/${recordId}`);
 }
 
-export async function deriveDispatchToJuridical(recordId: string, formData: FormData) {
+export async function deriveDispatchToJuridical(
+  recordId: string,
+  formData: FormData,
+) {
   const user = await requireUser();
   assertAccess(canAccessDispatch(user));
   if (await isDispatchLegajoDerivedOut(recordId)) {
@@ -547,9 +809,15 @@ export async function deriveDispatchToJuridical(recordId: string, formData: Form
   });
   const complainant = source.complainants[0];
   const firstLinkedPerson = source.linkedPersons[0];
-  const destinationArea = optionalText(formData, "area") ?? source.referredArea ?? "Intervenciones Juridico-Institucionales";
+  const destinationArea =
+    optionalText(formData, "area") ??
+    source.referredArea ??
+    "Intervenciones Juridico-Institucionales";
   const submittedSummary = sentenceText(formData, "summary");
-  const summary = submittedSummary.length >= 8 ? submittedSummary : referralSummaryFrom(source, destinationArea);
+  const summary =
+    submittedSummary.length >= 8
+      ? submittedSummary
+      : referralSummaryFrom(source, destinationArea);
 
   const intervention = await prisma.juridicalIntervention.create({
     data: {
@@ -560,18 +828,25 @@ export async function deriveDispatchToJuridical(recordId: string, formData: Form
       nameSnapshot: linkedPersonName(firstLinkedPerson) ?? source.nameSnapshot,
       complainantIsAnonymous: Boolean(complainant?.isAnonymous),
       complainantDni: complainant?.isAnonymous ? null : complainant?.dni,
-      complainantFirstName: complainant?.isAnonymous ? null : complainant?.firstName,
-      complainantLastName: complainant?.isAnonymous ? null : complainant?.lastName,
+      complainantFirstName: complainant?.isAnonymous
+        ? null
+        : complainant?.firstName,
+      complainantLastName: complainant?.isAnonymous
+        ? null
+        : complainant?.lastName,
       complainantPhone1: complainant?.isAnonymous ? null : complainant?.phone1,
       complainantPhone2: complainant?.isAnonymous ? null : complainant?.phone2,
-      complainantAddress: complainant?.isAnonymous ? null : complainant?.address,
+      complainantAddress: complainant?.isAnonymous
+        ? null
+        : complainant?.address,
       type,
       urgency: source.priority,
       status: "RECIBIDO",
       interventionContext: "ORIENTACION",
       counterpartType: null,
       description: summary,
-      guidanceProvided: "Derivacion recibida desde Despacho para primera evaluacion.",
+      guidanceProvided:
+        "Derivacion recibida desde Despacho para primera evaluacion.",
       origin: "FROM_DESPACHO",
       attendedAt: new Date(),
       lastStatusAt: new Date(),
@@ -645,10 +920,16 @@ export async function deriveDispatchToJuridical(recordId: string, formData: Form
   redirectWithReferralSuccess(`/despacho/${recordId}`);
 }
 
-export async function uploadDispatchAttachment(recordId: string, formData: FormData) {
+export async function uploadDispatchAttachment(
+  recordId: string,
+  formData: FormData,
+) {
   const user = await requireUser();
   assertAccess(canAccessDispatch(user));
-  if (!canBypassLegajoRestriction(user) && (await isDispatchLegajoDerivedOut(recordId))) {
+  if (
+    !canBypassLegajoRestriction(user) &&
+    (await isDispatchLegajoDerivedOut(recordId))
+  ) {
     revalidatePath(`/despacho/${recordId}`);
     redirect(`/despacho/${recordId}`);
   }
@@ -726,7 +1007,9 @@ export async function createExpedient(formData: FormData) {
 export async function updateExpedient(expedientId: string, formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessExpedients(user));
-  const before = await prisma.internalExpedient.findUniqueOrThrow({ where: { id: expedientId } });
+  const before = await prisma.internalExpedient.findUniqueOrThrow({
+    where: { id: expedientId },
+  });
   const parsed = expedientSchema.parse({
     expedienteNumber: optionalText(formData, "expedienteNumber"),
     codigo: optionalText(formData, "codigo"),
@@ -758,7 +1041,10 @@ export async function updateExpedient(expedientId: string, formData: FormData) {
   redirect(`/despacho/expedientes/${expedientId}`);
 }
 
-export async function uploadExpedientAttachment(expedientId: string, formData: FormData) {
+export async function uploadExpedientAttachment(
+  expedientId: string,
+  formData: FormData,
+) {
   const user = await requireUser();
   assertAccess(canAccessExpedients(user));
   const saved = await saveAttachments({

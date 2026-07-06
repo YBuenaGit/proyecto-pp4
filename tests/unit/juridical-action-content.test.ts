@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   buildJuridicalActionContent,
   parseJuridicalActionContent,
+  parseJuridicalActionContentForDisplay,
 } from "../../src/lib/juridical-action-content";
 
 test("construye y recupera las secciones de una actuacion", () => {
@@ -17,9 +18,26 @@ test("construye y recupera las secciones de una actuacion", () => {
 });
 
 test("mantiene compatibilidad con actuaciones de texto libre", () => {
-  assert.deepEqual(parseJuridicalActionContent("Registro historico sin secciones."), {
-    description: "Registro historico sin secciones.",
-    guidanceProvided: "",
-    nextStepDescription: "",
-  });
+  assert.deepEqual(
+    parseJuridicalActionContent("Registro historico sin secciones."),
+    {
+      description: "Registro historico sin secciones.",
+      guidanceProvided: "",
+      nextStepDescription: "",
+    },
+  );
+});
+
+test("muestra derivaciones sin el detalle interno del resumen", () => {
+  assert.deepEqual(
+    parseJuridicalActionContentForDisplay(
+      "Derivacion a Intervenciones: Intervenciones del legajo, test 01",
+      "DERIVACION",
+    ),
+    {
+      description: "Derivacion a Intervenciones",
+      guidanceProvided: "",
+      nextStepDescription: "",
+    },
+  );
 });

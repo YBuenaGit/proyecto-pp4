@@ -1,9 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type FormEvent,
+} from "react";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { FormField, inputClass, textareaClass } from "@/components/ui/form-controls";
+import {
+  FormField,
+  inputClass,
+  textareaClass,
+} from "@/components/ui/form-controls";
 import { DISPATCH_STATUSES } from "@/lib/constants";
 import { labelFromValue, toDateInputValue } from "@/lib/format";
 
@@ -13,11 +23,13 @@ function resizeTextarea(textarea: HTMLTextAreaElement) {
 }
 
 const autosizeTextareaClass = `${textareaClass} resize-none overflow-hidden`;
-const followUpStatuses = DISPATCH_STATUSES.filter((status) => status !== "DERIVADO");
+const followUpStatuses = DISPATCH_STATUSES.filter(
+  (status) => status !== "DERIVADO",
+);
 
 type DispatchFollowUpFormValues = {
   createdAt: Date | string;
-  deadlineAt: Date | string;
+  deadlineAt: Date | string | null;
   description: string;
   guidanceProvided: string;
   statusAfter: string;
@@ -26,7 +38,9 @@ type DispatchFollowUpFormValues = {
 function nowInputValue() {
   const date = new Date();
   const offset = date.getTimezoneOffset();
-  return new Date(date.getTime() - offset * 60 * 1000).toISOString().slice(0, 16);
+  return new Date(date.getTime() - offset * 60 * 1000)
+    .toISOString()
+    .slice(0, 16);
 }
 
 function attachmentKey(file: File) {
@@ -44,10 +58,14 @@ export function AddDispatchFollowUpForm({
 }) {
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const submitLockedRef = useRef(false);
   const [selectedAttachments, setSelectedAttachments] = useState<File[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    formRef.current?.querySelectorAll<HTMLTextAreaElement>("textarea[data-autosize='true']").forEach(resizeTextarea);
+    formRef.current
+      ?.querySelectorAll<HTMLTextAreaElement>("textarea[data-autosize='true']")
+      .forEach(resizeTextarea);
   }, []);
 
   function handleTextareaInput(event: FormEvent<HTMLTextAreaElement>) {
@@ -88,15 +106,33 @@ export function AddDispatchFollowUpForm({
     });
   }
 
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    if (submitLockedRef.current) {
+      event.preventDefault();
+      return;
+    }
+    submitLockedRef.current = true;
+    setIsSubmitting(true);
+  }
+
   return (
-    <form ref={formRef} action={action} className="space-y-4">
+    <form
+      ref={formRef}
+      action={action}
+      onSubmit={handleSubmit}
+      className="space-y-4"
+    >
       <div className="grid gap-3 sm:grid-cols-2">
         <FormField label="Fecha y hora">
           <input
             name="createdAt"
             type="datetime-local"
             className={inputClass}
-            defaultValue={initialValues?.createdAt ? toDateInputValue(initialValues.createdAt) : nowInputValue()}
+            defaultValue={
+              initialValues?.createdAt
+                ? toDateInputValue(initialValues.createdAt)
+                : nowInputValue()
+            }
           />
         </FormField>
         <FormField label="Plazo">
@@ -104,11 +140,19 @@ export function AddDispatchFollowUpForm({
             name="deadlineAt"
             type="datetime-local"
             className={inputClass}
-            defaultValue={initialValues?.deadlineAt ? toDateInputValue(initialValues.deadlineAt) : ""}
+            defaultValue={
+              initialValues?.deadlineAt
+                ? toDateInputValue(initialValues.deadlineAt)
+                : ""
+            }
           />
         </FormField>
         <FormField label="Estado">
-          <select name="statusAfter" className={inputClass} defaultValue={initialValues?.statusAfter ?? ""}>
+          <select
+            name="statusAfter"
+            className={inputClass}
+            defaultValue={initialValues?.statusAfter ?? ""}
+          >
             <option value="">Sin cambio</option>
             {followUpStatuses.map((status) => (
               <option key={status} value={status}>
@@ -148,12 +192,17 @@ export function AddDispatchFollowUpForm({
             className="block w-full text-sm text-[#212529] file:mr-2 file:rounded-sm file:border-0 file:bg-[#0667b0] file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white hover:file:bg-[#0a61b9]"
           />
           <p className="text-xs text-[#607589]">
-            {selectedAttachments.length ? `${selectedAttachments.length} archivo(s) seleccionado(s).` : "Sin adjuntos seleccionados."}
+            {selectedAttachments.length
+              ? `${selectedAttachments.length} archivo(s) seleccionado(s).`
+              : "Sin adjuntos seleccionados."}
           </p>
           {selectedAttachments.length ? (
             <ul className="space-y-1 rounded-md bg-white px-3 py-2 text-sm text-[#495057]">
               {selectedAttachments.map((file, index) => (
-                <li key={`${attachmentKey(file)}-${index}`} className="flex items-center justify-between gap-3">
+                <li
+                  key={`${attachmentKey(file)}-${index}`}
+                  className="flex items-center justify-between gap-3"
+                >
                   <span className="min-w-0 truncate">{file.name}</span>
                   <button
                     type="button"
@@ -173,7 +222,9 @@ export function AddDispatchFollowUpForm({
         <Button type="button" variant="secondary" data-modal-close>
           Cancelar
         </Button>
-        <Button type="submit">{submitLabel}</Button>
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Guardando..." : submitLabel}
+        </Button>
       </div>
     </form>
   );

@@ -1,11 +1,40 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ClipboardEvent, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
-import { AlertCircle, Check, ChevronLeft, ChevronRight, Lock, Pencil, Plus, Trash2, UploadCloud } from "lucide-react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type ClipboardEvent,
+  type FormEvent,
+  type KeyboardEvent,
+  type ReactNode,
+} from "react";
+import {
+  AlertCircle,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  Lock,
+  Pencil,
+  Plus,
+  Trash2,
+  UploadCloud,
+} from "lucide-react";
 import { Button, LinkButton } from "@/components/ui/button";
 import { cn } from "@/components/ui/cn";
-import { JURIDICAL_DERIVED_AREAS, JURIDICAL_STATUSES, PRIORITIES } from "@/lib/constants";
-import { formatDateTime, labelFromValue, normalizeName, toDateInputValue } from "@/lib/format";
+import {
+  JURIDICAL_DERIVED_AREAS,
+  JURIDICAL_STATUSES,
+  PRIORITIES,
+} from "@/lib/constants";
+import {
+  formatDateTime,
+  labelFromValue,
+  normalizeName,
+  toDateInputValue,
+} from "@/lib/format";
 import { sortByLabel } from "@/lib/text";
 
 type ComplainantDraft = {
@@ -134,7 +163,12 @@ type StepError = {
   message: string;
 };
 
-const steps = [{ label: "Situacion" }, { label: "Personas" }, { label: "Relato" }, { label: "Cierre" }];
+const steps = [
+  { label: "Situacion" },
+  { label: "Personas" },
+  { label: "Relato" },
+  { label: "Cierre" },
+];
 const lastStepIndex = steps.length - 1;
 
 const inputClass =
@@ -174,15 +208,34 @@ function newId(prefix: string) {
 function currentDateTimeInputValue() {
   const date = new Date();
   const offset = date.getTimezoneOffset();
-  return new Date(date.getTime() - offset * 60 * 1000).toISOString().slice(0, 16);
+  return new Date(date.getTime() - offset * 60 * 1000)
+    .toISOString()
+    .slice(0, 16);
 }
 
 function emptyComplainant(id = newId("complainant")): ComplainantDraft {
-  return { id, isAnonymous: false, dni: "", firstName: "", lastName: "", phone1: "", phone2: "", address: "" };
+  return {
+    id,
+    isAnonymous: false,
+    dni: "",
+    firstName: "",
+    lastName: "",
+    phone1: "",
+    phone2: "",
+    address: "",
+  };
 }
 
 function emptyLinkedPerson(id = newId("linked-person")): LinkedPersonDraft {
-  return { id, dni: "", firstName: "", apellidoApodoManual: "", phone1: "", phone2: "", address: "" };
+  return {
+    id,
+    dni: "",
+    firstName: "",
+    apellidoApodoManual: "",
+    phone1: "",
+    phone2: "",
+    address: "",
+  };
 }
 
 function onlyDigits(value: string, maxLength: number) {
@@ -203,22 +256,45 @@ function onlyAddressChars(value: string) {
     .replace(/ {2,}/g, " ");
 }
 
-function preventInvalidKey(event: KeyboardEvent<HTMLInputElement>, allowed: RegExp) {
-  if (event.ctrlKey || event.metaKey || event.altKey || allowedControlKeys.has(event.key)) return;
-  if (event.key.length === 1 && !allowed.test(event.key)) event.preventDefault();
+function preventInvalidKey(
+  event: KeyboardEvent<HTMLInputElement>,
+  allowed: RegExp,
+) {
+  if (
+    event.ctrlKey ||
+    event.metaKey ||
+    event.altKey ||
+    allowedControlKeys.has(event.key)
+  )
+    return;
+  if (event.key.length === 1 && !allowed.test(event.key))
+    event.preventDefault();
 }
 
-function valueAfterPaste(event: ClipboardEvent<HTMLInputElement>, sanitizer: (value: string) => string) {
+function valueAfterPaste(
+  event: ClipboardEvent<HTMLInputElement>,
+  sanitizer: (value: string) => string,
+) {
   const input = event.currentTarget;
   const start = input.selectionStart ?? input.value.length;
   const end = input.selectionEnd ?? input.value.length;
   const pasted = event.clipboardData.getData("text");
-  return sanitizer(`${input.value.slice(0, start)}${pasted}${input.value.slice(end)}`);
+  return sanitizer(
+    `${input.value.slice(0, start)}${pasted}${input.value.slice(end)}`,
+  );
 }
 
 function cleanComplainant(person: ComplainantDraft) {
   return person.isAnonymous
-    ? { isAnonymous: true, dni: "", firstName: "", lastName: "", phone1: "", phone2: "", address: "" }
+    ? {
+        isAnonymous: true,
+        dni: "",
+        firstName: "",
+        lastName: "",
+        phone1: "",
+        phone2: "",
+        address: "",
+      }
     : {
         isAnonymous: false,
         dni: person.dni.trim(),
@@ -242,36 +318,91 @@ function cleanLinkedPerson(person: LinkedPersonDraft) {
 }
 
 function hasComplainantData(person: ComplainantDraft) {
-  return Boolean(person.isAnonymous || person.dni || person.firstName || person.lastName || person.phone1 || person.phone2 || person.address);
+  return Boolean(
+    person.isAnonymous ||
+    person.dni ||
+    person.firstName ||
+    person.lastName ||
+    person.phone1 ||
+    person.phone2 ||
+    person.address,
+  );
 }
 
 function hasLinkedPersonData(person: LinkedPersonDraft) {
-  return Boolean(person.dni || person.firstName || person.apellidoApodoManual || person.phone1 || person.phone2 || person.address);
+  return Boolean(
+    person.dni ||
+    person.firstName ||
+    person.apellidoApodoManual ||
+    person.phone1 ||
+    person.phone2 ||
+    person.address,
+  );
 }
 
 function validateDni(field: string, value: string, label: string): StepError[] {
   if (!value) return [];
-  return dniPattern.test(value) ? [] : [{ field, message: `${label} debe tener solo numeros, entre 7 y 8 digitos.` }];
+  return dniPattern.test(value)
+    ? []
+    : [
+        {
+          field,
+          message: `${label} debe tener solo numeros, entre 7 y 8 digitos.`,
+        },
+      ];
 }
 
-function validatePhone(field: string, value: string, label: string): StepError[] {
+function validatePhone(
+  field: string,
+  value: string,
+  label: string,
+): StepError[] {
   if (!value) return [];
-  return phonePattern.test(value) ? [] : [{ field, message: `${label} debe tener solo numeros, entre 7 y 10 digitos.` }];
+  return phonePattern.test(value)
+    ? []
+    : [
+        {
+          field,
+          message: `${label} debe tener solo numeros, entre 7 y 10 digitos.`,
+        },
+      ];
 }
 
-function validateName(field: string, value: string, label: string): StepError[] {
+function validateName(
+  field: string,
+  value: string,
+  label: string,
+): StepError[] {
   if (!value.trim()) return [];
-  return namePattern.test(value.trim()) ? [] : [{ field, message: `${label} solo permite letras, espacios, tildes y enies.` }];
+  return namePattern.test(value.trim())
+    ? []
+    : [
+        {
+          field,
+          message: `${label} solo permite letras, espacios, tildes y enies.`,
+        },
+      ];
 }
 
-function validateAddress(field: string, value: string, label: string): StepError[] {
+function validateAddress(
+  field: string,
+  value: string,
+  label: string,
+): StepError[] {
   if (!value.trim()) return [];
   return addressPattern.test(value.trim())
     ? []
-    : [{ field, message: `${label} solo permite letras, numeros, espacios, punto, coma, guion y barra.` }];
+    : [
+        {
+          field,
+          message: `${label} solo permite letras, numeros, espacios, punto, coma, guion y barra.`,
+        },
+      ];
 }
 
-function complainantsFromRecord(record?: InterventionRecord): ComplainantDraft[] {
+function complainantsFromRecord(
+  record?: InterventionRecord,
+): ComplainantDraft[] {
   if (record?.complainants?.length) {
     return record.complainants.map((person) => ({
       id: person.id,
@@ -310,7 +441,9 @@ function complainantsFromRecord(record?: InterventionRecord): ComplainantDraft[]
   return [emptyComplainant("complainant-initial")];
 }
 
-function linkedPersonsFromRecord(record?: InterventionRecord): LinkedPersonDraft[] {
+function linkedPersonsFromRecord(
+  record?: InterventionRecord,
+): LinkedPersonDraft[] {
   if (record?.linkedPersons?.length) {
     return record.linkedPersons.map((person) => ({
       id: person.id,
@@ -327,8 +460,12 @@ function linkedPersonsFromRecord(record?: InterventionRecord): LinkedPersonDraft
       {
         id: "linked-person-existing",
         dni: record.person?.dni ?? record.dniSnapshot ?? "",
-        firstName: record.person?.firstName ?? record.nameSnapshot?.split(" ")[0] ?? "",
-        apellidoApodoManual: record.person?.lastName ?? record.nameSnapshot?.split(" ").slice(1).join(" ") ?? "",
+        firstName:
+          record.person?.firstName ?? record.nameSnapshot?.split(" ")[0] ?? "",
+        apellidoApodoManual:
+          record.person?.lastName ??
+          record.nameSnapshot?.split(" ").slice(1).join(" ") ??
+          "",
         phone1: record.person?.phone1 ?? "",
         phone2: record.person?.phone2 ?? "",
         address: record.person?.address ?? "",
@@ -338,9 +475,13 @@ function linkedPersonsFromRecord(record?: InterventionRecord): LinkedPersonDraft
   return [emptyLinkedPerson("linked-person-initial")];
 }
 
-function valuesFromRecord(record?: InterventionRecord): InterventionWizardValues {
+function valuesFromRecord(
+  record?: InterventionRecord,
+): InterventionWizardValues {
   return {
-    attendedAt: record?.attendedAt ? toDateInputValue(record.attendedAt) : currentDateTimeInputValue(),
+    attendedAt: record?.attendedAt
+      ? toDateInputValue(record.attendedAt)
+      : currentDateTimeInputValue(),
     deadlineAt: toDateInputValue(record?.deadlineAt),
     type: record?.type ?? "",
     urgency: record?.urgency ?? "MEDIA",
@@ -357,18 +498,35 @@ function valuesFromRecord(record?: InterventionRecord): InterventionWizardValues
   };
 }
 
-function validateStep(index: number, values: InterventionWizardValues): StepError[] {
+function validateStep(
+  index: number,
+  values: InterventionWizardValues,
+): StepError[] {
   if (index === 0) {
     const errors: StepError[] = [];
-    if (!values.attendedAt) errors.push({ field: "attendedAt", message: "Ingresa fecha y hora." });
-    if (!values.type) errors.push({ field: "type", message: "Selecciona un tipo." });
+    if (!values.attendedAt)
+      errors.push({ field: "attendedAt", message: "Ingresa fecha y hora." });
+    if (!values.type)
+      errors.push({ field: "type", message: "Selecciona un tipo." });
     if (!values.urgency || !PRIORITIES.includes(values.urgency)) {
-      errors.push({ field: "urgency", message: "Selecciona una urgencia valida." });
+      errors.push({
+        field: "urgency",
+        message: "Selecciona una urgencia valida.",
+      });
     }
-    if (values.attendedAt && Number.isNaN(new Date(values.attendedAt).getTime())) {
-      errors.push({ field: "attendedAt", message: "Ingresa una fecha y hora valida." });
+    if (
+      values.attendedAt &&
+      Number.isNaN(new Date(values.attendedAt).getTime())
+    ) {
+      errors.push({
+        field: "attendedAt",
+        message: "Ingresa una fecha y hora valida.",
+      });
     }
-    if (values.deadlineAt && Number.isNaN(new Date(values.deadlineAt).getTime())) {
+    if (
+      values.deadlineAt &&
+      Number.isNaN(new Date(values.deadlineAt).getTime())
+    ) {
       errors.push({ field: "deadlineAt", message: "Ingresa un plazo valido." });
     }
     return errors;
@@ -379,34 +537,83 @@ function validateStep(index: number, values: InterventionWizardValues): StepErro
       ...values.complainants.flatMap((person, personIndex) => {
         if (person.isAnonymous) return [];
         return [
-          ...validateDni(`complainants.${personIndex}.dni`, person.dni, "El DNI del denunciante"),
-          ...validateName(`complainants.${personIndex}.firstName`, person.firstName, "El nombre del denunciante"),
-          ...validateName(`complainants.${personIndex}.lastName`, person.lastName, "El apellido del denunciante"),
-          ...validatePhone(`complainants.${personIndex}.phone1`, person.phone1, "El telefono 1 del denunciante"),
-          ...validatePhone(`complainants.${personIndex}.phone2`, person.phone2, "El telefono 2 del denunciante"),
-          ...validateAddress(`complainants.${personIndex}.address`, person.address, "El domicilio del denunciante"),
+          ...validateDni(
+            `complainants.${personIndex}.dni`,
+            person.dni,
+            "El DNI del denunciante",
+          ),
+          ...validateName(
+            `complainants.${personIndex}.firstName`,
+            person.firstName,
+            "El nombre del denunciante",
+          ),
+          ...validateName(
+            `complainants.${personIndex}.lastName`,
+            person.lastName,
+            "El apellido del denunciante",
+          ),
+          ...validatePhone(
+            `complainants.${personIndex}.phone1`,
+            person.phone1,
+            "El telefono 1 del denunciante",
+          ),
+          ...validatePhone(
+            `complainants.${personIndex}.phone2`,
+            person.phone2,
+            "El telefono 2 del denunciante",
+          ),
+          ...validateAddress(
+            `complainants.${personIndex}.address`,
+            person.address,
+            "El domicilio del denunciante",
+          ),
         ];
       }),
       ...values.linkedPersons.flatMap((person, personIndex) => [
-        ...validateDni(`linkedPersons.${personIndex}.dni`, person.dni, "El DNI de la persona denunciada"),
-        ...validateName(`linkedPersons.${personIndex}.firstName`, person.firstName, "El nombre de la persona denunciada"),
+        ...validateDni(
+          `linkedPersons.${personIndex}.dni`,
+          person.dni,
+          "El DNI de la persona denunciada",
+        ),
+        ...validateName(
+          `linkedPersons.${personIndex}.firstName`,
+          person.firstName,
+          "El nombre de la persona denunciada",
+        ),
         ...validateName(
           `linkedPersons.${personIndex}.apellidoApodoManual`,
           person.apellidoApodoManual,
           "El apellido o apodo manual de la persona denunciada",
         ),
-        ...validatePhone(`linkedPersons.${personIndex}.phone1`, person.phone1, "El telefono 1 de la persona denunciada"),
-        ...validatePhone(`linkedPersons.${personIndex}.phone2`, person.phone2, "El telefono 2 de la persona denunciada"),
-        ...validateAddress(`linkedPersons.${personIndex}.address`, person.address, "El domicilio de la persona denunciada"),
+        ...validatePhone(
+          `linkedPersons.${personIndex}.phone1`,
+          person.phone1,
+          "El telefono 1 de la persona denunciada",
+        ),
+        ...validatePhone(
+          `linkedPersons.${personIndex}.phone2`,
+          person.phone2,
+          "El telefono 2 de la persona denunciada",
+        ),
+        ...validateAddress(
+          `linkedPersons.${personIndex}.address`,
+          person.address,
+          "El domicilio de la persona denunciada",
+        ),
       ]),
     ];
   }
 
   if (index === 2 && !values.description.trim()) {
-    return [{ field: "description", message: "La descripcion es obligatoria." }];
+    return [
+      { field: "description", message: "La descripcion es obligatoria." },
+    ];
   }
 
-  if (index === 3 && (!values.status || !JURIDICAL_STATUSES.includes(values.status))) {
+  if (
+    index === 3 &&
+    (!values.status || !JURIDICAL_STATUSES.includes(values.status))
+  ) {
     return [{ field: "status", message: "Selecciona un estado valido." }];
   }
 
@@ -422,7 +629,10 @@ function display(value: string | number | null | undefined) {
   return value ? String(value) : "-";
 }
 
-function selectedLabel(options: Array<{ value: string; label: string }>, value: string) {
+function selectedLabel(
+  options: Array<{ value: string; label: string }>,
+  value: string,
+) {
   return options.find((item) => item.value === value)?.label ?? display(value);
 }
 
@@ -448,22 +658,34 @@ function Field({
 }) {
   return (
     <label className={cn("block space-y-1.5", className)}>
-      <span className="text-xs font-semibold uppercase tracking-wide text-[#212529]">{label}</span>
+      <span className="text-xs font-semibold uppercase tracking-wide text-[#212529]">
+        {label}
+      </span>
       {children}
-      {error ? <span className="block text-xs font-medium text-rose-600">{error}</span> : null}
+      {error ? (
+        <span className="block text-xs font-medium text-rose-600">{error}</span>
+      ) : null}
     </label>
   );
 }
 
-function hasLookupNameConflict(person: DniLookupPerson, firstName: string, lastName: string) {
+function hasLookupNameConflict(
+  person: DniLookupPerson,
+  firstName: string,
+  lastName: string,
+) {
   const enteredFirstName = firstName.trim();
   const enteredLastName = lastName.trim();
   const storedFirstName = person.firstName?.trim();
   const storedLastName = person.lastName?.trim();
 
   return Boolean(
-    (enteredFirstName && storedFirstName && normalizeName(enteredFirstName) !== normalizeName(storedFirstName)) ||
-      (enteredLastName && storedLastName && normalizeName(enteredLastName) !== normalizeName(storedLastName)),
+    (enteredFirstName &&
+      storedFirstName &&
+      normalizeName(enteredFirstName) !== normalizeName(storedFirstName)) ||
+    (enteredLastName &&
+      storedLastName &&
+      normalizeName(enteredLastName) !== normalizeName(storedLastName)),
   );
 }
 
@@ -492,14 +714,21 @@ function DniLookupNotice({
       setLookup({ status: "checking", dni: cleanedDni });
 
       try {
-        const response = await fetch(`/api/personas/lookup?dni=${encodeURIComponent(cleanedDni)}`, {
-          headers: { Accept: "application/json" },
-          signal: controller.signal,
-        });
+        const response = await fetch(
+          `/api/personas/lookup?dni=${encodeURIComponent(cleanedDni)}`,
+          {
+            headers: { Accept: "application/json" },
+            signal: controller.signal,
+          },
+        );
         const payload = (await response.json()) as DniLookupResponse;
 
         if (!response.ok) {
-          setLookup({ status: "error", dni: cleanedDni, error: payload.error ?? "No se pudo validar el DNI." });
+          setLookup({
+            status: "error",
+            dni: cleanedDni,
+            error: payload.error ?? "No se pudo validar el DNI.",
+          });
           return;
         }
 
@@ -509,8 +738,13 @@ function DniLookupNotice({
             : { status: "not-found", dni: cleanedDni },
         );
       } catch (error) {
-        if (error instanceof DOMException && error.name === "AbortError") return;
-        setLookup({ status: "error", dni: cleanedDni, error: "No se pudo validar el DNI." });
+        if (error instanceof DOMException && error.name === "AbortError")
+          return;
+        setLookup({
+          status: "error",
+          dni: cleanedDni,
+          error: "No se pudo validar el DNI.",
+        });
       }
     }, 400);
 
@@ -520,7 +754,8 @@ function DniLookupNotice({
     };
   }, [canLookupDni, cleanedDni]);
 
-  const visibleLookup: DniLookupState = canLookupDni && lookup.dni === cleanedDni ? lookup : { status: "idle" };
+  const visibleLookup: DniLookupState =
+    canLookupDni && lookup.dni === cleanedDni ? lookup : { status: "idle" };
 
   if (visibleLookup.status === "idle") return null;
 
@@ -552,22 +787,34 @@ function DniLookupNotice({
   if (!foundPerson) return null;
 
   const nameConflict = hasLookupNameConflict(foundPerson, firstName, lastName);
-  const roles = foundPerson.roles.length ? foundPerson.roles.join(" / ") : "Registro";
-  const cases = foundPerson.caseCount === 1 ? "1 caso" : `${foundPerson.caseCount} casos`;
+  const roles = foundPerson.roles.length
+    ? foundPerson.roles.join(" / ")
+    : "Registro";
+  const cases =
+    foundPerson.caseCount === 1 ? "1 caso" : `${foundPerson.caseCount} casos`;
 
   return (
     <div
       className={cn(
         "rounded-md border px-3 py-2 text-xs leading-5",
-        nameConflict ? "border-amber-200 bg-amber-50 text-amber-800" : "border-emerald-200 bg-emerald-50 text-emerald-800",
+        nameConflict
+          ? "border-amber-200 bg-amber-50 text-amber-800"
+          : "border-emerald-200 bg-emerald-50 text-emerald-800",
       )}
     >
       <div className="flex items-start gap-2">
-        {nameConflict ? <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /> : <Check className="mt-0.5 h-4 w-4 shrink-0" />}
+        {nameConflict ? (
+          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+        ) : (
+          <Check className="mt-0.5 h-4 w-4 shrink-0" />
+        )}
         <div className="min-w-0 space-y-1">
           <p>
             El DNI ya existe en Personas:{" "}
-            <a href={foundPerson.href} className="font-semibold underline underline-offset-2">
+            <a
+              href={foundPerson.href}
+              className="font-semibold underline underline-offset-2"
+            >
               {foundPerson.displayName}
             </a>
             .
@@ -578,7 +825,11 @@ function DniLookupNotice({
               ? ` - Ultimo caso ${foundPerson.latestCase.internalNumber} (${formatDateTime(foundPerson.latestCase.attendedAt)})`
               : ""}
           </p>
-          {nameConflict ? <p className="font-semibold">El DNI ya figura con otro nombre, revisa los datos.</p> : null}
+          {nameConflict ? (
+            <p className="font-semibold">
+              El DNI ya figura con otro nombre, revisa los datos.
+            </p>
+          ) : null}
           {onUseExisting ? (
             <button
               type="button"
@@ -594,11 +845,21 @@ function DniLookupNotice({
   );
 }
 
-function StepCard({ title, action, children }: { title: string; action?: ReactNode; children: ReactNode }) {
+function StepCard({
+  title,
+  action,
+  children,
+}: {
+  title: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
   return (
     <section className="rounded-lg border border-[#dee2e6] bg-white p-4 shadow-sm">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-[#495057]">{title}</h3>
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-[#495057]">
+          {title}
+        </h3>
         {action}
       </div>
       {children}
@@ -607,14 +868,20 @@ function StepCard({ title, action, children }: { title: string; action?: ReactNo
 }
 
 function SummaryGrid({ children }: { children: ReactNode }) {
-  return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{children}</div>;
+  return (
+    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{children}</div>
+  );
 }
 
 function SummaryItem({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="rounded-md bg-[#f8f9fa] px-3 py-2">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-[#212529]">{label}</p>
-      <div className="mt-1 text-sm font-medium text-[#212529]">{value || "-"}</div>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-[#212529]">
+        {label}
+      </p>
+      <div className="mt-1 text-sm font-medium text-[#212529]">
+        {value || "-"}
+      </div>
     </div>
   );
 }
@@ -646,9 +913,14 @@ function SummaryBlock({
   );
 }
 
-function SummaryItems({ items }: { items: Array<{ label: string; value: string | null | undefined }> }) {
+function SummaryItems({
+  items,
+}: {
+  items: Array<{ label: string; value: string | null | undefined }>;
+}) {
   const visibleItems = items.filter((item) => item.value);
-  if (!visibleItems.length) return <p className="text-sm text-[#212529]">Sin datos cargados.</p>;
+  if (!visibleItems.length)
+    return <p className="text-sm text-[#212529]">Sin datos cargados.</p>;
   return (
     <SummaryGrid>
       {visibleItems.map((item) => (
@@ -678,31 +950,54 @@ export function InterventionForm({
   const formRef = useRef<HTMLFormElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const confirmedSubmitRef = useRef(false);
+  const submitLockedRef = useRef(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [furthestStep, setFurthestStep] = useState(0);
   const [visitedSteps, setVisitedSteps] = useState([true, false, false, false]);
-  const [attemptedSteps, setAttemptedSteps] = useState([false, false, false, false]);
-  const [values, setValues] = useState<InterventionWizardValues>(() => valuesFromRecord(record));
+  const [attemptedSteps, setAttemptedSteps] = useState([
+    false,
+    false,
+    false,
+    false,
+  ]);
+  const [values, setValues] = useState<InterventionWizardValues>(() =>
+    valuesFromRecord(record),
+  );
   const [selectedAttachments, setSelectedAttachments] = useState<File[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
-  const sortedTypes = useMemo(() => sortByLabel(types, (item) => item.label), [types]);
-  const sortedContexts = useMemo(() => sortByLabel(contexts, (item) => item.label), [contexts]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const sortedTypes = useMemo(
+    () => sortByLabel(types, (item) => item.label),
+    [types],
+  );
+  const sortedContexts = useMemo(
+    () => sortByLabel(contexts, (item) => item.label),
+    [contexts],
+  );
 
   const submittedComplainants = useMemo(
     () => values.complainants.filter(hasComplainantData).map(cleanComplainant),
     [values.complainants],
   );
   const submittedLinkedPersons = useMemo(
-    () => values.linkedPersons.filter(hasLinkedPersonData).map(cleanLinkedPerson),
+    () =>
+      values.linkedPersons.filter(hasLinkedPersonData).map(cleanLinkedPerson),
     [values.linkedPersons],
   );
 
   const stepErrors = useMemo(() => validateAllSteps(values), [values]);
   const allValid = stepErrors.every((errors) => errors.length === 0);
-  const currentErrors = attemptedSteps[currentStep] ? stepErrors[currentStep] : [];
-  const effectiveSubmitLabel = record ? (submitLabel ?? "Guardar cambios") : "Crear intervencion";
+  const currentErrors = attemptedSteps[currentStep]
+    ? stepErrors[currentStep]
+    : [];
+  const effectiveSubmitLabel = record
+    ? (submitLabel ?? "Guardar cambios")
+    : "Crear intervencion";
 
-  function setValue<Key extends keyof InterventionWizardValues>(key: Key, value: InterventionWizardValues[Key]) {
+  function setValue<Key extends keyof InterventionWizardValues>(
+    key: Key,
+    value: InterventionWizardValues[Key],
+  ) {
     setValues((current) => ({ ...current, [key]: value }));
   }
 
@@ -740,29 +1035,42 @@ export function InterventionForm({
     });
   }
 
-  function setAutosizedTextareaValue<Key extends "description" | "guidanceProvided" | "confidentialNotes">(
-    key: Key,
-    event: ChangeEvent<HTMLTextAreaElement>,
-  ) {
+  function setAutosizedTextareaValue<
+    Key extends "description" | "guidanceProvided" | "confidentialNotes",
+  >(key: Key, event: ChangeEvent<HTMLTextAreaElement>) {
     resizeTextarea(event.currentTarget);
     setValue(key, event.currentTarget.value);
   }
 
   useEffect(() => {
-    formRef.current?.querySelectorAll<HTMLTextAreaElement>("textarea[data-autosize='true']").forEach(resizeTextarea);
-  }, [currentStep, values.description, values.guidanceProvided, values.confidentialNotes]);
+    formRef.current
+      ?.querySelectorAll<HTMLTextAreaElement>("textarea[data-autosize='true']")
+      .forEach(resizeTextarea);
+  }, [
+    currentStep,
+    values.description,
+    values.guidanceProvided,
+    values.confidentialNotes,
+  ]);
 
   function updateComplainant(index: number, patch: Partial<ComplainantDraft>) {
     setValues((current) => ({
       ...current,
-      complainants: current.complainants.map((person, personIndex) => (personIndex === index ? { ...person, ...patch } : person)),
+      complainants: current.complainants.map((person, personIndex) =>
+        personIndex === index ? { ...person, ...patch } : person,
+      ),
     }));
   }
 
-  function updateLinkedPerson(index: number, patch: Partial<LinkedPersonDraft>) {
+  function updateLinkedPerson(
+    index: number,
+    patch: Partial<LinkedPersonDraft>,
+  ) {
     setValues((current) => ({
       ...current,
-      linkedPersons: current.linkedPersons.map((person, personIndex) => (personIndex === index ? { ...person, ...patch } : person)),
+      linkedPersons: current.linkedPersons.map((person, personIndex) =>
+        personIndex === index ? { ...person, ...patch } : person,
+      ),
     }));
   }
 
@@ -789,11 +1097,15 @@ export function InterventionForm({
   }
 
   function markAttempted(step: number) {
-    setAttemptedSteps((current) => current.map((value, index) => (index === step ? true : value)));
+    setAttemptedSteps((current) =>
+      current.map((value, index) => (index === step ? true : value)),
+    );
   }
 
   function markVisited(step: number) {
-    setVisitedSteps((current) => current.map((value, index) => (index === step ? true : value)));
+    setVisitedSteps((current) =>
+      current.map((value, index) => (index === step ? true : value)),
+    );
   }
 
   function firstInvalidStepBefore(targetStep: number) {
@@ -813,7 +1125,9 @@ export function InterventionForm({
     const field = stepErrors[step][0]?.field;
     if (!field) return;
     window.requestAnimationFrame(() => {
-      const control = formRef.current?.querySelector<HTMLElement>(`[name="${field.replace(/"/g, '\\"')}"]`);
+      const control = formRef.current?.querySelector<HTMLElement>(
+        `[name="${field.replace(/"/g, '\\"')}"]`,
+      );
       control?.focus();
     });
   }
@@ -851,13 +1165,23 @@ export function InterventionForm({
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    if (confirmedSubmitRef.current) return;
+    if (confirmedSubmitRef.current) {
+      if (submitLockedRef.current) {
+        event.preventDefault();
+        return;
+      }
+      submitLockedRef.current = true;
+      setIsSubmitting(true);
+      return;
+    }
 
     event.preventDefault();
 
     if (currentStep < lastStepIndex) {
       event.preventDefault();
       confirmedSubmitRef.current = false;
+      submitLockedRef.current = false;
+      setIsSubmitting(false);
       goNext();
       return;
     }
@@ -866,6 +1190,8 @@ export function InterventionForm({
     if (invalidStep >= 0) {
       event.preventDefault();
       confirmedSubmitRef.current = false;
+      submitLockedRef.current = false;
+      setIsSubmitting(false);
       setAttemptedSteps([true, true, true, true]);
       setCurrentStep(invalidStep);
       markVisited(invalidStep);
@@ -881,6 +1207,8 @@ export function InterventionForm({
     const invalidStep = stepErrors.findIndex((errors) => errors.length > 0);
     if (invalidStep >= 0) {
       confirmedSubmitRef.current = false;
+      submitLockedRef.current = false;
+      setIsSubmitting(false);
       setShowConfirm(false);
       setCurrentStep(invalidStep);
       markVisited(invalidStep);
@@ -904,9 +1232,19 @@ export function InterventionForm({
       noValidate
       className="rounded-lg bg-[#f0f2f5] p-3 sm:p-5"
     >
-      <input type="hidden" name="complainantsPayload" value={JSON.stringify(submittedComplainants)} />
-      <input type="hidden" name="linkedPersonsPayload" value={JSON.stringify(submittedLinkedPersons)} />
-      {record ? <input type="hidden" name="derivedArea" value={values.derivedArea} /> : null}
+      <input
+        type="hidden"
+        name="complainantsPayload"
+        value={JSON.stringify(submittedComplainants)}
+      />
+      <input
+        type="hidden"
+        name="linkedPersonsPayload"
+        value={JSON.stringify(submittedLinkedPersons)}
+      />
+      {record ? (
+        <input type="hidden" name="derivedArea" value={values.derivedArea} />
+      ) : null}
 
       <div className="space-y-4">
         <div className="rounded-lg border border-[#dee2e6] bg-white p-4 shadow-sm">
@@ -914,8 +1252,14 @@ export function InterventionForm({
             {steps.map((step, index) => {
               const isCurrent = index === currentStep;
               const isLocked = !isCurrent && !canOpenStep(index);
-              const hasError = attemptedSteps[index] && stepErrors[index].length > 0;
-              const isComplete = !isCurrent && !isLocked && visitedSteps[index] && !hasError && stepErrors[index].length === 0;
+              const hasError =
+                attemptedSteps[index] && stepErrors[index].length > 0;
+              const isComplete =
+                !isCurrent &&
+                !isLocked &&
+                visitedSteps[index] &&
+                !hasError &&
+                stepErrors[index].length === 0;
 
               return (
                 <li key={step.label}>
@@ -930,12 +1274,24 @@ export function InterventionForm({
                     <span
                       className={cn(
                         "flex h-10 w-10 items-center justify-center rounded-full border text-sm font-bold transition",
-                        isCurrent && !hasError && "border-[#0667b0] bg-[#0667b0] text-white shadow-sm shadow-blue-200",
-                        isCurrent && hasError && "border-rose-500 bg-rose-500 text-white shadow-sm shadow-rose-200",
-                        isComplete && "border-emerald-500 bg-emerald-500 text-white",
-                        hasError && !isCurrent && "border-rose-500 bg-rose-50 text-rose-600",
-                        isLocked && "border-[#dee2e6] bg-[#e9ecef] text-[#adb5bd]",
-                        !isCurrent && !isComplete && !hasError && !isLocked && "border-[#ced4da] bg-white text-[#212529] group-hover:border-blue-300",
+                        isCurrent &&
+                          !hasError &&
+                          "border-[#0667b0] bg-[#0667b0] text-white shadow-sm shadow-blue-200",
+                        isCurrent &&
+                          hasError &&
+                          "border-rose-500 bg-rose-500 text-white shadow-sm shadow-rose-200",
+                        isComplete &&
+                          "border-emerald-500 bg-emerald-500 text-white",
+                        hasError &&
+                          !isCurrent &&
+                          "border-rose-500 bg-rose-50 text-rose-600",
+                        isLocked &&
+                          "border-[#dee2e6] bg-[#e9ecef] text-[#adb5bd]",
+                        !isCurrent &&
+                          !isComplete &&
+                          !hasError &&
+                          !isLocked &&
+                          "border-[#ced4da] bg-white text-[#212529] group-hover:border-blue-300",
                       )}
                     >
                       {isLocked ? (
@@ -955,7 +1311,11 @@ export function InterventionForm({
                         isComplete && "text-emerald-700",
                         hasError && "text-rose-600",
                         isLocked && "text-[#adb5bd]",
-                        !isCurrent && !isComplete && !hasError && !isLocked && "text-[#212529]",
+                        !isCurrent &&
+                          !isComplete &&
+                          !hasError &&
+                          !isLocked &&
+                          "text-[#212529]",
                       )}
                     >
                       {step.label}
@@ -967,7 +1327,10 @@ export function InterventionForm({
           </ol>
         </div>
 
-        <div className={cn(currentStep === 0 ? "grid gap-4" : "hidden")} aria-hidden={currentStep !== 0}>
+        <div
+          className={cn(currentStep === 0 ? "grid gap-4" : "hidden")}
+          aria-hidden={currentStep !== 0}
+        >
           <StepCard title="Situacion">
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               <Field label="Fecha y hora" error={errorFor("attendedAt")}>
@@ -975,7 +1338,9 @@ export function InterventionForm({
                   name="attendedAt"
                   type="datetime-local"
                   value={values.attendedAt}
-                  onChange={(event) => setValue("attendedAt", event.target.value)}
+                  onChange={(event) =>
+                    setValue("attendedAt", event.target.value)
+                  }
                   className={inputClass}
                 />
               </Field>
@@ -984,12 +1349,19 @@ export function InterventionForm({
                   name="deadlineAt"
                   type="datetime-local"
                   value={values.deadlineAt}
-                  onChange={(event) => setValue("deadlineAt", event.target.value)}
+                  onChange={(event) =>
+                    setValue("deadlineAt", event.target.value)
+                  }
                   className={inputClass}
                 />
               </Field>
               <Field label="Tipo" error={errorFor("type")}>
-                <select name="type" value={values.type} onChange={(event) => setValue("type", event.target.value)} className={inputClass}>
+                <select
+                  name="type"
+                  value={values.type}
+                  onChange={(event) => setValue("type", event.target.value)}
+                  className={inputClass}
+                >
                   <option value="">Seleccionar</option>
                   {sortedTypes.map((item) => (
                     <option key={item.value} value={item.value}>
@@ -999,7 +1371,12 @@ export function InterventionForm({
                 </select>
               </Field>
               <Field label="Urgencia" error={errorFor("urgency")}>
-                <select name="urgency" value={values.urgency} onChange={(event) => setValue("urgency", event.target.value)} className={inputClass}>
+                <select
+                  name="urgency"
+                  value={values.urgency}
+                  onChange={(event) => setValue("urgency", event.target.value)}
+                  className={inputClass}
+                >
                   {PRIORITIES.map((item) => (
                     <option key={item} value={item}>
                       {labelFromValue(item)}
@@ -1011,7 +1388,9 @@ export function InterventionForm({
                 <select
                   name="interventionContext"
                   value={values.interventionContext}
-                  onChange={(event) => setValue("interventionContext", event.target.value)}
+                  onChange={(event) =>
+                    setValue("interventionContext", event.target.value)
+                  }
                   className={inputClass}
                 >
                   <option value="">Sin especificar</option>
@@ -1026,7 +1405,9 @@ export function InterventionForm({
                 <input
                   name="oficioNumber"
                   value={values.oficioNumber}
-                  onChange={(event) => setValue("oficioNumber", event.target.value)}
+                  onChange={(event) =>
+                    setValue("oficioNumber", event.target.value)
+                  }
                   className={inputClass}
                 />
               </Field>
@@ -1034,7 +1415,9 @@ export function InterventionForm({
                 <input
                   name="expedienteNumber"
                   value={values.expedienteNumber}
-                  onChange={(event) => setValue("expedienteNumber", event.target.value)}
+                  onChange={(event) =>
+                    setValue("expedienteNumber", event.target.value)
+                  }
                   className={inputClass}
                 />
               </Field>
@@ -1042,13 +1425,21 @@ export function InterventionForm({
           </StepCard>
         </div>
 
-        <div className={cn(currentStep === 1 ? "grid gap-4" : "hidden")} aria-hidden={currentStep !== 1}>
+        <div
+          className={cn(currentStep === 1 ? "grid gap-4" : "hidden")}
+          aria-hidden={currentStep !== 1}
+        >
           <StepCard
             title="Personas denunciantes"
             action={
               <button
                 type="button"
-                onClick={() => setValue("complainants", [...values.complainants, emptyComplainant()])}
+                onClick={() =>
+                  setValue("complainants", [
+                    ...values.complainants,
+                    emptyComplainant(),
+                  ])
+                }
                 className="inline-flex h-9 items-center gap-2 rounded-md border border-[#bee5eb] bg-[#d1ecf1] px-3 text-xs font-semibold text-[#0c5460] transition hover:bg-[#bee5eb]"
               >
                 <Plus className="h-4 w-4" />
@@ -1058,13 +1449,25 @@ export function InterventionForm({
           >
             <div className="space-y-4">
               {values.complainants.map((person, personIndex) => (
-                <div key={person.id} className="rounded-lg border border-[#dee2e6] bg-[#f8f9fa] p-3">
+                <div
+                  key={person.id}
+                  className="rounded-lg border border-[#dee2e6] bg-[#f8f9fa] p-3"
+                >
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-[#212529]">Denunciante {personIndex + 1}</p>
+                    <p className="text-sm font-semibold text-[#212529]">
+                      Denunciante {personIndex + 1}
+                    </p>
                     {values.complainants.length > 1 ? (
                       <button
                         type="button"
-                        onClick={() => setValue("complainants", values.complainants.filter((_, index) => index !== personIndex))}
+                        onClick={() =>
+                          setValue(
+                            "complainants",
+                            values.complainants.filter(
+                              (_, index) => index !== personIndex,
+                            ),
+                          )
+                        }
                         className="inline-flex h-8 items-center gap-1.5 rounded-md border border-rose-100 bg-white px-3 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -1081,7 +1484,15 @@ export function InterventionForm({
                         updateComplainant(
                           personIndex,
                           event.target.checked
-                            ? { isAnonymous: true, dni: "", firstName: "", lastName: "", phone1: "", phone2: "", address: "" }
+                            ? {
+                                isAnonymous: true,
+                                dni: "",
+                                firstName: "",
+                                lastName: "",
+                                phone1: "",
+                                phone2: "",
+                                address: "",
+                              }
                             : { isAnonymous: false },
                         )
                       }
@@ -1090,19 +1501,34 @@ export function InterventionForm({
                     Denunciante anonimo
                   </label>
                   {person.isAnonymous ? (
-                    <p className="rounded-md bg-white px-3 py-2 text-sm text-[#212529]">Denunciante anonimo.</p>
+                    <p className="rounded-md bg-white px-3 py-2 text-sm text-[#212529]">
+                      Denunciante anonimo.
+                    </p>
                   ) : (
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                       <div className="space-y-2">
-                        <Field label="DNI" error={errorFor(`complainants.${personIndex}.dni`)}>
+                        <Field
+                          label="DNI"
+                          error={errorFor(`complainants.${personIndex}.dni`)}
+                        >
                           <input
                             name={`complainants.${personIndex}.dni`}
                             value={person.dni}
-                            onChange={(event) => updateComplainant(personIndex, { dni: onlyDigits(event.target.value, 8) })}
-                            onKeyDown={(event) => preventInvalidKey(event, /^\d$/)}
+                            onChange={(event) =>
+                              updateComplainant(personIndex, {
+                                dni: onlyDigits(event.target.value, 8),
+                              })
+                            }
+                            onKeyDown={(event) =>
+                              preventInvalidKey(event, /^\d$/)
+                            }
                             onPaste={(event) => {
                               event.preventDefault();
-                              updateComplainant(personIndex, { dni: valueAfterPaste(event, (value) => onlyDigits(value, 8)) });
+                              updateComplainant(personIndex, {
+                                dni: valueAfterPaste(event, (value) =>
+                                  onlyDigits(value, 8),
+                                ),
+                              });
                             }}
                             inputMode="numeric"
                             className={inputClass}
@@ -1113,72 +1539,148 @@ export function InterventionForm({
                           firstName={person.firstName}
                           lastName={person.lastName}
                           disabled={person.isAnonymous}
-                          onUseExisting={(existingPerson) => applyExistingComplainant(personIndex, existingPerson)}
+                          onUseExisting={(existingPerson) =>
+                            applyExistingComplainant(
+                              personIndex,
+                              existingPerson,
+                            )
+                          }
                         />
                       </div>
-                      <Field label="Apellido" error={errorFor(`complainants.${personIndex}.lastName`)}>
+                      <Field
+                        label="Apellido"
+                        error={errorFor(`complainants.${personIndex}.lastName`)}
+                      >
                         <input
                           name={`complainants.${personIndex}.lastName`}
                           value={person.lastName}
-                          onChange={(event) => updateComplainant(personIndex, { lastName: onlyLettersAndSpaces(event.target.value) })}
-                          onKeyDown={(event) => preventInvalidKey(event, /^[\p{L} ]$/u)}
+                          onChange={(event) =>
+                            updateComplainant(personIndex, {
+                              lastName: onlyLettersAndSpaces(
+                                event.target.value,
+                              ),
+                            })
+                          }
+                          onKeyDown={(event) =>
+                            preventInvalidKey(event, /^[\p{L} ]$/u)
+                          }
                           onPaste={(event) => {
                             event.preventDefault();
-                            updateComplainant(personIndex, { lastName: valueAfterPaste(event, onlyLettersAndSpaces) });
+                            updateComplainant(personIndex, {
+                              lastName: valueAfterPaste(
+                                event,
+                                onlyLettersAndSpaces,
+                              ),
+                            });
                           }}
                           className={inputClass}
                         />
                       </Field>
-                      <Field label="Nombre" error={errorFor(`complainants.${personIndex}.firstName`)}>
+                      <Field
+                        label="Nombre"
+                        error={errorFor(
+                          `complainants.${personIndex}.firstName`,
+                        )}
+                      >
                         <input
                           name={`complainants.${personIndex}.firstName`}
                           value={person.firstName}
-                          onChange={(event) => updateComplainant(personIndex, { firstName: onlyLettersAndSpaces(event.target.value) })}
-                          onKeyDown={(event) => preventInvalidKey(event, /^[\p{L} ]$/u)}
+                          onChange={(event) =>
+                            updateComplainant(personIndex, {
+                              firstName: onlyLettersAndSpaces(
+                                event.target.value,
+                              ),
+                            })
+                          }
+                          onKeyDown={(event) =>
+                            preventInvalidKey(event, /^[\p{L} ]$/u)
+                          }
                           onPaste={(event) => {
                             event.preventDefault();
-                            updateComplainant(personIndex, { firstName: valueAfterPaste(event, onlyLettersAndSpaces) });
+                            updateComplainant(personIndex, {
+                              firstName: valueAfterPaste(
+                                event,
+                                onlyLettersAndSpaces,
+                              ),
+                            });
                           }}
                           className={inputClass}
                         />
                       </Field>
-                      <Field label="Telefono 1" error={errorFor(`complainants.${personIndex}.phone1`)}>
+                      <Field
+                        label="Telefono 1"
+                        error={errorFor(`complainants.${personIndex}.phone1`)}
+                      >
                         <input
                           name={`complainants.${personIndex}.phone1`}
                           value={person.phone1}
-                          onChange={(event) => updateComplainant(personIndex, { phone1: onlyDigits(event.target.value, 10) })}
-                          onKeyDown={(event) => preventInvalidKey(event, /^\d$/)}
+                          onChange={(event) =>
+                            updateComplainant(personIndex, {
+                              phone1: onlyDigits(event.target.value, 10),
+                            })
+                          }
+                          onKeyDown={(event) =>
+                            preventInvalidKey(event, /^\d$/)
+                          }
                           onPaste={(event) => {
                             event.preventDefault();
-                            updateComplainant(personIndex, { phone1: valueAfterPaste(event, (value) => onlyDigits(value, 10)) });
+                            updateComplainant(personIndex, {
+                              phone1: valueAfterPaste(event, (value) =>
+                                onlyDigits(value, 10),
+                              ),
+                            });
                           }}
                           inputMode="numeric"
                           className={inputClass}
                         />
                       </Field>
-                      <Field label="Telefono 2" error={errorFor(`complainants.${personIndex}.phone2`)}>
+                      <Field
+                        label="Telefono 2"
+                        error={errorFor(`complainants.${personIndex}.phone2`)}
+                      >
                         <input
                           name={`complainants.${personIndex}.phone2`}
                           value={person.phone2}
-                          onChange={(event) => updateComplainant(personIndex, { phone2: onlyDigits(event.target.value, 10) })}
-                          onKeyDown={(event) => preventInvalidKey(event, /^\d$/)}
+                          onChange={(event) =>
+                            updateComplainant(personIndex, {
+                              phone2: onlyDigits(event.target.value, 10),
+                            })
+                          }
+                          onKeyDown={(event) =>
+                            preventInvalidKey(event, /^\d$/)
+                          }
                           onPaste={(event) => {
                             event.preventDefault();
-                            updateComplainant(personIndex, { phone2: valueAfterPaste(event, (value) => onlyDigits(value, 10)) });
+                            updateComplainant(personIndex, {
+                              phone2: valueAfterPaste(event, (value) =>
+                                onlyDigits(value, 10),
+                              ),
+                            });
                           }}
                           inputMode="numeric"
                           className={inputClass}
                         />
                       </Field>
-                      <Field label="Domicilio" error={errorFor(`complainants.${personIndex}.address`)}>
+                      <Field
+                        label="Domicilio"
+                        error={errorFor(`complainants.${personIndex}.address`)}
+                      >
                         <input
                           name={`complainants.${personIndex}.address`}
                           value={person.address}
-                          onChange={(event) => updateComplainant(personIndex, { address: onlyAddressChars(event.target.value) })}
-                          onKeyDown={(event) => preventInvalidKey(event, /^[\p{L}\d .,\-/]$/u)}
+                          onChange={(event) =>
+                            updateComplainant(personIndex, {
+                              address: onlyAddressChars(event.target.value),
+                            })
+                          }
+                          onKeyDown={(event) =>
+                            preventInvalidKey(event, /^[\p{L}\d .,\-/]$/u)
+                          }
                           onPaste={(event) => {
                             event.preventDefault();
-                            updateComplainant(personIndex, { address: valueAfterPaste(event, onlyAddressChars) });
+                            updateComplainant(personIndex, {
+                              address: valueAfterPaste(event, onlyAddressChars),
+                            });
                           }}
                           className={inputClass}
                         />
@@ -1195,7 +1697,12 @@ export function InterventionForm({
             action={
               <button
                 type="button"
-                onClick={() => setValue("linkedPersons", [...values.linkedPersons, emptyLinkedPerson()])}
+                onClick={() =>
+                  setValue("linkedPersons", [
+                    ...values.linkedPersons,
+                    emptyLinkedPerson(),
+                  ])
+                }
                 className="inline-flex h-9 items-center gap-2 rounded-md border border-[#bee5eb] bg-[#d1ecf1] px-3 text-xs font-semibold text-[#0c5460] transition hover:bg-[#bee5eb]"
               >
                 <Plus className="h-4 w-4" />
@@ -1205,13 +1712,25 @@ export function InterventionForm({
           >
             <div className="space-y-4">
               {values.linkedPersons.map((person, personIndex) => (
-                <div key={person.id} className="rounded-lg border border-[#dee2e6] bg-[#f8f9fa] p-3">
+                <div
+                  key={person.id}
+                  className="rounded-lg border border-[#dee2e6] bg-[#f8f9fa] p-3"
+                >
                   <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-sm font-semibold text-[#212529]">Persona denunciada / vinculada {personIndex + 1}</p>
+                    <p className="text-sm font-semibold text-[#212529]">
+                      Persona denunciada / vinculada {personIndex + 1}
+                    </p>
                     {values.linkedPersons.length > 1 ? (
                       <button
                         type="button"
-                        onClick={() => setValue("linkedPersons", values.linkedPersons.filter((_, index) => index !== personIndex))}
+                        onClick={() =>
+                          setValue(
+                            "linkedPersons",
+                            values.linkedPersons.filter(
+                              (_, index) => index !== personIndex,
+                            ),
+                          )
+                        }
                         className="inline-flex h-8 items-center gap-1.5 rounded-md border border-rose-100 bg-white px-3 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -1221,15 +1740,28 @@ export function InterventionForm({
                   </div>
                   <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                     <div className="space-y-2">
-                      <Field label="DNI" error={errorFor(`linkedPersons.${personIndex}.dni`)}>
+                      <Field
+                        label="DNI"
+                        error={errorFor(`linkedPersons.${personIndex}.dni`)}
+                      >
                         <input
                           name={`linkedPersons.${personIndex}.dni`}
                           value={person.dni}
-                          onChange={(event) => updateLinkedPerson(personIndex, { dni: onlyDigits(event.target.value, 8) })}
-                          onKeyDown={(event) => preventInvalidKey(event, /^\d$/)}
+                          onChange={(event) =>
+                            updateLinkedPerson(personIndex, {
+                              dni: onlyDigits(event.target.value, 8),
+                            })
+                          }
+                          onKeyDown={(event) =>
+                            preventInvalidKey(event, /^\d$/)
+                          }
                           onPaste={(event) => {
                             event.preventDefault();
-                            updateLinkedPerson(personIndex, { dni: valueAfterPaste(event, (value) => onlyDigits(value, 8)) });
+                            updateLinkedPerson(personIndex, {
+                              dni: valueAfterPaste(event, (value) =>
+                                onlyDigits(value, 8),
+                              ),
+                            });
                           }}
                           inputMode="numeric"
                           className={inputClass}
@@ -1239,72 +1771,139 @@ export function InterventionForm({
                         dni={person.dni}
                         firstName={person.firstName}
                         lastName={person.apellidoApodoManual}
-                        onUseExisting={(existingPerson) => applyExistingLinkedPerson(personIndex, existingPerson)}
+                        onUseExisting={(existingPerson) =>
+                          applyExistingLinkedPerson(personIndex, existingPerson)
+                        }
                       />
                     </div>
-                    <Field label="Apellido / apodo" error={errorFor(`linkedPersons.${personIndex}.apellidoApodoManual`)}>
+                    <Field
+                      label="Apellido / apodo"
+                      error={errorFor(
+                        `linkedPersons.${personIndex}.apellidoApodoManual`,
+                      )}
+                    >
                       <input
                         name={`linkedPersons.${personIndex}.apellidoApodoManual`}
                         value={person.apellidoApodoManual}
-                        onChange={(event) => updateLinkedPerson(personIndex, { apellidoApodoManual: onlyLettersAndSpaces(event.target.value) })}
-                        onKeyDown={(event) => preventInvalidKey(event, /^[\p{L} ]$/u)}
+                        onChange={(event) =>
+                          updateLinkedPerson(personIndex, {
+                            apellidoApodoManual: onlyLettersAndSpaces(
+                              event.target.value,
+                            ),
+                          })
+                        }
+                        onKeyDown={(event) =>
+                          preventInvalidKey(event, /^[\p{L} ]$/u)
+                        }
                         onPaste={(event) => {
                           event.preventDefault();
-                          updateLinkedPerson(personIndex, { apellidoApodoManual: valueAfterPaste(event, onlyLettersAndSpaces) });
+                          updateLinkedPerson(personIndex, {
+                            apellidoApodoManual: valueAfterPaste(
+                              event,
+                              onlyLettersAndSpaces,
+                            ),
+                          });
                         }}
                         className={inputClass}
                       />
                     </Field>
-                    <Field label="Nombre" error={errorFor(`linkedPersons.${personIndex}.firstName`)}>
+                    <Field
+                      label="Nombre"
+                      error={errorFor(`linkedPersons.${personIndex}.firstName`)}
+                    >
                       <input
                         name={`linkedPersons.${personIndex}.firstName`}
                         value={person.firstName}
-                        onChange={(event) => updateLinkedPerson(personIndex, { firstName: onlyLettersAndSpaces(event.target.value) })}
-                        onKeyDown={(event) => preventInvalidKey(event, /^[\p{L} ]$/u)}
+                        onChange={(event) =>
+                          updateLinkedPerson(personIndex, {
+                            firstName: onlyLettersAndSpaces(event.target.value),
+                          })
+                        }
+                        onKeyDown={(event) =>
+                          preventInvalidKey(event, /^[\p{L} ]$/u)
+                        }
                         onPaste={(event) => {
                           event.preventDefault();
-                          updateLinkedPerson(personIndex, { firstName: valueAfterPaste(event, onlyLettersAndSpaces) });
+                          updateLinkedPerson(personIndex, {
+                            firstName: valueAfterPaste(
+                              event,
+                              onlyLettersAndSpaces,
+                            ),
+                          });
                         }}
                         className={inputClass}
                       />
                     </Field>
-                    <Field label="Telefono 1" error={errorFor(`linkedPersons.${personIndex}.phone1`)}>
+                    <Field
+                      label="Telefono 1"
+                      error={errorFor(`linkedPersons.${personIndex}.phone1`)}
+                    >
                       <input
                         name={`linkedPersons.${personIndex}.phone1`}
                         value={person.phone1}
-                        onChange={(event) => updateLinkedPerson(personIndex, { phone1: onlyDigits(event.target.value, 10) })}
+                        onChange={(event) =>
+                          updateLinkedPerson(personIndex, {
+                            phone1: onlyDigits(event.target.value, 10),
+                          })
+                        }
                         onKeyDown={(event) => preventInvalidKey(event, /^\d$/)}
                         onPaste={(event) => {
                           event.preventDefault();
-                          updateLinkedPerson(personIndex, { phone1: valueAfterPaste(event, (value) => onlyDigits(value, 10)) });
+                          updateLinkedPerson(personIndex, {
+                            phone1: valueAfterPaste(event, (value) =>
+                              onlyDigits(value, 10),
+                            ),
+                          });
                         }}
                         inputMode="numeric"
                         className={inputClass}
                       />
                     </Field>
-                    <Field label="Telefono 2" error={errorFor(`linkedPersons.${personIndex}.phone2`)}>
+                    <Field
+                      label="Telefono 2"
+                      error={errorFor(`linkedPersons.${personIndex}.phone2`)}
+                    >
                       <input
                         name={`linkedPersons.${personIndex}.phone2`}
                         value={person.phone2}
-                        onChange={(event) => updateLinkedPerson(personIndex, { phone2: onlyDigits(event.target.value, 10) })}
+                        onChange={(event) =>
+                          updateLinkedPerson(personIndex, {
+                            phone2: onlyDigits(event.target.value, 10),
+                          })
+                        }
                         onKeyDown={(event) => preventInvalidKey(event, /^\d$/)}
                         onPaste={(event) => {
                           event.preventDefault();
-                          updateLinkedPerson(personIndex, { phone2: valueAfterPaste(event, (value) => onlyDigits(value, 10)) });
+                          updateLinkedPerson(personIndex, {
+                            phone2: valueAfterPaste(event, (value) =>
+                              onlyDigits(value, 10),
+                            ),
+                          });
                         }}
                         inputMode="numeric"
                         className={inputClass}
                       />
                     </Field>
-                    <Field label="Domicilio" error={errorFor(`linkedPersons.${personIndex}.address`)}>
+                    <Field
+                      label="Domicilio"
+                      error={errorFor(`linkedPersons.${personIndex}.address`)}
+                    >
                       <input
                         name={`linkedPersons.${personIndex}.address`}
                         value={person.address}
-                        onChange={(event) => updateLinkedPerson(personIndex, { address: onlyAddressChars(event.target.value) })}
-                        onKeyDown={(event) => preventInvalidKey(event, /^[\p{L}\d .,\-/]$/u)}
+                        onChange={(event) =>
+                          updateLinkedPerson(personIndex, {
+                            address: onlyAddressChars(event.target.value),
+                          })
+                        }
+                        onKeyDown={(event) =>
+                          preventInvalidKey(event, /^[\p{L}\d .,\-/]$/u)
+                        }
                         onPaste={(event) => {
                           event.preventDefault();
-                          updateLinkedPerson(personIndex, { address: valueAfterPaste(event, onlyAddressChars) });
+                          updateLinkedPerson(personIndex, {
+                            address: valueAfterPaste(event, onlyAddressChars),
+                          });
                         }}
                         className={inputClass}
                       />
@@ -1316,14 +1915,19 @@ export function InterventionForm({
           </StepCard>
         </div>
 
-        <div className={cn(currentStep === 2 ? "grid gap-4" : "hidden")} aria-hidden={currentStep !== 2}>
+        <div
+          className={cn(currentStep === 2 ? "grid gap-4" : "hidden")}
+          aria-hidden={currentStep !== 2}
+        >
           <StepCard title="Relato">
             <div className="space-y-4">
               <Field label="Descripcion" error={errorFor("description")}>
                 <textarea
                   name="description"
                   value={values.description}
-                  onChange={(event) => setAutosizedTextareaValue("description", event)}
+                  onChange={(event) =>
+                    setAutosizedTextareaValue("description", event)
+                  }
                   data-autosize="true"
                   className={autosizeTextareaClass}
                 />
@@ -1332,7 +1936,9 @@ export function InterventionForm({
                 <textarea
                   name="guidanceProvided"
                   value={values.guidanceProvided}
-                  onChange={(event) => setAutosizedTextareaValue("guidanceProvided", event)}
+                  onChange={(event) =>
+                    setAutosizedTextareaValue("guidanceProvided", event)
+                  }
                   data-autosize="true"
                   className={autosizeTextareaClass}
                 />
@@ -1341,7 +1947,9 @@ export function InterventionForm({
                 <textarea
                   name="confidentialNotes"
                   value={values.confidentialNotes}
-                  onChange={(event) => setAutosizedTextareaValue("confidentialNotes", event)}
+                  onChange={(event) =>
+                    setAutosizedTextareaValue("confidentialNotes", event)
+                  }
                   data-autosize="true"
                   className={autosizeTextareaClass}
                 />
@@ -1350,11 +1958,19 @@ export function InterventionForm({
           </StepCard>
         </div>
 
-        <div className={cn(currentStep === 3 ? "grid gap-4" : "hidden")} aria-hidden={currentStep !== 3}>
+        <div
+          className={cn(currentStep === 3 ? "grid gap-4" : "hidden")}
+          aria-hidden={currentStep !== 3}
+        >
           <StepCard title="Cierre">
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               <Field label="Estado" error={errorFor("status")}>
-                <select name="status" value={values.status} onChange={(event) => setValue("status", event.target.value)} className={inputClass}>
+                <select
+                  name="status"
+                  value={values.status}
+                  onChange={(event) => setValue("status", event.target.value)}
+                  className={inputClass}
+                >
                   {JURIDICAL_STATUSES.map((item) => (
                     <option key={item} value={item}>
                       {labelFromValue(item)}
@@ -1367,7 +1983,9 @@ export function InterventionForm({
                   <select
                     name="derivedArea"
                     value={values.derivedArea}
-                    onChange={(event) => setValue("derivedArea", event.target.value)}
+                    onChange={(event) =>
+                      setValue("derivedArea", event.target.value)
+                    }
                     className={inputClass}
                   >
                     <option value="">Sin derivacion</option>
@@ -1393,13 +2011,20 @@ export function InterventionForm({
                         className={fileInputClass}
                       />
                       <p className="text-xs text-[#212529]">
-                        {selectedAttachments.length ? `${selectedAttachments.length} archivo(s) seleccionado(s).` : "Sin adjuntos seleccionados."}
+                        {selectedAttachments.length
+                          ? `${selectedAttachments.length} archivo(s) seleccionado(s).`
+                          : "Sin adjuntos seleccionados."}
                       </p>
                       {selectedAttachments.length ? (
                         <ul className="space-y-1 rounded-md bg-white px-3 py-2 text-sm text-[#495057]">
                           {selectedAttachments.map((file, index) => (
-                            <li key={`${attachmentKey(file)}-${index}`} className="flex items-center justify-between gap-3">
-                              <span className="min-w-0 truncate">{file.name}</span>
+                            <li
+                              key={`${attachmentKey(file)}-${index}`}
+                              className="flex items-center justify-between gap-3"
+                            >
+                              <span className="min-w-0 truncate">
+                                {file.name}
+                              </span>
                               <button
                                 type="button"
                                 onClick={() => removeAttachment(index)}
@@ -1452,12 +2077,23 @@ export function InterventionForm({
           </div>
 
           {currentStep < lastStepIndex ? (
-            <Button type="button" onClick={goNext} className="border-[#0667b0] bg-[#0667b0] hover:bg-blue-700">
-              {currentStep === lastStepIndex - 1 ? "Continuar a cierre" : "Continuar"}
+            <Button
+              type="button"
+              onClick={goNext}
+              className="border-[#0667b0] bg-[#0667b0] hover:bg-blue-700"
+            >
+              {currentStep === lastStepIndex - 1
+                ? "Continuar a cierre"
+                : "Continuar"}
               <ChevronRight className="h-4 w-4" />
             </Button>
           ) : (
-            <Button type="button" disabled={!allValid} onClick={openSummaryFromClosure} className="border-[#0667b0] bg-[#0667b0] hover:bg-blue-700">
+            <Button
+              type="button"
+              disabled={!allValid}
+              onClick={openSummaryFromClosure}
+              className="border-[#0667b0] bg-[#0667b0] hover:bg-blue-700"
+            >
               {effectiveSubmitLabel}
             </Button>
           )}
@@ -1469,9 +2105,15 @@ export function InterventionForm({
           <div className="max-h-[90vh] w-full max-w-5xl overflow-y-auto rounded-lg bg-white p-5 shadow-xl">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-3 border-b border-[#dee2e6] pb-4">
               <div>
-                <h3 className="text-lg font-semibold text-[#212529]">Resumen de la intervencion</h3>
+                <h3 className="text-lg font-semibold text-[#212529]">
+                  Resumen de la intervencion
+                </h3>
               </div>
-              <Button type="button" variant="secondary" onClick={() => setShowConfirm(false)}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowConfirm(false)}
+              >
                 Editar
               </Button>
             </div>
@@ -1479,31 +2121,78 @@ export function InterventionForm({
             <div className="divide-y divide-slate-200">
               <SummaryBlock title="Situacion" onEdit={() => goToStep(0)}>
                 <SummaryGrid>
-                  <SummaryItem label="Fecha y hora" value={values.attendedAt ? formatDateTime(values.attendedAt) : "-"} />
-                  <SummaryItem label="Plazo" value={values.deadlineAt ? formatDateTime(values.deadlineAt) : "Sin plazo"} />
-                  <SummaryItem label="Tipo" value={selectedLabel(sortedTypes, values.type)} />
-                  <SummaryItem label="Urgencia" value={labelFromValue(values.urgency)} />
-                  <SummaryItem label="Contexto" value={selectedLabel(sortedContexts, values.interventionContext)} />
-                  <SummaryItem label="Numero de oficio" value={values.oficioNumber} />
-                  <SummaryItem label="Numero de expediente / legajo" value={values.expedienteNumber} />
+                  <SummaryItem
+                    label="Fecha y hora"
+                    value={
+                      values.attendedAt
+                        ? formatDateTime(values.attendedAt)
+                        : "-"
+                    }
+                  />
+                  <SummaryItem
+                    label="Plazo"
+                    value={
+                      values.deadlineAt
+                        ? formatDateTime(values.deadlineAt)
+                        : "Sin plazo"
+                    }
+                  />
+                  <SummaryItem
+                    label="Tipo"
+                    value={selectedLabel(sortedTypes, values.type)}
+                  />
+                  <SummaryItem
+                    label="Urgencia"
+                    value={labelFromValue(values.urgency)}
+                  />
+                  <SummaryItem
+                    label="Contexto"
+                    value={selectedLabel(
+                      sortedContexts,
+                      values.interventionContext,
+                    )}
+                  />
+                  <SummaryItem
+                    label="Numero de oficio"
+                    value={values.oficioNumber}
+                  />
+                  <SummaryItem
+                    label="Numero de expediente / legajo"
+                    value={values.expedienteNumber}
+                  />
                 </SummaryGrid>
               </SummaryBlock>
 
-              <SummaryBlock title="Personas denunciantes" onEdit={() => goToStep(1)}>
+              <SummaryBlock
+                title="Personas denunciantes"
+                onEdit={() => goToStep(1)}
+              >
                 {submittedComplainants.length ? (
                   <div className="space-y-3">
                     {submittedComplainants.map((person, index) => (
-                      <div key={`summary-complainant-${index}`} className="rounded-md border border-[#e9ecef] bg-white p-3">
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#212529]">Denunciante {index + 1}</p>
+                      <div
+                        key={`summary-complainant-${index}`}
+                        className="rounded-md border border-[#e9ecef] bg-white p-3"
+                      >
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#212529]">
+                          Denunciante {index + 1}
+                        </p>
                         {person.isAnonymous ? (
-                          <p className="text-sm font-semibold text-[#212529]">Denunciante anonimo</p>
+                          <p className="text-sm font-semibold text-[#212529]">
+                            Denunciante anonimo
+                          </p>
                         ) : (
                           <SummaryItems
                             items={[
                               { label: "DNI", value: person.dni },
                               { label: "Apellido", value: person.lastName },
                               { label: "Nombre", value: person.firstName },
-                              { label: "Telefono", value: [person.phone1, person.phone2].filter(Boolean).join(" / ") },
+                              {
+                                label: "Telefono",
+                                value: [person.phone1, person.phone2]
+                                  .filter(Boolean)
+                                  .join(" / "),
+                              },
                               { label: "Domicilio", value: person.address },
                             ]}
                           />
@@ -1512,22 +2201,40 @@ export function InterventionForm({
                     ))}
                   </div>
                 ) : (
-                  <p className="rounded-md bg-[#f8f9fa] px-3 py-2 text-sm text-[#495057]">Sin denunciantes cargados.</p>
+                  <p className="rounded-md bg-[#f8f9fa] px-3 py-2 text-sm text-[#495057]">
+                    Sin denunciantes cargados.
+                  </p>
                 )}
               </SummaryBlock>
 
-              <SummaryBlock title="Personas denunciadas / vinculadas" onEdit={() => goToStep(1)}>
+              <SummaryBlock
+                title="Personas denunciadas / vinculadas"
+                onEdit={() => goToStep(1)}
+              >
                 {submittedLinkedPersons.length ? (
                   <div className="space-y-3">
                     {submittedLinkedPersons.map((person, index) => (
-                      <div key={`summary-linked-${index}`} className="rounded-md border border-[#e9ecef] bg-white p-3">
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#212529]">Persona {index + 1}</p>
+                      <div
+                        key={`summary-linked-${index}`}
+                        className="rounded-md border border-[#e9ecef] bg-white p-3"
+                      >
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#212529]">
+                          Persona {index + 1}
+                        </p>
                         <SummaryItems
                           items={[
                             { label: "DNI", value: person.dni },
-                            { label: "Apellido / apodo", value: person.apellidoApodoManual },
+                            {
+                              label: "Apellido / apodo",
+                              value: person.apellidoApodoManual,
+                            },
                             { label: "Nombre", value: person.firstName },
-                            { label: "Telefono", value: [person.phone1, person.phone2].filter(Boolean).join(" / ") },
+                            {
+                              label: "Telefono",
+                              value: [person.phone1, person.phone2]
+                                .filter(Boolean)
+                                .join(" / "),
+                            },
                             { label: "Domicilio", value: person.address },
                           ]}
                         />
@@ -1535,37 +2242,68 @@ export function InterventionForm({
                     ))}
                   </div>
                 ) : (
-                  <p className="rounded-md bg-[#f8f9fa] px-3 py-2 text-sm text-[#495057]">Sin personas denunciadas o vinculadas cargadas.</p>
+                  <p className="rounded-md bg-[#f8f9fa] px-3 py-2 text-sm text-[#495057]">
+                    Sin personas denunciadas o vinculadas cargadas.
+                  </p>
                 )}
               </SummaryBlock>
 
               <SummaryBlock title="Relato" onEdit={() => goToStep(2)}>
                 <div className="space-y-3 text-sm leading-6 text-[#212529]">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[#212529]">Descripcion</p>
-                    <p className="mt-1 whitespace-pre-wrap">{display(values.description)}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#212529]">
+                      Descripcion
+                    </p>
+                    <p className="mt-1 whitespace-pre-wrap">
+                      {display(values.description)}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[#212529]">Orientacion o intervencion realizada</p>
-                    <p className="mt-1 whitespace-pre-wrap">{display(values.guidanceProvided)}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#212529]">
+                      Orientacion o intervencion realizada
+                    </p>
+                    <p className="mt-1 whitespace-pre-wrap">
+                      {display(values.guidanceProvided)}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[#212529]">Notas internas confidenciales</p>
-                    <p className="mt-1 whitespace-pre-wrap">{display(values.confidentialNotes)}</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#212529]">
+                      Notas internas confidenciales
+                    </p>
+                    <p className="mt-1 whitespace-pre-wrap">
+                      {display(values.confidentialNotes)}
+                    </p>
                   </div>
                 </div>
               </SummaryBlock>
 
               <SummaryBlock title="Cierre" onEdit={() => goToStep(3)}>
                 <SummaryGrid>
-                  <SummaryItem label="Estado" value={labelFromValue(values.status)} />
-                  {!record ? <SummaryItem label="Area derivada" value={values.derivedArea || "Sin derivacion"} /> : null}
-                  <SummaryItem label="Cantidad de adjuntos" value={!record ? selectedAttachments.length : "Sin cambios desde este formulario"} />
+                  <SummaryItem
+                    label="Estado"
+                    value={labelFromValue(values.status)}
+                  />
+                  {!record ? (
+                    <SummaryItem
+                      label="Area derivada"
+                      value={values.derivedArea || "Sin derivacion"}
+                    />
+                  ) : null}
+                  <SummaryItem
+                    label="Cantidad de adjuntos"
+                    value={
+                      !record
+                        ? selectedAttachments.length
+                        : "Sin cambios desde este formulario"
+                    }
+                  />
                 </SummaryGrid>
                 {selectedAttachments.length ? (
                   <ul className="mt-3 space-y-1 rounded-md bg-[#f8f9fa] px-3 py-2 text-sm text-[#495057]">
                     {selectedAttachments.map((file, index) => (
-                      <li key={`${attachmentKey(file)}-${index}`}>{file.name}</li>
+                      <li key={`${attachmentKey(file)}-${index}`}>
+                        {file.name}
+                      </li>
                     ))}
                   </ul>
                 ) : null}
@@ -1573,17 +2311,26 @@ export function InterventionForm({
             </div>
 
             <div className="mt-5 flex flex-wrap justify-end gap-2 border-t border-[#dee2e6] pt-4">
-              <Button type="button" variant="secondary" onClick={() => setShowConfirm(false)}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setShowConfirm(false)}
+              >
                 Editar
               </Button>
               <Button
                 type="submit"
-                onClick={() => {
+                disabled={isSubmitting}
+                onClick={(event) => {
+                  if (submitLockedRef.current) {
+                    event.preventDefault();
+                    return;
+                  }
                   confirmedSubmitRef.current = true;
                 }}
                 className="border-[#0667b0] bg-[#0667b0] hover:bg-blue-700"
               >
-                Confirmar
+                {isSubmitting ? "Guardando..." : "Confirmar"}
               </Button>
             </div>
           </div>

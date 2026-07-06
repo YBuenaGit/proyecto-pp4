@@ -34,10 +34,21 @@ function rowCount(children: ReactNode) {
 }
 
 function isInteractiveTarget(target: EventTarget | null) {
-  return target instanceof Element && Boolean(target.closest("a,button,input,select,textarea,label,summary,[role='button'],[data-row-action]"));
+  return (
+    target instanceof Element &&
+    Boolean(
+      target.closest(
+        "a,button,input,select,textarea,label,summary,[role='button'],[data-row-action]",
+      ),
+    )
+  );
 }
 
-function paginationHref(pathname: string, params: URLSearchParams, page: number) {
+function paginationHref(
+  pathname: string,
+  params: URLSearchParams,
+  page: number,
+) {
   const next = new URLSearchParams(params);
 
   if (page <= 1) {
@@ -86,7 +97,11 @@ function TablePagination({
           </button>
         ) : (
           <Link
-            href={paginationHref(pathname, new URLSearchParams(searchParams.toString()), safePage - 1)}
+            href={paginationHref(
+              pathname,
+              new URLSearchParams(searchParams.toString()),
+              safePage - 1,
+            )}
             className="inline-flex h-9 w-10 items-center justify-center border-r border-[#c7d2de] bg-white text-[#0667b0] transition duration-150 hover:bg-[#e8f2ff]"
             aria-label="Página anterior"
           >
@@ -113,7 +128,11 @@ function TablePagination({
           </button>
         ) : (
           <Link
-            href={paginationHref(pathname, new URLSearchParams(searchParams.toString()), safePage + 1)}
+            href={paginationHref(
+              pathname,
+              new URLSearchParams(searchParams.toString()),
+              safePage + 1,
+            )}
             className="inline-flex h-9 w-10 items-center justify-center border-l border-[#c7d2de] bg-white text-[#0667b0] transition duration-150 hover:bg-[#e8f2ff]"
             aria-label="Página siguiente"
           >
@@ -125,11 +144,18 @@ function TablePagination({
   );
 }
 
-function withMobileLabels(children: ReactNode, headers: string[], rowClick: boolean) {
+function withMobileLabels(
+  children: ReactNode,
+  headers: string[],
+  rowClick: boolean,
+) {
   return Children.map(children, (row) => {
     if (!isValidElement(row)) return row;
 
-    const rowElement = row as ReactElement<{ children?: ReactNode; className?: string }>;
+    const rowElement = row as ReactElement<{
+      children?: ReactNode;
+      className?: string;
+    }>;
 
     const cells = Children.map(rowElement.props.children, (cell, index) => {
       if (!isValidElement(cell)) return cell;
@@ -175,13 +201,18 @@ export function Table({
     if (!rowClick) return;
     if (isInteractiveTarget(event.target)) return;
 
-    const row = event.target instanceof Element ? event.target.closest("tr") : null;
+    const row =
+      event.target instanceof Element ? event.target.closest("tr") : null;
     const link = row?.querySelector<HTMLAnchorElement>("a[href]");
     const href = link?.getAttribute("href");
 
     if (!href) return;
 
-    if (href.startsWith("http") || href.startsWith("mailto:") || href.startsWith("tel:")) {
+    if (
+      href.startsWith("http") ||
+      href.startsWith("mailto:") ||
+      href.startsWith("tel:")
+    ) {
       window.location.href = href;
       return;
     }
@@ -192,7 +223,8 @@ export function Table({
   return (
     <section className="overflow-hidden bg-white">
       <div className="mb-2 flex items-center font-semibold justify-end px-1 text-md text-[#515a64]">
-        Total de {itemLabel}: {resolvedTotal} · Mostrando {displayed} en esta página
+        Total de {itemLabel}: {resolvedTotal} · Mostrando {displayed} en esta
+        página
       </div>
 
       <div className="overflow-hidden rounded-sm border border-[#c7d2de] bg-white shadow-sm">
@@ -220,21 +252,34 @@ export function Table({
         </div>
 
         <div className="max-w-full overflow-x-auto">
-          <table className="w-full table-fixed border-collapse text-sm max-lg:block" style={{ minWidth: `min(100%, ${minWidth}px)` }}>
+          <table
+            className="w-full table-fixed border-collapse text-sm max-lg:block"
+            style={{ minWidth: `min(100%, ${minWidth}px)` }}
+          >
             <thead className="bg-[#d7e0ea] max-lg:hidden">
               <tr>
-                {headers.map((header) => (
-                  <th
-                    key={header}
-                    className="border border-[#c7d2de] px-2.5 py-2 text-center text-xs font-semibold uppercase tracking-normal text-[#263544]"
-                  >
-                    {header}
-                  </th>
-                ))}
+                {headers.map((header, index) => {
+                  const isEditColumn =
+                    header.toLocaleLowerCase("es-AR") === "edicion";
+                  return (
+                    <th
+                      key={`${header}-${index}`}
+                      className={cn(
+                        "border border-[#c7d2de] px-2.5 py-2 text-center text-xs font-semibold uppercase tracking-normal text-[#263544]",
+                        isEditColumn && "w-[90px] px-1",
+                      )}
+                    >
+                      {header}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
 
-            <tbody className="bg-white max-lg:block max-lg:space-y-3 max-lg:bg-[#f4f8fb] max-lg:p-3" onClick={handleBodyClick}>
+            <tbody
+              className="bg-white max-lg:block max-lg:space-y-3 max-lg:bg-[#f4f8fb] max-lg:p-3"
+              onClick={handleBodyClick}
+            >
               {labelledChildren}
             </tbody>
           </table>
@@ -247,7 +292,14 @@ export function Table({
         ) : null}
       </div>
 
-      {shouldPaginate ? <TablePagination page={page} pageSize={pageSize} total={resolvedTotal} onPageChange={onPageChange} /> : null}
+      {shouldPaginate ? (
+        <TablePagination
+          page={page}
+          pageSize={pageSize}
+          total={resolvedTotal}
+          onPageChange={onPageChange}
+        />
+      ) : null}
     </section>
   );
 }

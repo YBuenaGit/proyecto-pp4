@@ -25,14 +25,20 @@ export function LegajoActionEditButton({
         type="button"
         data-row-action
         onClick={openModal}
-        className="inline-flex min-h-8 items-center justify-center gap-1.5 rounded-sm border border-[#6c757d] bg-white px-2.5 py-1 text-xs font-semibold text-[#495057] shadow-sm transition hover:bg-[#e9ecef] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff]"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-sm border border-[#6c757d] bg-white text-[#495057] shadow-sm transition hover:bg-[#e9ecef] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff]"
+        aria-label={title}
+        title={title}
       >
         <Edit className="h-3.5 w-3.5" />
-        Editar
       </button>
       {open
         ? createPortal(
-            <AppModal title={title} size="md" open={open} onOpenChange={setOpen}>
+            <AppModal
+              title={title}
+              size="md"
+              open={open}
+              onOpenChange={setOpen}
+            >
               {children}
             </AppModal>,
             document.body,

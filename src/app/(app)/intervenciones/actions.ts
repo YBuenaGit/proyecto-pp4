@@ -8,7 +8,7 @@ import { requireUser } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { saveAttachments } from "@/lib/files";
 import { nextInternalNumber, optionalDate, optionalSentenceText, optionalText, sentenceText, text } from "@/lib/form";
-import { buildJuridicalActionContent } from "@/lib/juridical-action-content";
+import { buildJuridicalActionContent, parseJuridicalActionContent } from "@/lib/juridical-action-content";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessJuridical, canBypassLegajoRestriction } from "@/lib/rbac";
 import { capitalizeOptionalText, personDisplayName } from "@/lib/text";
@@ -490,6 +490,41 @@ export async function updateJuridicalIntervention(interventionId: string, formDa
   redirect(`/intervenciones/${interventionId}`);
 }
 
+export async function updateJuridicalInitialNarrative(interventionId: string, formData: FormData) {
+  const user = await requireUser();
+  assertAccess(canAccessJuridical(user));
+  const before = await juridicalAuditSnapshot(interventionId);
+  if (!canBypassLegajoRestriction(user) && (await isJuridicalLegajoDerivedOut(interventionId))) {
+    revalidatePath(`/intervenciones/${interventionId}`);
+    redirect(`/intervenciones/${interventionId}`);
+  }
+
+  const description = sentenceText(formData, "description");
+  if (description.length < 3) return;
+  const guidanceProvided = optionalSentenceText(formData, "guidanceProvided");
+
+  const after = await prisma.juridicalIntervention.update({
+    where: { id: interventionId },
+    data: {
+      description,
+      guidanceProvided,
+    },
+    include: juridicalAuditInclude,
+  });
+
+  await writeAuditLog({
+    module: "JURIDICO",
+    entityType: "JuridicalIntervention",
+    entityId: interventionId,
+    action: "UPDATE",
+    createdById: user.id,
+    before,
+    after,
+  });
+  revalidatePath(`/intervenciones/${interventionId}`);
+  redirect(`/intervenciones/${interventionId}`);
+}
+
 export async function addJuridicalAction(interventionId: string, formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
@@ -569,10 +604,14 @@ export async function updateJuridicalAction(actionId: string, formData: FormData
   }
   const actionType = text(formData, "actionType") || existingAction.actionType;
   const description = sentenceText(formData, "description") || sentenceText(formData, "content");
+  const existingParts = parseJuridicalActionContent(existingAction.content);
+  const nextStepDescription = formData.has("nextStepDescription")
+    ? optionalSentenceText(formData, "nextStepDescription") ?? ""
+    : existingParts.nextStepDescription;
   const content = buildJuridicalActionContent({
     description,
     guidanceProvided: optionalSentenceText(formData, "guidanceProvided") ?? "",
-    nextStepDescription: optionalSentenceText(formData, "nextStepDescription") ?? "",
+    nextStepDescription,
   });
   const statusAfter = optionalText(formData, "statusAfter");
   const createdAt = optionalDate(formData, "createdAt") ?? existingAction.createdAt;
