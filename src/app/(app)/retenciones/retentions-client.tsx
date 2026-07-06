@@ -339,7 +339,7 @@ function RetentionDetailsPanel({ record }: { record: RetentionRecord }) {
   return (
     <div className="space-y-4">
       {error ? <div className="rounded-sm border border-[#f5c6cb] bg-[#f8d7da] px-3 py-2 text-sm font-semibold text-[#721c24]">{error}</div> : null}
-      {!detail && !error ? <div className="text-sm font-medium text-[#6c757d]">Cargando detalle...</div> : null}
+      {!detail && !error ? <div className="text-sm font-medium text-[#212529]">Cargando detalle...</div> : null}
 
       <section className="grid gap-3 rounded-sm border border-[#dee2e6] bg-[#f8f9fa] p-3 text-sm md:grid-cols-2">
         <p>
@@ -378,7 +378,7 @@ function RetentionDetailsPanel({ record }: { record: RetentionRecord }) {
         <div className="md:col-span-2">
           <strong className="mr-2">Estado:</strong>
           <StatusBadge value={current.status} />
-          {deliveredBy ? <span className="ml-2 text-xs text-[#6c757d]">Entregado por {deliveredBy.editedBy}</span> : null}
+          {deliveredBy ? <span className="ml-2 text-xs text-[#212529]">Entregado por {deliveredBy.editedBy}</span> : null}
         </div>
       </section>
 
@@ -422,7 +422,7 @@ function AttachmentGrid({
   onDelete?: (attachment: RetentionAttachment) => void;
   deletingId?: string | null;
 }) {
-  if (!attachments.length) return <p className="rounded-sm border border-[#dee2e6] bg-[#f8f9fa] p-3 text-sm font-medium text-[#6c757d]">Sin archivos cargados.</p>;
+  if (!attachments.length) return <p className="rounded-sm border border-[#dee2e6] bg-[#f8f9fa] p-3 text-sm font-medium text-[#212529]">Sin archivos cargados.</p>;
 
   return (
     <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
@@ -435,10 +435,10 @@ function AttachmentGrid({
             className="block transition duration-150 hover:text-[#064f87]"
           >
             <div className="font-semibold text-[#0667b0] [overflow-wrap:anywhere]">{file.originalName || file.fileName}</div>
-            <div className="mt-1 text-xs font-medium text-[#6c757d]">
+            <div className="mt-1 text-xs font-medium text-[#212529]">
               {formatFileSize(file.size)} - {file.mimeType || "application/octet-stream"}
             </div>
-            <div className="mt-1 text-xs font-medium text-[#6c757d]">
+            <div className="mt-1 text-xs font-medium text-[#212529]">
               {file.uploadedBy} - {formatDateTime(file.createdAt)}
             </div>
           </a>
@@ -628,11 +628,11 @@ export function RetentionsClient() {
           <tr key={record.id}>
             <Td>
               <div className="font-medium">{formatDateTime(record.dateTime)}</div>
-              <div className="mt-1 text-xs text-[#6c757d]">Registro {record.internalNumber}</div>
+              <div className="mt-1 text-xs text-[#212529]">Registro {record.internalNumber}</div>
             </Td>
             <Td>
               <div className="font-medium">{optionLabel(ACT_TYPES, record.actType)}</div>
-              <div className="mt-1 text-xs text-[#6c757d]">Nro: {record.actNumber} - Legajo: {record.recordNumber}</div>
+              <div className="mt-1 text-xs text-[#212529]">Nro: {record.actNumber} - Legajo: {record.recordNumber}</div>
             </Td>
             <Td>
               <IdentifierLine label="Dominio" value={record.domain} />
@@ -641,12 +641,12 @@ export function RetentionsClient() {
             </Td>
             <Td>
               <div className="font-medium">{optionLabel(VEHICLE_TYPES, record.vehicleType)}</div>
-              <div className="mt-1 text-xs text-[#6c757d]">{record.brand} - {record.color || "Sin color"}</div>
+              <div className="mt-1 text-xs text-[#212529]">{record.brand} - {record.color || "Sin color"}</div>
             </Td>
             <Td>
               <StatusBadge value={record.status} />
-              <div className="mt-1 text-xs text-[#6c757d]">Cargado por: {record.createdBy}</div>
-              <div className="mt-1 text-xs text-[#6c757d]">
+              <div className="mt-1 text-xs text-[#212529]">Cargado por: {record.createdBy}</div>
+              <div className="mt-1 text-xs text-[#212529]">
                 {record.attachmentCount} archivos - {record.historyCount} cambios
               </div>
             </Td>
@@ -672,7 +672,7 @@ export function RetentionsClient() {
         ))}
       </Table>
 
-      {loading ? <p className="mt-3 text-sm font-medium text-[#6c757d]">Cargando retenciones...</p> : null}
+      {loading ? <p className="mt-3 text-sm font-medium text-[#212529]">Cargando retenciones...</p> : null}
 
     </>
   );
@@ -680,7 +680,7 @@ export function RetentionsClient() {
 
 function IdentifierLine({ label, value }: { label: string; value: string }) {
   return (
-    <div className={cn("text-xs leading-5", value ? "text-[#212529]" : "text-[#6c757d]")}>
+    <div className={cn("text-xs leading-5", value ? "text-[#212529]" : "text-[#212529]")}>
       <span className="font-semibold">{label}:</span> {value || "N/A"}
     </div>
   );

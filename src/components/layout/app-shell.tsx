@@ -61,7 +61,7 @@ export function AppShell({ user, children }: { user: CurrentUser; children: Reac
           />
           <div>
             <p className="text-sm font-semibold text-[#212529]">Seguridad Municipal</p>
-            <p className="text-xs font-medium text-[#6c757d]">Portal interno</p>
+            <p className="text-xs font-medium text-[#212529]">Portal interno</p>
           </div>
         </div>
         <SidebarNav items={buildNav(user)} />
@@ -80,11 +80,11 @@ export function AppShell({ user, children }: { user: CurrentUser; children: Reac
               />
               Seguridad Municipal
             </Link>
-            <div className="hidden text-sm font-medium text-[#6c757d] lg:block">Sistema interno de gestion juridica y operativa</div>
+            <div className="hidden text-sm font-medium text-[#212529] lg:block">Sistema interno de gestion juridica y operativa</div>
             <div className="flex items-center gap-2.5">
               <div className="text-right">
                 <p className="text-sm font-semibold text-[#212529]">{user.name}</p>
-                <p className="text-xs font-medium text-[#6c757d]">{ROLE_LABELS[user.role] ?? user.role}</p>
+                <p className="text-xs font-medium text-[#212529]">{ROLE_LABELS[user.role] ?? user.role}</p>
               </div>
               <form action="/logout" method="post">
                 <button

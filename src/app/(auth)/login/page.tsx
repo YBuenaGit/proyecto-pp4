@@ -21,7 +21,7 @@ export default async function LoginPage({
           />
           <div>
             <h1 className="text-2xl font-semibold tracking-normal text-[#212529]">Secretaria de Seguridad</h1>
-            <p className="text-sm font-medium text-[#6c757d]">Acceso interno municipal</p>
+            <p className="text-sm font-medium text-[#212529]">Acceso interno municipal</p>
           </div>
         </div>
 

@@ -151,12 +151,12 @@ export default async function DispatchListPage({
                 {record.internalNumber}
               </Link>
               {record.originReferrals.length ? (
-                <p className="mt-1 text-xs text-[#6c757d]">{record.originReferrals[0].visibleStatusForOrigin}</p>
+                <p className="mt-1 text-xs text-[#212529]">{record.originReferrals[0].visibleStatusForOrigin}</p>
               ) : null}
             </Td>
             <Td>
               <div className="font-medium text-[#212529]">{formatDateTime(record.attendedAt)}</div>
-              <div className="text-xs text-[#6c757d]">Reportado por: {record.createdBy.name}</div>
+              <div className="text-xs text-[#212529]">Reportado por: {record.createdBy.name}</div>
             </Td>
             <Td>
               <div className="font-medium text-[#212529]">
@@ -164,17 +164,17 @@ export default async function DispatchListPage({
                   record.nameSnapshot ||
                   "Sin identificar"}
               </div>
-              <div className="text-xs text-[#6c757d]">{record.dniSnapshot ?? "Sin DNI"}</div>
+              <div className="text-xs text-[#212529]">{record.dniSnapshot ?? "Sin DNI"}</div>
             </Td>
             <Td>{categories.find((item) => item.value === record.category)?.label ?? labelFromValue(record.category)}</Td>
             <Td>
               <div className="space-y-2">
                 <div className="grid grid-cols-[minmax(54px,64px)_minmax(0,110px)] items-center gap-2">
-                  <span className="text-xs text-[#6c757d]">Prioridad:</span>
+                  <span className="text-xs text-[#212529]">Prioridad:</span>
                   <StatusBadge value={record.priority} />
                 </div>
                 <div className="grid grid-cols-[minmax(54px,64px)_minmax(0,110px)] items-center gap-2">
-                  <span className="text-xs text-[#6c757d]">Estado:</span>
+                  <span className="text-xs text-[#212529]">Estado:</span>
                   <StatusBadge value={record.status} />
                 </div>
               </div>

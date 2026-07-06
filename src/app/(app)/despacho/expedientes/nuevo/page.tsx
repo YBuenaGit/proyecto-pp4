@@ -30,7 +30,7 @@ export default async function NewExpedientPage() {
           </AppModal>
         }
       />
-      <p className="text-sm text-[#6c757d]">Usa el boton Nuevo expediente para abrir el formulario de carga.</p>
+      <p className="text-sm text-[#212529]">Usa el boton Nuevo expediente para abrir el formulario de carga.</p>
     </>
   );
 }

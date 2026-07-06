@@ -1,4 +1,4 @@
-ï»¿import Link from "next/link";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
 import { Download, Edit, FileText, Plus, Send } from "lucide-react";
@@ -82,7 +82,7 @@ function DispatchBookAttachments({ attachments }: { attachments: DispatchAttachm
   if (!attachments.length) return null;
   return (
     <div className="rounded-sm border border-[#dee2e6] bg-[#f8f9fa] p-3">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Adjuntos del legajo</p>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#212529]">Adjuntos del legajo</p>
       <div className="grid gap-2 sm:grid-cols-2">
         {attachments.map((attachment) => (
           <Link
@@ -95,7 +95,7 @@ function DispatchBookAttachments({ attachments }: { attachments: DispatchAttachm
             <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[#0667b0]" />
             <span className="min-w-0 flex-1">
               <span className="block truncate font-semibold">{attachment.originalName}</span>
-              <span className="block text-xs text-[#6c757d]">{Math.ceil(attachment.size / 1024)} KB Ã‚Â· {attachment.uploadedBy.name}</span>
+              <span className="block text-xs text-[#212529]">{Math.ceil(attachment.size / 1024)} KB Â· {attachment.uploadedBy.name}</span>
             </span>
           </Link>
         ))}
@@ -109,8 +109,8 @@ function DispatchAttachmentSheet({ attachments, pageNumber, pageCount }: { attac
     <article className="book-leaf rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_12px_34px_rgba(0,0,0,0.22)]">
       <div className="border-b border-[#b7dfee] bg-[#dff3fb] px-4 py-4 sm:px-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Archivos</p>
-        <h3 className="mt-1 text-lg font-semibold text-[#212529]">Archivos del legajo{pageCount && pageCount > 1 ? ` Â· hoja ${pageNumber} de ${pageCount}` : ""}</h3>
-        <p className="mt-1 text-sm text-[#6c757d]">Documentacion adjunta disponible para abrir o descargar.</p>
+        <h3 className="mt-1 text-lg font-semibold text-[#212529]">Archivos del legajo{pageCount && pageCount > 1 ? ` · hoja ${pageNumber} de ${pageCount}` : ""}</h3>
+        <p className="mt-1 text-sm text-[#212529]">Documentacion adjunta disponible para abrir o descargar.</p>
       </div>
       <div className="book-leaf-body px-4 py-4 sm:px-5">
         <DispatchBookAttachments attachments={attachments} />
@@ -148,7 +148,7 @@ function DispatchReadContent({
       <BookText label="Notas internas confidenciales">{confidentialNotes}</BookText>
       {attachments.length ? (
         <div className="rounded-sm border border-[#dee2e6] bg-[#f8f9fa] p-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Archivos vinculados</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#212529]">Archivos vinculados</p>
           <div className="flex flex-wrap gap-2">
             {attachments.map((attachment) => (
               <AttachmentPreviewButton key={attachment.id} href={`/adjuntos/${attachment.id}`} name={attachment.originalName} mimeType={attachment.mimeType} compact />
@@ -302,7 +302,7 @@ export default async function DispatchDetailPage({
     bookEntries.push({
       item: {
         sheetNumber: 1,
-        label: pageIndex > 0 ? `Primera atencion Â· cont. ${pageIndex + 1}` : "Primera atencion Â· contenido",
+        label: pageIndex > 0 ? `Primera atencion · cont. ${pageIndex + 1}` : "Primera atencion · contenido",
         title: categoryLabel,
         dateText: formatDateTime(record.attendedAt),
         statusText: record.status,
@@ -324,7 +324,7 @@ export default async function DispatchDetailPage({
     const sheetNumber = index + 2;
     const parsed = parseJuridicalActionContent(followUp.content);
     const followUpAttachments = attachmentsByFollowUpId.get(followUp.id) ?? [];
-    const sectionLabel = `Seguimiento NÂ° ${sheetNumber}`;
+    const sectionLabel = `Seguimiento N° ${sheetNumber}`;
     const followUpPages = paginateBookTextSections(
       [
         { label: "Descripcion / relato", text: parsed.description },
@@ -361,7 +361,7 @@ export default async function DispatchDetailPage({
       bookEntries.push({
         item: {
           sheetNumber,
-          label: pageIndex > 0 ? `${sectionLabel} Â· cont. ${pageIndex + 1}` : `${sectionLabel} Â· contenido`,
+          label: pageIndex > 0 ? `${sectionLabel} · cont. ${pageIndex + 1}` : `${sectionLabel} · contenido`,
           title: "Seguimiento de atencion",
           dateText: formatDateTime(followUp.createdAt),
           statusText: followUp.statusAfter,
@@ -388,7 +388,7 @@ export default async function DispatchDetailPage({
       bookEntries.push({
         item: {
           sheetNumber: displayFollowUpRows.length + 2,
-          label: attachmentPages.length > 1 ? `Archivos Â· hoja ${pageIndex + 1}` : "Archivos",
+          label: attachmentPages.length > 1 ? `Archivos · hoja ${pageIndex + 1}` : "Archivos",
           title: "Archivos del legajo",
           dateText: formatDateTime(generalAttachments[0]?.createdAt ?? record.createdAt),
           statusText: `${generalAttachments.length} archivo${generalAttachments.length === 1 ? "" : "s"}`,
@@ -416,7 +416,7 @@ export default async function DispatchDetailPage({
       >
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Expediente virtual Ã‚Â· Atencion / reclamo</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Expediente virtual Â· Atencion / reclamo</p>
             <h1 className="mt-1 text-2xl font-semibold text-[#212529] sm:text-3xl">Legajo de despacho {record.internalNumber}</h1>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <span className="rounded-sm border border-[#b7dfee] bg-white px-2.5 py-1 text-sm font-semibold text-[#0c5460]">{categoryLabel}</span>
@@ -536,7 +536,7 @@ export default async function DispatchDetailPage({
         action={
           <LegajoBookViewer
             items={bookItems}
-            title="Expediente virtual Â· Atencion / reclamo"
+            title="Expediente virtual · Atencion / reclamo"
             itemLabel="Seguimiento"
           >
             {bookEntries.map((entry) => entry.node)}
@@ -558,7 +558,7 @@ export default async function DispatchDetailPage({
             return (
               <LegajoInterventionRow
                 key={followUp.id}
-                modalTitle={`Seguimiento NÂ° ${sheetNumber}`}
+                modalTitle={`Seguimiento N° ${sheetNumber}`}
                 modalContent={
                   <DispatchReadContent
                     date={followUp.createdAt}
@@ -571,26 +571,26 @@ export default async function DispatchDetailPage({
                 }
               >
                 <Td className="w-[150px]">
-                  <span className="block font-semibold text-[#0667b0]">Seguimiento NÂ° {sheetNumber}</span>
-                  <span className="mt-0.5 block text-xs text-[#6c757d]">Registro agregado</span>
+                  <span className="block font-semibold text-[#0667b0]">Seguimiento N° {sheetNumber}</span>
+                  <span className="mt-0.5 block text-xs text-[#212529]">Registro agregado</span>
                 </Td>
                 <Td className="w-[210px]">
                   <span className="block font-semibold">{formatDateTime(followUp.createdAt)}</span>
-                  <span className="mt-0.5 block text-xs text-[#6c757d]">{followUp.createdBy.name}</span>
+                  <span className="mt-0.5 block text-xs text-[#212529]">{followUp.createdBy.name}</span>
                 </Td>
                 <Td>
                   <span className="block font-semibold">Seguimiento de atencion</span>
                   <span className="mt-1 block text-xs font-medium text-[#0667b0]">Clic para ver el detalle</span>
                 </Td>
                 <Td className="w-[230px]">
-                  {followUp.statusAfter ? <StatusBadge value={followUp.statusAfter} /> : <span className="text-sm text-[#6c757d]">Sin cambio de estado</span>}
+                  {followUp.statusAfter ? <StatusBadge value={followUp.statusAfter} /> : <span className="text-sm text-[#212529]">Sin cambio de estado</span>}
                 </Td>
                 <Td className="w-[180px]">
                   <div className="flex flex-col items-start gap-2">
                     {rowAttachments.map((attachment) => (
                       <AttachmentPreviewButton key={attachment.id} href={`/adjuntos/${attachment.id}`} name={attachment.originalName} mimeType={attachment.mimeType} compact />
                     ))}
-                    {!rowAttachments.length ? <span className="text-sm text-[#6c757d]">-</span> : null}
+                    {!rowAttachments.length ? <span className="text-sm text-[#212529]">-</span> : null}
                   </div>
                 </Td>
               </LegajoInterventionRow>
@@ -598,7 +598,7 @@ export default async function DispatchDetailPage({
           })}
 
           <LegajoInterventionRow
-            modalTitle="Atencion NÂ° 1"
+            modalTitle="Atencion N° 1"
             modalContent={
               <DispatchReadContent
                 date={record.attendedAt}
@@ -612,12 +612,12 @@ export default async function DispatchDetailPage({
             }
           >
             <Td className="w-[150px]">
-              <span className="block font-semibold text-[#0667b0]">Atencion NÂ° 1</span>
-              <span className="mt-0.5 block text-xs text-[#6c757d]">Primera atencion</span>
+              <span className="block font-semibold text-[#0667b0]">Atencion N° 1</span>
+              <span className="mt-0.5 block text-xs text-[#212529]">Primera atencion</span>
             </Td>
             <Td className="w-[210px]">
               <span className="block font-semibold">{formatDateTime(record.attendedAt)}</span>
-              <span className="mt-0.5 block text-xs text-[#6c757d]">{record.createdBy.name}</span>
+              <span className="mt-0.5 block text-xs text-[#212529]">{record.createdBy.name}</span>
             </Td>
             <Td>
               <span className="block font-semibold">{categoryLabel}</span>
@@ -629,7 +629,7 @@ export default async function DispatchDetailPage({
                 {generalAttachments.map((attachment) => (
                   <AttachmentPreviewButton key={attachment.id} href={`/adjuntos/${attachment.id}`} name={attachment.originalName} mimeType={attachment.mimeType} compact />
                 ))}
-                {!generalAttachments.length ? <span className="text-sm text-[#6c757d]">-</span> : null}
+                {!generalAttachments.length ? <span className="text-sm text-[#212529]">-</span> : null}
               </div>
             </Td>
           </LegajoInterventionRow>

@@ -61,7 +61,7 @@ export function SelectedFilesInput({
           onChange={(event) => syncFiles(filesFromInput(event.currentTarget))}
         />
       </label>
-      <p className="mt-1 text-xs font-medium text-[#6c757d]">
+      <p className="mt-1 text-xs font-medium text-[#212529]">
         {files.length ? `${files.length} archivo(s) seleccionado(s).` : "Puedes seleccionar mas de un archivo."}
       </p>
       {files.length ? (

@@ -32,7 +32,7 @@ function rowNumber(index: number) {
 }
 
 function PdfLinks({ attachments }: { attachments: ExpedientPdf[] }) {
-  if (!attachments.length) return <span className="text-sm font-medium text-[#6c757d]">-</span>;
+  if (!attachments.length) return <span className="text-sm font-medium text-[#212529]">-</span>;
 
   return (
     <div className="flex flex-wrap gap-1.5">
@@ -170,12 +170,12 @@ export default async function ExpedientsListPage({ searchParams }: { searchParam
 
             <Td>
               <div className="font-medium text-[#212529]">{formatDateTime(expedient.createdAt)}</div>
-              <div className="mt-1 text-xs text-[#6c757d]">Usuario: {expedient.createdBy.name}</div>
+              <div className="mt-1 text-xs text-[#212529]">Usuario: {expedient.createdBy.name}</div>
             </Td>
 
             <Td>
               <div className="font-medium text-[#212529]">{expedient.expedienteNumber ?? "-"}</div>
-              <div className="mt-1 text-xs text-[#6c757d]">{codigoExpedienteLabel(expedient.codigo)}</div>
+              <div className="mt-1 text-xs text-[#212529]">{codigoExpedienteLabel(expedient.codigo)}</div>
             </Td>
 
             <Td>

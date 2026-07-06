@@ -10,7 +10,7 @@ export function Breadcrumbs({ items }: { items: BreadcrumbItem[] }) {
 
   return (
     <nav aria-label="breadcrumb" className="mb-3">
-      <ol className="flex flex-wrap items-center rounded-sm border border-[#dee2e6] bg-[#e9ecef] px-3 py-2 text-xs text-[#6c757d]">
+      <ol className="flex flex-wrap items-center rounded-sm border border-[#dee2e6] bg-[#e9ecef] px-3 py-2 text-xs text-[#212529]">
         {items.map((item, index) => {
           const current = index === items.length - 1 || !item.href;
           const href = item.href;

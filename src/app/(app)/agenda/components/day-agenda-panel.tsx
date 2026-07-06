@@ -21,7 +21,7 @@ export function DayAgendaPanel({
       <div className="flex items-start justify-between gap-3 border-b border-[#dee2e6] bg-[#e9ecef] px-3 py-2.5">
         <div>
           <h2 className="text-lg font-semibold tracking-normal text-[#212529]">Agenda del {formatDayTitle(dateKey)}</h2>
-          <p className="mt-1 text-xs font-medium text-[#6c757d]">{appointments.length} citas para este día</p>
+          <p className="mt-1 text-xs font-medium text-[#212529]">{appointments.length} citas para este día</p>
         </div>
         <div className="inline-flex h-9 w-9 items-center justify-center rounded-sm border border-[#dee2e6] bg-white text-[#0667b0]">
           <CalendarDays className="h-4 w-4" />
@@ -38,7 +38,7 @@ export function DayAgendaPanel({
             />
           ))
         ) : (
-          <div className="rounded-sm border border-dashed border-[#17a2b8] bg-[#d1ecf1]/40 px-4 py-10 text-center text-sm font-medium text-[#6c757d]">
+          <div className="rounded-sm border border-dashed border-[#17a2b8] bg-[#d1ecf1]/40 px-4 py-10 text-center text-sm font-medium text-[#212529]">
             No hay citas para este día.
           </div>
         )}

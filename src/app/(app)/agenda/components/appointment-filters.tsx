@@ -51,7 +51,7 @@ export function AppointmentFilters({
             <input type="hidden" name="day" value={selectedDay} />
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <label className="block">
-                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[#6c757d]">Agenda</span>
+                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[#212529]">Agenda</span>
                 <select name="scope" className={inputClass} defaultValue={activeScope}>
                   {sortedScopes.map((scope) => (
                     <option key={scope} value={scope}>
@@ -61,7 +61,7 @@ export function AppointmentFilters({
                 </select>
               </label>
               <label className="block">
-                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[#6c757d]">Tipo</span>
+                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[#212529]">Tipo</span>
                 <select name="type" className={inputClass} defaultValue={filters.type ?? ""}>
                   <option value="">Todos</option>
                   {APPOINTMENT_TYPES.map((type) => (
@@ -72,11 +72,11 @@ export function AppointmentFilters({
                 </select>
               </label>
               <label className="block">
-                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[#6c757d]">Fecha desde</span>
+                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[#212529]">Fecha desde</span>
                 <input name="dateFrom" type="date" className={inputClass} defaultValue={filters.dateFrom ?? ""} />
               </label>
               <label className="block">
-                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[#6c757d]">Fecha hasta</span>
+                <span className="mb-1 block text-xs font-medium uppercase tracking-wide text-[#212529]">Fecha hasta</span>
                 <input name="dateTo" type="date" className={inputClass} defaultValue={filters.dateTo ?? ""} />
               </label>
             </div>

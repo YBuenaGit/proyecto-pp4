@@ -34,7 +34,7 @@ export default async function NewDispatchPage() {
           </AppModal>
         }
       />
-      <p className="text-sm text-[#6c757d]">Usa el boton Nueva atencion para abrir el formulario de carga.</p>
+      <p className="text-sm text-[#212529]">Usa el boton Nueva atencion para abrir el formulario de carga.</p>
     </>
   );
 }

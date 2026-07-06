@@ -27,7 +27,7 @@ export function FieldGrid({ children }: { children: ReactNode }) {
 export function DetailField({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div>
-      <dt className="text-xs font-semibold text-[#6c757d]">{label}</dt>
+      <dt className="text-xs font-semibold text-[#212529]">{label}</dt>
       <dd className="mt-0.5 text-sm leading-6 text-[#212529]">{value || "-"}</dd>
     </div>
   );

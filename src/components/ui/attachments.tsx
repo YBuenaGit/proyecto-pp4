@@ -16,7 +16,7 @@ export function AttachmentList({
     isPrivate: boolean;
   }>;
 }) {
-  if (!attachments.length) return <p className="text-sm font-medium text-[#6c757d]">Sin adjuntos.</p>;
+  if (!attachments.length) return <p className="text-sm font-medium text-[#212529]">Sin adjuntos.</p>;
   return (
     <div className="space-y-2">
       {attachments.map((attachment) => (
@@ -30,7 +30,7 @@ export function AttachmentList({
             <FileText className="mt-1 h-4 w-4 shrink-0 text-[#0667b0]" />
             <span className="min-w-0 flex-1">
               <span className="block break-words font-semibold leading-6 text-[#212529]">{attachment.originalName}</span>
-              <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs font-medium text-[#6c757d]">
+              <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs font-medium text-[#212529]">
                 {attachment.isPrivate ? (
                   <span className="rounded-sm border border-[#bee5eb] bg-[#d1ecf1] px-1.5 py-0.5 font-semibold text-[#0c5460]">Privado</span>
                 ) : null}

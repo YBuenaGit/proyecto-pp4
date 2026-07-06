@@ -149,7 +149,7 @@ export function FilterInput({
         type={type}
         name={name}
         defaultValue={defaultValue}
-        className="h-9 w-full rounded-sm border border-[#b9c6d3] bg-white px-2.5 text-sm text-[#212529] outline-none transition duration-150 placeholder:text-[#6c757d] focus:border-[#0667b0] focus:ring-2 focus:ring-[rgba(6,103,176,.22)]"
+        className="h-9 w-full rounded-sm border border-[#b9c6d3] bg-white px-2.5 text-sm text-[#212529] outline-none transition duration-150 placeholder:text-[#212529] focus:border-[#0667b0] focus:ring-2 focus:ring-[rgba(6,103,176,.22)]"
       />
     </label>
   );

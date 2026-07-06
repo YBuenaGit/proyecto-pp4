@@ -826,7 +826,7 @@ function DaySummaryTable({
           </tr>
         ))}
       </Table>
-      {!result.rows.length ? <p className="mt-2 text-sm font-medium text-[#6c757d]">{copy.empty}</p> : null}
+      {!result.rows.length ? <p className="mt-2 text-sm font-medium text-[#212529]">{copy.empty}</p> : null}
     </div>
   );
 }
@@ -870,7 +870,7 @@ function DashboardTable({
             </Td>
             <Td>
               <p className="font-semibold text-[#212529]">{formatDateTime(row.dateTime)}</p>
-              <p className="mt-1 text-xs font-medium text-[#6c757d]">Reportado por: {row.reportedBy}</p>
+              <p className="mt-1 text-xs font-medium text-[#212529]">Reportado por: {row.reportedBy}</p>
             </Td>
             <Td>{row.requester}</Td>
             <Td>{row.category}</Td>
@@ -880,11 +880,11 @@ function DashboardTable({
               ) : (
                 <div className="space-y-2">
                   <div className="grid grid-cols-[minmax(54px,64px)_minmax(0,110px)] items-center justify-center gap-2">
-                    <span className="text-xs font-medium text-[#6c757d]">Prioridad:</span>
+                    <span className="text-xs font-medium text-[#212529]">Prioridad:</span>
                     <StatusBadge value={row.priority} />
                   </div>
                   <div className="grid grid-cols-[minmax(54px,64px)_minmax(0,110px)] items-center justify-center gap-2">
-                    <span className="text-xs font-medium text-[#6c757d]">Estado:</span>
+                    <span className="text-xs font-medium text-[#212529]">Estado:</span>
                     <StatusBadge value={row.status} />
                   </div>
                 </div>
@@ -893,7 +893,7 @@ function DashboardTable({
           </tr>
         ))}
       </Table>
-      {!result.rows.length ? <p className="mt-2 text-sm font-medium text-[#6c757d]">{copy.empty}</p> : null}
+      {!result.rows.length ? <p className="mt-2 text-sm font-medium text-[#212529]">{copy.empty}</p> : null}
     </div>
   );
 }

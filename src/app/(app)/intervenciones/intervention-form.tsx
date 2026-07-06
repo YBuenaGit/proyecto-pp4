@@ -136,10 +136,10 @@ const steps = [{ label: "Situacion" }, { label: "Personas" }, { label: "Relato" 
 const lastStepIndex = steps.length - 1;
 
 const inputClass =
-  "h-9 w-full rounded-sm border border-[#ced4da] bg-white px-2.5 text-sm text-[#212529] outline-none transition duration-150 placeholder:text-[#6c757d] focus:border-[#80bdff] focus:ring-2 focus:ring-[rgba(0,123,255,.25)] disabled:bg-[#e9ecef] disabled:text-[#6c757d]";
+  "h-9 w-full rounded-sm border border-[#ced4da] bg-white px-2.5 text-sm text-[#212529] outline-none transition duration-150 placeholder:text-[#212529] focus:border-[#80bdff] focus:ring-2 focus:ring-[rgba(0,123,255,.25)] disabled:bg-[#e9ecef] disabled:text-[#212529]";
 
 const textareaClass =
-  "min-h-32 w-full rounded-sm border border-[#ced4da] bg-white px-2.5 py-2 text-sm leading-6 text-[#212529] outline-none transition duration-150 placeholder:text-[#6c757d] focus:border-[#80bdff] focus:ring-2 focus:ring-[rgba(0,123,255,.25)]";
+  "min-h-32 w-full rounded-sm border border-[#ced4da] bg-white px-2.5 py-2 text-sm leading-6 text-[#212529] outline-none transition duration-150 placeholder:text-[#212529] focus:border-[#80bdff] focus:ring-2 focus:ring-[rgba(0,123,255,.25)]";
 
 const autosizeTextareaClass = cn(textareaClass, "resize-none overflow-hidden");
 
@@ -442,7 +442,7 @@ function Field({
 }) {
   return (
     <label className={cn("block space-y-1.5", className)}>
-      <span className="text-xs font-semibold uppercase tracking-wide text-[#6c757d]">{label}</span>
+      <span className="text-xs font-semibold uppercase tracking-wide text-[#212529]">{label}</span>
       {children}
       {error ? <span className="block text-xs font-medium text-rose-600">{error}</span> : null}
     </label>
@@ -520,7 +520,7 @@ function DniLookupNotice({
 
   if (visibleLookup.status === "checking") {
     return (
-      <div className="rounded-md border border-[#dee2e6] bg-white px-3 py-2 text-xs font-medium text-[#6c757d]">
+      <div className="rounded-md border border-[#dee2e6] bg-white px-3 py-2 text-xs font-medium text-[#212529]">
         Validando DNI en Personas...
       </div>
     );
@@ -528,7 +528,7 @@ function DniLookupNotice({
 
   if (visibleLookup.status === "not-found") {
     return (
-      <div className="rounded-md border border-[#dee2e6] bg-white px-3 py-2 text-xs font-medium text-[#6c757d]">
+      <div className="rounded-md border border-[#dee2e6] bg-white px-3 py-2 text-xs font-medium text-[#212529]">
         No hay persona registrada con este DNI.
       </div>
     );
@@ -607,7 +607,7 @@ function SummaryGrid({ children }: { children: ReactNode }) {
 function SummaryItem({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="rounded-md bg-[#f8f9fa] px-3 py-2">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-[#6c757d]">{label}</p>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-[#212529]">{label}</p>
       <div className="mt-1 text-sm font-medium text-[#212529]">{value || "-"}</div>
     </div>
   );
@@ -642,7 +642,7 @@ function SummaryBlock({
 
 function SummaryItems({ items }: { items: Array<{ label: string; value: string | null | undefined }> }) {
   const visibleItems = items.filter((item) => item.value);
-  if (!visibleItems.length) return <p className="text-sm text-[#6c757d]">Sin datos cargados.</p>;
+  if (!visibleItems.length) return <p className="text-sm text-[#212529]">Sin datos cargados.</p>;
   return (
     <SummaryGrid>
       {visibleItems.map((item) => (
@@ -929,7 +929,7 @@ export function InterventionForm({
                         isComplete && "border-emerald-500 bg-emerald-500 text-white",
                         hasError && !isCurrent && "border-rose-500 bg-rose-50 text-rose-600",
                         isLocked && "border-[#dee2e6] bg-[#e9ecef] text-[#adb5bd]",
-                        !isCurrent && !isComplete && !hasError && !isLocked && "border-[#ced4da] bg-white text-[#6c757d] group-hover:border-blue-300",
+                        !isCurrent && !isComplete && !hasError && !isLocked && "border-[#ced4da] bg-white text-[#212529] group-hover:border-blue-300",
                       )}
                     >
                       {isLocked ? (
@@ -949,7 +949,7 @@ export function InterventionForm({
                         isComplete && "text-emerald-700",
                         hasError && "text-rose-600",
                         isLocked && "text-[#adb5bd]",
-                        !isCurrent && !isComplete && !hasError && !isLocked && "text-[#6c757d]",
+                        !isCurrent && !isComplete && !hasError && !isLocked && "text-[#212529]",
                       )}
                     >
                       {step.label}
@@ -1075,7 +1075,7 @@ export function InterventionForm({
                     Denunciante anonimo
                   </label>
                   {person.isAnonymous ? (
-                    <p className="rounded-md bg-white px-3 py-2 text-sm text-[#6c757d]">Denunciante anonimo.</p>
+                    <p className="rounded-md bg-white px-3 py-2 text-sm text-[#212529]">Denunciante anonimo.</p>
                   ) : (
                     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
                       <div className="space-y-2">
@@ -1377,7 +1377,7 @@ export function InterventionForm({
                         onChange={addAttachments}
                         className={fileInputClass}
                       />
-                      <p className="text-xs text-[#6c757d]">
+                      <p className="text-xs text-[#212529]">
                         {selectedAttachments.length ? `${selectedAttachments.length} archivo(s) seleccionado(s).` : "Sin adjuntos seleccionados."}
                       </p>
                       {selectedAttachments.length ? (
@@ -1478,7 +1478,7 @@ export function InterventionForm({
                   <div className="space-y-3">
                     {submittedComplainants.map((person, index) => (
                       <div key={`summary-complainant-${index}`} className="rounded-md border border-[#e9ecef] bg-white p-3">
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Denunciante {index + 1}</p>
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#212529]">Denunciante {index + 1}</p>
                         {person.isAnonymous ? (
                           <p className="text-sm font-semibold text-[#212529]">Denunciante anonimo</p>
                         ) : (
@@ -1505,7 +1505,7 @@ export function InterventionForm({
                   <div className="space-y-3">
                     {submittedLinkedPersons.map((person, index) => (
                       <div key={`summary-linked-${index}`} className="rounded-md border border-[#e9ecef] bg-white p-3">
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Persona {index + 1}</p>
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#212529]">Persona {index + 1}</p>
                         <SummaryItems
                           items={[
                             { label: "DNI", value: person.dni },
@@ -1526,15 +1526,15 @@ export function InterventionForm({
               <SummaryBlock title="Relato" onEdit={() => goToStep(2)}>
                 <div className="space-y-3 text-sm leading-6 text-[#212529]">
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Descripcion</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#212529]">Descripcion</p>
                     <p className="mt-1 whitespace-pre-wrap">{display(values.description)}</p>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Orientacion o intervencion realizada</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#212529]">Orientacion o intervencion realizada</p>
                     <p className="mt-1 whitespace-pre-wrap">{display(values.guidanceProvided)}</p>
                   </div>
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Notas internas confidenciales</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-[#212529]">Notas internas confidenciales</p>
                     <p className="mt-1 whitespace-pre-wrap">{display(values.confidentialNotes)}</p>
                   </div>
                 </div>

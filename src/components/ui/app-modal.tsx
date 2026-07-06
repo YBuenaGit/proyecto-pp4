@@ -105,12 +105,12 @@ export function AppModal({
               <h2 id={titleId} className="text-lg font-semibold tracking-normal text-[#212529]">
                 {title}
               </h2>
-              {description ? <p className="mt-1 max-w-2xl text-sm leading-6 text-[#6c757d]">{description}</p> : null}
+              {description ? <p className="mt-1 max-w-2xl text-sm leading-6 text-[#212529]">{description}</p> : null}
             </div>
             <button
               type="button"
               onClick={close}
-              className="rounded-sm p-2 text-[#6c757d] transition duration-150 hover:bg-white hover:text-[#212529] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff]"
+              className="rounded-sm p-2 text-[#212529] transition duration-150 hover:bg-white hover:text-[#212529] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff]"
               aria-label="Cerrar modal"
             >
               <X className="h-4 w-4" />

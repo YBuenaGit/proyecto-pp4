@@ -36,7 +36,7 @@ export function CalendarMonthView({
         <Link
           href={agendaHref(query, { month: previousMonth, day: firstDayOfMonth(previousMonth) })}
           aria-label="Mes anterior"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-sm text-[#6c757d] transition hover:bg-white hover:text-[#0667b0]"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-sm text-[#212529] transition hover:bg-white hover:text-[#0667b0]"
         >
           <ChevronLeft className="h-4 w-4" />
         </Link>
@@ -51,7 +51,7 @@ export function CalendarMonthView({
           <Link
             href={agendaHref(query, { month: nextMonth, day: firstDayOfMonth(nextMonth) })}
             aria-label="Mes siguiente"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-sm text-[#6c757d] transition hover:bg-white hover:text-[#0667b0]"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-sm text-[#212529] transition hover:bg-white hover:text-[#0667b0]"
           >
             <ChevronRight className="h-4 w-4" />
           </Link>
@@ -60,7 +60,7 @@ export function CalendarMonthView({
       <div className="w-full">
         <div className="grid grid-cols-7 border-b border-[#dee2e6] bg-[#f8f9fa]">
           {weekDays.map((day) => (
-            <div key={day} className="border-r border-[#dee2e6] px-1.5 py-2 text-center text-[11px] font-semibold text-[#6c757d] last:border-r-0 sm:px-3 sm:text-xs">
+            <div key={day} className="border-r border-[#dee2e6] px-1.5 py-2 text-center text-[11px] font-semibold text-[#212529] last:border-r-0 sm:px-3 sm:text-xs">
               {day}
             </div>
           ))}

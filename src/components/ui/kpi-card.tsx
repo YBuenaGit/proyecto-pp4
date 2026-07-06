@@ -21,9 +21,9 @@ export function KpiCard({
     <>
       <div className="flex items-start justify-between gap-2.5">
         <div>
-          <p className={cn("text-sm font-semibold", active ? "text-white" : "text-[#6c757d]")}>{label}</p>
+          <p className={cn("text-sm font-semibold", active ? "text-white" : "text-[#212529]")}>{label}</p>
           <p className={cn("mt-1 text-3xl font-semibold tracking-normal", active ? "text-white" : "text-[#212529]")}>{value}</p>
-          {hint ? <p className={cn("mt-1 text-xs font-medium", active ? "text-white/85" : "text-[#6c757d]")}>{hint}</p> : null}
+          {hint ? <p className={cn("mt-1 text-xs font-medium", active ? "text-white/85" : "text-[#212529]")}>{hint}</p> : null}
         </div>
         <div className={cn("rounded-sm border p-2", active ? "border-white/35 bg-white/15 text-white" : "border-[#9fd3e3] bg-[#c4e7f3] text-[#064d60]")}>{icon}</div>
       </div>

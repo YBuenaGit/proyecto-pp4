@@ -173,7 +173,7 @@ function CreateUserForm({
             aria-describedby="create-user-password-help"
             aria-invalid={Boolean(passwordError)}
           />
-          <p id="create-user-password-help" className="mt-1 text-xs leading-5 text-[#6c757d]">
+          <p id="create-user-password-help" className="mt-1 text-xs leading-5 text-[#212529]">
             {CREATE_USER_PASSWORD_MESSAGE}
           </p>
           <FieldError message={passwordError} />
@@ -284,7 +284,7 @@ function ResetUserPasswordForm({
             aria-describedby="reset-user-password-help"
             aria-invalid={Boolean(passwordError)}
           />
-          <p id="reset-user-password-help" className="mt-1 text-xs leading-5 text-[#6c757d]">
+          <p id="reset-user-password-help" className="mt-1 text-xs leading-5 text-[#212529]">
             {CREATE_USER_PASSWORD_MESSAGE}
           </p>
           <FieldError message={passwordError} />

@@ -114,7 +114,7 @@ export function AppointmentCard({
               title="Editar cita"
               trigger={<Edit3 className="h-3.5 w-3.5" />}
               triggerVariant="secondary"
-              triggerClassName="h-8 w-8 border-[#dee2e6] px-0 text-[#6c757d] shadow-none hover:text-[#0667b0]"
+              triggerClassName="h-8 w-8 border-[#dee2e6] px-0 text-[#212529] shadow-none hover:text-[#0667b0]"
               size="xl"
             >
               <AppointmentForm

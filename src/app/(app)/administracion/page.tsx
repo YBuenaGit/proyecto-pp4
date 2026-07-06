@@ -46,7 +46,7 @@ export default async function AdminPage() {
               <tr key={item.id}>
                 <Td>
                   <div className="font-medium text-[#212529]">{item.name}</div>
-                  <div className="text-xs text-[#6c757d]">{item.email ?? "-"}</div>
+                  <div className="text-xs text-[#212529]">{item.email ?? "-"}</div>
                 </Td>
                 <Td>{item.username}</Td>
                 <Td>{ROLE_LABELS[item.role] ?? item.role}</Td>

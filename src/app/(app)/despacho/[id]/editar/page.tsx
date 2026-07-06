@@ -50,7 +50,7 @@ export default async function EditDispatchPage({ params }: { params: Promise<{ i
           </>
         }
       />
-      <p className="text-sm text-[#6c757d]">La informacion se edita desde el modal para mantener separada la lectura de la modificacion.</p>
+      <p className="text-sm text-[#212529]">La informacion se edita desde el modal para mantener separada la lectura de la modificacion.</p>
     </>
   );
 }

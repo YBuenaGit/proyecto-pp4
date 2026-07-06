@@ -59,7 +59,7 @@ export default async function PeoplePage({ searchParams }: { searchParams?: Prom
               <Link href={`/personas/${person.id}`} className="font-medium text-[#0667b0] hover:underline">
                 {person.displayName}
               </Link>
-              <div className="text-xs text-[#6c757d]">{person.dni ?? "Sin DNI"}</div>
+              <div className="text-xs text-[#212529]">{person.dni ?? "Sin DNI"}</div>
             </Td>
             <Td>{[person.phone1, person.phone2].filter(Boolean).join(" / ") || "-"}</Td>
             <Td>{person.address ?? "-"}</Td>
@@ -73,7 +73,7 @@ export default async function PeoplePage({ searchParams }: { searchParams?: Prom
                   <Link href={person.latestCase.href} className="whitespace-nowrap font-medium text-[#0667b0] hover:underline">
                     {person.latestCase.internalNumber}
                   </Link>
-                  <div className="text-xs text-[#6c757d]">{formatDateTime(person.latestCase.attendedAt)}</div>
+                  <div className="text-xs text-[#212529]">{formatDateTime(person.latestCase.attendedAt)}</div>
                 </div>
               ) : (
                 "-"

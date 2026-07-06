@@ -26,14 +26,14 @@ export function BookSectionCover({
             <dl className="mt-7 w-full max-w-md space-y-2 text-left">
               {meta.map((row) => (
                 <div key={row.label} className="flex items-baseline justify-between gap-3 border-b border-[#cfe6f1] pb-1.5">
-                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#6c757d]">{row.label}</dt>
+                  <dt className="text-[11px] font-semibold uppercase tracking-wide text-[#212529]">{row.label}</dt>
                   <dd className="text-right text-sm font-semibold text-[#212529]">{row.value || "-"}</dd>
                 </div>
               ))}
             </dl>
           ) : null}
         </div>
-        <div className="border-t border-[#cfe6f1] px-6 py-3 text-center text-[11px] font-medium uppercase tracking-[0.2em] text-[#6c757d]">
+        <div className="border-t border-[#cfe6f1] px-6 py-3 text-center text-[11px] font-medium uppercase tracking-[0.2em] text-[#212529]">
           Secretaria de Seguridad Municipal
         </div>
       </div>
@@ -74,7 +74,7 @@ export function BookContentSheet({
             ))}
           </div>
         ) : (
-          <p className="text-sm font-medium text-[#6c757d]">Sin contenido textual cargado.</p>
+          <p className="text-sm font-medium text-[#212529]">Sin contenido textual cargado.</p>
         )}
         {footer ? <div className="mt-5">{footer}</div> : null}
       </div>

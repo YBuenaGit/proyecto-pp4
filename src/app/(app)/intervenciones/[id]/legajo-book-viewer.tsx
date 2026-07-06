@@ -210,7 +210,7 @@ export function LegajoBookViewer({
                 ) : null}
               </div>
             ) : (
-              <div className="m-auto max-w-2xl rounded-sm border border-[#b7dfee] bg-[#eefaff] px-4 py-16 text-center text-sm font-medium text-[#6c757d]">
+              <div className="m-auto max-w-2xl rounded-sm border border-[#b7dfee] bg-[#eefaff] px-4 py-16 text-center text-sm font-medium text-[#212529]">
                 No hay intervenciones que coincidan.
               </div>
             )}

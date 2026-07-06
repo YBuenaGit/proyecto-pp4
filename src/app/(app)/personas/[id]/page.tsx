@@ -73,7 +73,7 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
                   </Td>
                   <Td>
                     <div className="font-medium text-[#212529]">{formatDateTime(record.attendedAt)}</div>
-                    <div className="text-xs text-[#6c757d]">Usuario: {record.createdByName}</div>
+                    <div className="text-xs text-[#212529]">Usuario: {record.createdByName}</div>
                   </Td>
                   <Td>{labelFromValue(record.kind)}</Td>
                   <Td><StatusBadge value={record.status} /></Td>
@@ -82,7 +82,7 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
               ))}
             </Table>
           ) : (
-            <p className="text-sm text-[#6c757d]">Historial de Despacho no visible para este rol.</p>
+            <p className="text-sm text-[#212529]">Historial de Despacho no visible para este rol.</p>
           )}
         </DetailSection>
 
@@ -98,7 +98,7 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
                   </Td>
                   <Td>
                     <div className="font-medium text-[#212529]">{formatDateTime(intervention.attendedAt)}</div>
-                    <div className="text-xs text-[#6c757d]">Usuario: {intervention.createdByName}</div>
+                    <div className="text-xs text-[#212529]">Usuario: {intervention.createdByName}</div>
                   </Td>
                   <Td>{labelFromValue(intervention.kind)}</Td>
                   <Td><StatusBadge value={intervention.status} /></Td>
@@ -107,7 +107,7 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
               ))}
             </Table>
           ) : (
-            <p className="text-sm text-[#6c757d]">Historial de Intervenciones no visible para este rol.</p>
+            <p className="text-sm text-[#212529]">Historial de Intervenciones no visible para este rol.</p>
           )}
         </DetailSection>
       </div>

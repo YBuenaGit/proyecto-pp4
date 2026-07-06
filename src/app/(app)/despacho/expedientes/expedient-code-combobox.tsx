@@ -100,10 +100,10 @@ export function ExpedientCodeCombobox({ defaultValue }: { defaultValue?: string 
         }}
         className={cn(inputClass, "flex items-center justify-between gap-2 text-left")}
       >
-        <span className={cn("min-w-0 flex-1 truncate", selectedOption ? "text-[#212529]" : "text-[#6c757d]")}>
+        <span className={cn("min-w-0 flex-1 truncate", selectedOption ? "text-[#212529]" : "text-[#212529]")}>
           {selectedOption ? optionText(selectedOption) : "Seleccionar"}
         </span>
-        <ChevronDown className="h-4 w-4 shrink-0 text-[#6c757d]" />
+        <ChevronDown className="h-4 w-4 shrink-0 text-[#212529]" />
       </button>
 
       {open ? (
@@ -115,7 +115,7 @@ export function ExpedientCodeCombobox({ defaultValue }: { defaultValue?: string 
                 type="button"
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => setQuery("")}
-                className="inline-flex items-center gap-1 rounded-sm px-1.5 py-1 text-[#6c757d] hover:bg-[#e9ecef] hover:text-[#212529]"
+                className="inline-flex items-center gap-1 rounded-sm px-1.5 py-1 text-[#212529] hover:bg-[#e9ecef] hover:text-[#212529]"
               >
                 <X className="h-3.5 w-3.5" />
                 Ver todos
@@ -138,7 +138,7 @@ export function ExpedientCodeCombobox({ defaultValue }: { defaultValue?: string 
               </button>
             ))
           ) : (
-            <p className="px-3 py-2 text-sm font-medium text-[#6c757d]">Sin codigos coincidentes.</p>
+            <p className="px-3 py-2 text-sm font-medium text-[#212529]">Sin codigos coincidentes.</p>
           )}
         </div>
       ) : null}

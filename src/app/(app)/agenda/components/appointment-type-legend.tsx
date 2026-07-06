@@ -34,7 +34,7 @@ export function AppointmentTypeLegend() {
         {legendTypes.map((type) => (
           <span
             key={type}
-            className="inline-flex items-center gap-2 text-xs font-medium text-[#6c757d]"
+            className="inline-flex items-center gap-2 text-xs font-medium text-[#212529]"
           >
             <span className={cn("h-2.5 w-2.5 rounded-full", legendDots[type])} />
             {APPOINTMENT_TYPE_LABELS[type]}

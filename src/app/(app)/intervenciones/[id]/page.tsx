@@ -1,4 +1,4 @@
-﻿import Image from "next/image";
+import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
@@ -179,7 +179,7 @@ function SheetAttachments({ attachments }: { attachments: LegajoAttachment[] }) 
   if (!attachments.length) return null;
   return (
     <div className="rounded-sm border border-[#dee2e6] bg-[#f8f9fa] p-3">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Adjuntos de esta intervencion</p>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#212529]">Adjuntos de esta intervencion</p>
       <div className="grid gap-2 sm:grid-cols-2">
         {attachments.map((attachment) => (
           <div
@@ -189,7 +189,7 @@ function SheetAttachments({ attachments }: { attachments: LegajoAttachment[] }) 
             <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[#0667b0]" />
             <span className="min-w-0 flex-1">
               <span className="block truncate font-semibold">{attachment.originalName}</span>
-              <span className="block text-xs text-[#6c757d]">{Math.ceil(attachment.size / 1024)} KB Â· {attachment.uploadedBy.name}</span>
+              <span className="block text-xs text-[#212529]">{Math.ceil(attachment.size / 1024)} KB · {attachment.uploadedBy.name}</span>
               <span className="mt-2 block">
                 <AttachmentPreviewButton href={`/adjuntos/${attachment.id}`} name={attachment.originalName} mimeType={attachment.mimeType} compact />
               </span>
@@ -252,7 +252,7 @@ function LegajoCoverSheet({
             </div>
           </div>
           <div className="rounded-sm border border-[#86cfdf] bg-white px-3 py-2 text-right">
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#0c5460]">NÂ° de legajo</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-[#0c5460]">N° de legajo</p>
             <p className="mt-1 text-base font-semibold text-[#212529]">{internalNumber}</p>
           </div>
         </div>
@@ -260,7 +260,7 @@ function LegajoCoverSheet({
 
       <div className="book-leaf-body space-y-5 px-5 py-5">
         <div className="rounded-sm border border-[#b7dfee] bg-white/80 px-4 py-3">
-          <CoverField label="Tipo / contexto" value={`${type} Â· ${context}`} />
+          <CoverField label="Tipo / contexto" value={`${type} · ${context}`} />
           <CoverField label="Fecha de apertura" value={formatDateTime(attendedAt)} />
           <CoverField label="Usuario que inicio" value={createdBy} />
         </div>
@@ -284,8 +284,8 @@ function LegajoAttachmentSheet({ attachments, pageNumber, pageCount }: { attachm
     <article className="book-leaf rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_12px_34px_rgba(0,0,0,0.22)]">
       <div className="border-b border-[#b7dfee] bg-[#dff3fb] px-4 py-4 sm:px-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Archivos</p>
-        <h3 className="mt-1 text-lg font-semibold text-[#212529]">Archivos generales del legajo{pageCount && pageCount > 1 ? ` · hoja ${pageNumber} de ${pageCount}` : ""}</h3>
-        <p className="mt-1 text-sm text-[#6c757d]">Documentacion adjunta disponible para abrir o descargar.</p>
+        <h3 className="mt-1 text-lg font-semibold text-[#212529]">Archivos generales del legajo{pageCount && pageCount > 1 ? ` � hoja ${pageNumber} de ${pageCount}` : ""}</h3>
+        <p className="mt-1 text-sm text-[#212529]">Documentacion adjunta disponible para abrir o descargar.</p>
       </div>
       <div className="book-leaf-body grid gap-3 px-4 py-4 sm:grid-cols-2 sm:px-5">
         {attachments.map((attachment) => (
@@ -294,7 +294,7 @@ function LegajoAttachmentSheet({ attachments, pageNumber, pageCount }: { attachm
               <FileText className="mt-1 h-4 w-4 shrink-0 text-[#0667b0]" />
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-[#212529]">{attachment.originalName}</p>
-                <p className="text-xs text-[#6c757d]">{Math.ceil(attachment.size / 1024)} KB Â· {attachment.uploadedBy.name}</p>
+                <p className="text-xs text-[#212529]">{Math.ceil(attachment.size / 1024)} KB · {attachment.uploadedBy.name}</p>
                 <div className="mt-3">
                   <AttachmentPreviewButton href={`/adjuntos/${attachment.id}`} name={attachment.originalName} mimeType={attachment.mimeType} />
                 </div>
@@ -348,7 +348,7 @@ function InterventionReadContent({
 
       {attachments.length ? (
         <div className="rounded-sm border border-[#dee2e6] bg-[#f8f9fa] p-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#6c757d]">Archivos vinculados</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#212529]">Archivos vinculados</p>
           <div className="flex flex-wrap gap-2">
             {attachments.map((attachment) => (
               <AttachmentPreviewButton key={attachment.id} href={`/adjuntos/${attachment.id}`} name={attachment.originalName} mimeType={attachment.mimeType} compact />
@@ -570,7 +570,7 @@ export default async function InterventionDetailPage({
     bookEntries.push({
       item: {
         sheetNumber: 1,
-        label: pageIndex > 0 ? `Primera atencion · cont. ${pageIndex + 1}` : "Primera atencion · contenido",
+        label: pageIndex > 0 ? `Primera atencion � cont. ${pageIndex + 1}` : "Primera atencion � contenido",
         title: firstAttentionType,
         dateText: formatDateTime(intervention.attendedAt),
         statusText: initialStatusText,
@@ -630,7 +630,7 @@ export default async function InterventionDetailPage({
       bookEntries.push({
         item: {
           sheetNumber,
-          label: pageIndex > 0 ? `${sectionLabel} · cont. ${pageIndex + 1}` : `${sectionLabel} · contenido`,
+          label: pageIndex > 0 ? `${sectionLabel} � cont. ${pageIndex + 1}` : `${sectionLabel} � contenido`,
           title: actionTitle,
           dateText: formatDateTime(action.createdAt),
           statusText,
@@ -657,7 +657,7 @@ export default async function InterventionDetailPage({
       bookEntries.push({
         item: {
           sheetNumber: displayActionSheets.length + 2,
-          label: attachmentPages.length > 1 ? `Archivos · hoja ${pageIndex + 1}` : "Archivos",
+          label: attachmentPages.length > 1 ? `Archivos � hoja ${pageIndex + 1}` : "Archivos",
           title: "Archivos del legajo",
           dateText: formatDateTime(generalAttachments[0]?.createdAt ?? intervention.createdAt),
           statusText: `${generalAttachments.length} archivo${generalAttachments.length === 1 ? "" : "s"}`,
@@ -685,7 +685,7 @@ export default async function InterventionDetailPage({
       >
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Expediente virtual Â· Legajo de intervencion</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">Expediente virtual · Legajo de intervencion</p>
             <h1 className="mt-1 text-2xl font-semibold text-[#212529] sm:text-3xl">Legajo de la intervencion {intervention.internalNumber}</h1>
             <div className="mt-3 flex flex-wrap items-center gap-2">
               <span className="rounded-sm border border-[#b7dfee] bg-white px-2.5 py-1 text-sm font-semibold text-[#0c5460]">{labelFromValue(intervention.type)}</span>
@@ -794,7 +794,7 @@ export default async function InterventionDetailPage({
             return (
               <LegajoInterventionRow
                 key={action.id}
-                modalTitle={`Intervencion NÂ° ${sheetNumber}`}
+                modalTitle={`Intervencion N° ${sheetNumber}`}
                 modalContent={
                   <InterventionReadContent
                     date={action.createdAt}
@@ -811,19 +811,19 @@ export default async function InterventionDetailPage({
                 }
               >
                 <Td className="w-[150px]">
-                  <span className="block font-semibold text-[#0667b0]">Intervencion NÂ° {sheetNumber}</span>
-                  <span className="mt-0.5 block text-xs text-[#6c757d]">Registro agregado</span>
+                  <span className="block font-semibold text-[#0667b0]">Intervencion N° {sheetNumber}</span>
+                  <span className="mt-0.5 block text-xs text-[#212529]">Registro agregado</span>
                 </Td>
                 <Td className="w-[210px]">
                   <span className="block font-semibold">{formatDateTime(action.createdAt)}</span>
-                  <span className="mt-0.5 block text-xs text-[#6c757d]">{action.createdBy.name} Â· {labelFromValue(action.createdBy.role)}</span>
+                  <span className="mt-0.5 block text-xs text-[#212529]">{action.createdBy.name} · {labelFromValue(action.createdBy.role)}</span>
                 </Td>
                 <Td>
                   <span className="block font-semibold">{labelFromValue(action.actionType)}</span>
                   <span className="mt-1 block text-xs font-medium text-[#0667b0]">Clic para ver el detalle</span>
                   {!isOriginRestricted ? (
                     <div className="mt-2">
-                      <LegajoActionEditButton title={`Editar intervencion N° ${sheetNumber}`}>
+                      <LegajoActionEditButton title={`Editar intervencion N� ${sheetNumber}`}>
                         <AddJuridicalActionForm
                           action={updateJuridicalAction.bind(null, action.id)}
                           initialValues={{
@@ -847,7 +847,7 @@ export default async function InterventionDetailPage({
                         Seguimiento: {formatDate(action.nextStepDate)}
                       </span>
                     ) : null}
-                    {!statusText && !action.nextStepDate ? <span className="text-sm text-[#6c757d]">Sin seguimiento</span> : null}
+                    {!statusText && !action.nextStepDate ? <span className="text-sm text-[#212529]">Sin seguimiento</span> : null}
                   </div>
                 </Td>
                 <Td className="w-[180px]">
@@ -866,7 +866,7 @@ export default async function InterventionDetailPage({
           })}
 
           <LegajoInterventionRow
-            modalTitle="Intervencion NÂ° 1"
+            modalTitle="Intervencion N° 1"
             modalContent={
               <InterventionReadContent
                 date={intervention.attendedAt}
@@ -884,12 +884,12 @@ export default async function InterventionDetailPage({
             }
           >
             <Td className="w-[150px]">
-              <span className="block font-semibold text-[#0667b0]">Intervencion NÂ° 1</span>
-              <span className="mt-0.5 block text-xs text-[#6c757d]">Primera atencion</span>
+              <span className="block font-semibold text-[#0667b0]">Intervencion N° 1</span>
+              <span className="mt-0.5 block text-xs text-[#212529]">Primera atencion</span>
             </Td>
             <Td className="w-[210px]">
               <span className="block font-semibold">{formatDateTime(intervention.attendedAt)}</span>
-              <span className="mt-0.5 block text-xs text-[#6c757d]">{intervention.createdBy.name} Â· {labelFromValue(intervention.createdBy.role)}</span>
+              <span className="mt-0.5 block text-xs text-[#212529]">{intervention.createdBy.name} · {labelFromValue(intervention.createdBy.role)}</span>
             </Td>
             <Td>
               <span className="block font-semibold">{labelFromValue(intervention.type)}</span>
