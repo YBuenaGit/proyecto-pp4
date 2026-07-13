@@ -10,7 +10,7 @@ import {
   EXPEDIENT_CATEGORY_LABELS,
   JURIDICAL_TYPE_LABELS,
 } from "@/lib/constants";
-import { toDateKey } from "@/lib/agenda-dates";
+import { argentinaDayRange, toArgentinaDateKey } from "@/lib/argentina-time";
 import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_TYPE_LABELS, type CalendarScope } from "@/lib/appointment-constants";
 import { canAccessAgenda, getAllowedCalendarScopes } from "@/lib/appointment-permissions";
 import { formatDateTime, labelFromValue } from "@/lib/format";
@@ -596,11 +596,8 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
   const selectedDayPanelParam = param(params, "dayPanel");
   const selectedDayPanel = selectedDayPanelParam ? normalizeDayPanel(selectedDayPanelParam, availableDayPanels) : undefined;
 
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
-  const todayKey = toDateKey(today);
+  const todayKey = toArgentinaDateKey();
+  const { start: today, endExclusive: tomorrow } = argentinaDayRange(todayKey);
 
   const [
     pendingDispatch,

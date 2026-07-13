@@ -1,6 +1,7 @@
 import { PrismaClient, type JuridicalAction } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { getCloudflareR2Storage, sanitizeFileName } from "../src/lib/cloudflare-r2-core";
+import { addArgentinaDateKeyDays, parseArgentinaDateTime, toArgentinaDateKey } from "../src/lib/argentina-time";
 
 const prisma = new PrismaClient();
 
@@ -16,10 +17,8 @@ function normalizeName(value: string) {
 }
 
 function daysAgo(days: number, hour = 10) {
-  const date = new Date();
-  date.setDate(date.getDate() - days);
-  date.setHours(hour, 0, 0, 0);
-  return date;
+  const dateKey = addArgentinaDateKeyDays(toArgentinaDateKey(), -days);
+  return parseArgentinaDateTime(`${dateKey}T${String(hour).padStart(2, "0")}:00`);
 }
 
 function internalNumber(prefix: string, index: number) {

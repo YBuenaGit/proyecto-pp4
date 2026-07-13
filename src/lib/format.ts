@@ -1,3 +1,5 @@
+import { ARGENTINA_TIME_ZONE, toArgentinaDateTimeInputValue } from "./argentina-time";
+
 export function labelFromValue(value: string | null | undefined) {
   if (!value) return "-";
   return value
@@ -10,14 +12,17 @@ export function labelFromValue(value: string | null | undefined) {
 export function formatDateTime(value: Date | string | null | undefined) {
   if (!value) return "-";
   return new Intl.DateTimeFormat("es-AR", {
+    timeZone: ARGENTINA_TIME_ZONE,
     dateStyle: "short",
     timeStyle: "short",
+    hourCycle: "h23",
   }).format(new Date(value));
 }
 
 export function formatDate(value: Date | string | null | undefined) {
   if (!value) return "-";
   return new Intl.DateTimeFormat("es-AR", {
+    timeZone: ARGENTINA_TIME_ZONE,
     dateStyle: "short",
   }).format(new Date(value));
 }
@@ -32,11 +37,7 @@ export function normalizeName(value: string) {
 }
 
 export function toDateInputValue(value: Date | string | null | undefined) {
-  if (!value) return "";
-  const date = new Date(value);
-  const offset = date.getTimezoneOffset();
-  const localDate = new Date(date.getTime() - offset * 60 * 1000);
-  return localDate.toISOString().slice(0, 16);
+  return toArgentinaDateTimeInputValue(value);
 }
 
 export function currencylessCount(value: number) {

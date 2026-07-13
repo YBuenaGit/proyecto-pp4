@@ -14,6 +14,8 @@ import { Table, Td } from "@/components/ui/table";
 import { cn } from "@/components/ui/cn";
 import { SelectedFilesInput } from "@/components/ui/selected-files-input";
 import { sortByLabel } from "@/lib/text";
+import { parseArgentinaDate } from "@/lib/argentina-time";
+import { formatDate, formatDateTime } from "@/lib/format";
 import {
   ACT_TYPES,
   BRANDS,
@@ -65,17 +67,6 @@ type RetentionDetail = RetentionRecord & {
 
 type RetentionFilters = Partial<Record<(typeof RETENTION_FILTER_KEYS)[number], string>>;
 
-function formatDateTime(value: string) {
-  const date = new Date(value);
-  const argentinaDate = new Date(date.getTime() - 3 * 60 * 60 * 1000);
-  const day = String(argentinaDate.getUTCDate()).padStart(2, "0");
-  const month = String(argentinaDate.getUTCMonth() + 1).padStart(2, "0");
-  const year = String(argentinaDate.getUTCFullYear()).slice(-2);
-  const hours = String(argentinaDate.getUTCHours()).padStart(2, "0");
-  const minutes = String(argentinaDate.getUTCMinutes()).padStart(2, "0");
-  return `${day}/${month}/${year}, ${hours}:${minutes}`;
-}
-
 function formatFileSize(size: number) {
   if (size < 1024 * 1024) return `${Math.max(1, Math.ceil(size / 1024))} KB`;
   return `${(size / (1024 * 1024)).toFixed(1)} MB`;
@@ -83,7 +74,7 @@ function formatFileSize(size: number) {
 
 function formatDateOnly(value: string) {
   if (!value) return "-";
-  return new Intl.DateTimeFormat("es-AR", { dateStyle: "short" }).format(new Date(`${value}T00:00:00-03:00`));
+  return formatDate(parseArgentinaDate(value));
 }
 
 function textFromForm(formData: FormData, key: string) {

@@ -6,24 +6,17 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Table, Td } from "@/components/ui/table";
 import { requireUser } from "@/lib/auth";
+import { getMonthRange } from "@/lib/agenda-dates";
+import { toArgentinaMonthKey } from "@/lib/argentina-time";
 import { labelFromValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessDispatch, canAccessExpedients, canAccessJuridical, canAccessReports } from "@/lib/rbac";
 import { dateRangeWhere, param } from "@/lib/search";
 import type { SearchParams } from "@/lib/types";
 
-function dateKey(value: Date) {
-  const year = value.getFullYear();
-  const month = String(value.getMonth() + 1).padStart(2, "0");
-  const day = String(value.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
 function currentMonthRange() {
-  const now = new Date();
-  const first = new Date(now.getFullYear(), now.getMonth(), 1);
-  const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-  return { from: dateKey(first), to: dateKey(last) };
+  const { monthStart, monthEnd } = getMonthRange(toArgentinaMonthKey());
+  return { from: monthStart, to: monthEnd };
 }
 
 function reportRangeLabel(from: string, to: string) {

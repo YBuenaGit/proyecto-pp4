@@ -31,6 +31,7 @@ import {
   PRIORITIES,
 } from "@/lib/constants";
 import { formatDateTime, labelFromValue, normalizeName } from "@/lib/format";
+import { parseArgentinaDateTime, toArgentinaDateTimeInputValue } from "@/lib/argentina-time";
 import { sortByLabel } from "@/lib/text";
 
 export type DispatchWizardValues = {
@@ -147,11 +148,7 @@ function newId(prefix: string) {
 }
 
 function currentDateTimeInputValue() {
-  const date = new Date();
-  const offset = date.getTimezoneOffset();
-  return new Date(date.getTime() - offset * 60 * 1000)
-    .toISOString()
-    .slice(0, 16);
+  return toArgentinaDateTimeInputValue(new Date());
 }
 
 function emptyComplainant(id = newId("complainant")): ComplainantDraft {
@@ -368,7 +365,7 @@ function validateStep(
     }
     if (
       values.attendedAt &&
-      Number.isNaN(new Date(values.attendedAt).getTime())
+      Number.isNaN(parseArgentinaDateTime(values.attendedAt).getTime())
     ) {
       errors.push({
         field: "attendedAt",
@@ -377,7 +374,7 @@ function validateStep(
     }
     if (
       values.deadlineAt &&
-      Number.isNaN(new Date(values.deadlineAt).getTime())
+      Number.isNaN(parseArgentinaDateTime(values.deadlineAt).getTime())
     ) {
       errors.push({ field: "deadlineAt", message: "Ingresá un plazo válido." });
     }

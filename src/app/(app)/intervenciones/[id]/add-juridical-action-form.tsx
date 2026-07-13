@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/form-controls";
 import { JURIDICAL_STATUSES } from "@/lib/constants";
 import { labelFromValue, toDateInputValue } from "@/lib/format";
+import { toArgentinaDateTimeInputValue } from "@/lib/argentina-time";
 import {
   ExistingAttachmentsEditor,
   type EditableAttachment,
@@ -43,11 +44,7 @@ type ActionSheetFormValues = {
 };
 
 function nowInputValue() {
-  const date = new Date();
-  const offset = date.getTimezoneOffset();
-  return new Date(date.getTime() - offset * 60 * 1000)
-    .toISOString()
-    .slice(0, 16);
+  return toArgentinaDateTimeInputValue(new Date());
 }
 
 function attachmentKey(file: File) {

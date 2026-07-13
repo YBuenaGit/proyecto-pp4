@@ -4,6 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { nextInternalNumber } from "@/lib/form";
 import { prisma } from "@/lib/prisma";
 import { canAccessRetentions } from "@/lib/rbac";
+import { addArgentinaDateKeyDays, parseArgentinaDate } from "@/lib/argentina-time";
 import {
   normalizeOptionalIdentifier,
   type RetentionStatus,
@@ -42,20 +43,19 @@ function textParam(request: NextRequest, key: string) {
   return (request.nextUrl.searchParams.get(key) ?? "").trim();
 }
 
-function dateBoundary(value: string, endOfDay = false) {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
-  return new Date(`${value}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}-03:00`);
-}
-
 function contains(value: string): Prisma.StringFilter<"Retention"> {
   return { contains: value, mode: "insensitive" };
 }
 
 function buildWhere(request: NextRequest): Prisma.RetentionWhereInput {
   const where: Prisma.RetentionWhereInput = {};
-  const from = dateBoundary(textParam(request, "from"));
-  const to = dateBoundary(textParam(request, "to"), true);
-  if (from || to) where.dateTime = { ...(from ? { gte: from } : {}), ...(to ? { lte: to } : {}) };
+  const fromKey = textParam(request, "from");
+  const toKey = textParam(request, "to");
+  const from = fromKey ? parseArgentinaDate(fromKey) : null;
+  const toExclusive = toKey ? parseArgentinaDate(addArgentinaDateKeyDays(toKey, 1)) : null;
+  if (from || toExclusive) {
+    where.dateTime = { ...(from ? { gte: from } : {}), ...(toExclusive ? { lt: toExclusive } : {}) };
+  }
 
   const actNumber = textParam(request, "actNumber");
   const recordNumber = textParam(request, "recordNumber");

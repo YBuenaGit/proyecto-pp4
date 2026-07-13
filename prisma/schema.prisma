@@ -16,8 +16,8 @@ model User {
   passwordHash String
   role         String
   active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
 
   sessions               Session[]
   dispatchRecords        DispatchRecord[]        @relation("DispatchCreatedBy")
@@ -46,7 +46,7 @@ model NotificationRead {
   id              String   @id @default(cuid())
   userId          String
   notificationKey String
-  readAt          DateTime @default(now())
+  readAt          DateTime @default(now()) @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -60,8 +60,8 @@ model Session {
   id        String   @id @default(cuid())
   tokenHash String   @unique
   userId    String
-  expiresAt DateTime
-  createdAt DateTime @default(now())
+  expiresAt DateTime @db.Timestamptz(3)
+  createdAt DateTime @default(now()) @db.Timestamptz(3)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -79,8 +79,8 @@ model ExternalPerson {
   phone2             String?
   address            String?
   notes              String?
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  createdAt          DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @db.Timestamptz(3)
 
   dispatchRecords        DispatchRecord[]
   juridicalInterventions JuridicalIntervention[]
@@ -90,34 +90,34 @@ model ExternalPerson {
 }
 
 model DispatchRecord {
-  id                  String   @id @default(cuid())
-  internalNumber      String   @unique
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
-  attendedAt          DateTime @default(now())
-  usesHistoricalDate  Boolean  @default(false)
-  createdById         String
-  personId            String?
-  dniSnapshot         String?
-  nameSnapshot        String?
-  description         String
-  initialGuidance     String?
-  confidentialNotes   String?
-  deadlineAt          DateTime?
-  category            String
-  priority            String   @default("MEDIA")
-  status              String   @default("RECIBIDO")
-  referredArea        String?
-  origin              String   @default("DIRECT")
-  lastStatusAt        DateTime @default(now())
+  id                 String    @id @default(cuid())
+  internalNumber     String    @unique
+  createdAt          DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime  @updatedAt @db.Timestamptz(3)
+  attendedAt         DateTime  @default(now()) @db.Timestamptz(3)
+  usesHistoricalDate Boolean   @default(false)
+  createdById        String
+  personId           String?
+  dniSnapshot        String?
+  nameSnapshot       String?
+  description        String
+  initialGuidance    String?
+  confidentialNotes  String?
+  deadlineAt         DateTime? @db.Timestamptz(3)
+  category           String
+  priority           String    @default("MEDIA")
+  status             String    @default("RECIBIDO")
+  referredArea       String?
+  origin             String    @default("DIRECT")
+  lastStatusAt       DateTime  @default(now()) @db.Timestamptz(3)
 
-  createdBy            User               @relation("DispatchCreatedBy", fields: [createdById], references: [id])
-  person               ExternalPerson?    @relation(fields: [personId], references: [id], onDelete: SetNull)
+  createdBy            User                   @relation("DispatchCreatedBy", fields: [createdById], references: [id])
+  person               ExternalPerson?        @relation(fields: [personId], references: [id], onDelete: SetNull)
   complainants         DispatchComplainant[]
   linkedPersons        DispatchLinkedPerson[]
   followUps            DispatchFollowUp[]
-  originReferrals      Referral[]         @relation("OriginDispatch")
-  destinationReferrals Referral[]         @relation("DestinationDispatch")
+  originReferrals      Referral[]             @relation("OriginDispatch")
+  destinationReferrals Referral[]             @relation("DestinationDispatch")
 
   @@index([createdAt])
   @@index([attendedAt])
@@ -140,7 +140,7 @@ model DispatchComplainant {
   phone1           String?
   phone2           String?
   address          String?
-  createdAt        DateTime @default(now())
+  createdAt        DateTime @default(now()) @db.Timestamptz(3)
 
   dispatchRecord DispatchRecord @relation(fields: [dispatchRecordId], references: [id], onDelete: Cascade)
 
@@ -160,7 +160,7 @@ model DispatchLinkedPerson {
   phone1              String?
   phone2              String?
   address             String?
-  createdAt           DateTime @default(now())
+  createdAt           DateTime @default(now()) @db.Timestamptz(3)
 
   dispatchRecord DispatchRecord @relation(fields: [dispatchRecordId], references: [id], onDelete: Cascade)
 
@@ -171,13 +171,13 @@ model DispatchLinkedPerson {
 }
 
 model DispatchFollowUp {
-  id               String   @id @default(cuid())
+  id               String    @id @default(cuid())
   dispatchRecordId String
   content          String
   statusAfter      String?
-  deadlineAt       DateTime?
+  deadlineAt       DateTime? @db.Timestamptz(3)
   createdById      String
-  createdAt        DateTime @default(now())
+  createdAt        DateTime  @default(now()) @db.Timestamptz(3)
 
   dispatchRecord DispatchRecord @relation(fields: [dispatchRecordId], references: [id], onDelete: Cascade)
   createdBy      User           @relation("DispatchFollowUpCreatedBy", fields: [createdById], references: [id])
@@ -189,16 +189,16 @@ model DispatchFollowUp {
 }
 
 model JuridicalIntervention {
-  id                     String   @id @default(cuid())
-  internalNumber         String   @unique
-  createdAt              DateTime @default(now())
-  updatedAt              DateTime @updatedAt
-  attendedAt             DateTime @default(now())
+  id                     String    @id @default(cuid())
+  internalNumber         String    @unique
+  createdAt              DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt              DateTime  @updatedAt @db.Timestamptz(3)
+  attendedAt             DateTime  @default(now()) @db.Timestamptz(3)
   createdById            String
   personId               String?
   dniSnapshot            String?
   nameSnapshot           String?
-  complainantIsAnonymous Boolean  @default(false)
+  complainantIsAnonymous Boolean   @default(false)
   complainantDni         String?
   complainantFirstName   String?
   complainantLastName    String?
@@ -207,8 +207,8 @@ model JuridicalIntervention {
   complainantAddress     String?
   type                   String
   subType                String?
-  urgency                String   @default("MEDIA")
-  status                 String   @default("RECIBIDO")
+  urgency                String    @default("MEDIA")
+  status                 String    @default("RECIBIDO")
   oficioNumber           String?
   expedienteNumber       String?
   interventionContext    String?
@@ -218,17 +218,17 @@ model JuridicalIntervention {
   referredToAgency       String?
   derivedArea            String?
   confidentialNotes      String?
-  deadlineAt             DateTime?
-  origin                 String   @default("DIRECT")
-  lastStatusAt           DateTime @default(now())
+  deadlineAt             DateTime? @db.Timestamptz(3)
+  origin                 String    @default("DIRECT")
+  lastStatusAt           DateTime  @default(now()) @db.Timestamptz(3)
 
-  createdBy            User              @relation("JuridicalCreatedBy", fields: [createdById], references: [id])
-  person               ExternalPerson?   @relation(fields: [personId], references: [id], onDelete: SetNull)
+  createdBy            User                    @relation("JuridicalCreatedBy", fields: [createdById], references: [id])
+  person               ExternalPerson?         @relation(fields: [personId], references: [id], onDelete: SetNull)
   complainants         JuridicalComplainant[]
   linkedPersons        JuridicalLinkedPerson[]
   actions              JuridicalAction[]
-  originReferrals      Referral[]        @relation("OriginJuridical")
-  destinationReferrals Referral[]        @relation("DestinationJuridical")
+  originReferrals      Referral[]              @relation("OriginJuridical")
+  destinationReferrals Referral[]              @relation("DestinationJuridical")
 
   @@index([createdAt])
   @@index([attendedAt])
@@ -244,17 +244,17 @@ model JuridicalIntervention {
 }
 
 model JuridicalComplainant {
-  id                       String   @id @default(cuid())
-  juridicalInterventionId  String
-  sortOrder                Int      @default(0)
-  isAnonymous              Boolean  @default(false)
-  dni                      String?
-  firstName                String?
-  lastName                 String?
-  phone1                   String?
-  phone2                   String?
-  address                  String?
-  createdAt                DateTime @default(now())
+  id                      String   @id @default(cuid())
+  juridicalInterventionId String
+  sortOrder               Int      @default(0)
+  isAnonymous             Boolean  @default(false)
+  dni                     String?
+  firstName               String?
+  lastName                String?
+  phone1                  String?
+  phone2                  String?
+  address                 String?
+  createdAt               DateTime @default(now()) @db.Timestamptz(3)
 
   juridicalIntervention JuridicalIntervention @relation(fields: [juridicalInterventionId], references: [id], onDelete: Cascade)
 
@@ -265,16 +265,16 @@ model JuridicalComplainant {
 }
 
 model JuridicalLinkedPerson {
-  id                       String   @id @default(cuid())
-  juridicalInterventionId  String
-  sortOrder                Int      @default(0)
-  dni                      String?
-  firstName                String?
-  apellidoApodoManual      String?
-  phone1                   String?
-  phone2                   String?
-  address                  String?
-  createdAt                DateTime @default(now())
+  id                      String   @id @default(cuid())
+  juridicalInterventionId String
+  sortOrder               Int      @default(0)
+  dni                     String?
+  firstName               String?
+  apellidoApodoManual     String?
+  phone1                  String?
+  phone2                  String?
+  address                 String?
+  createdAt               DateTime @default(now()) @db.Timestamptz(3)
 
   juridicalIntervention JuridicalIntervention @relation(fields: [juridicalInterventionId], references: [id], onDelete: Cascade)
 
@@ -289,10 +289,10 @@ model JuridicalAction {
   juridicalInterventionId String
   actionType              String
   content                 String
-  nextStepDate            DateTime?
-  deadlineAt              DateTime?
+  nextStepDate            DateTime? @db.Timestamptz(3)
+  deadlineAt              DateTime? @db.Timestamptz(3)
   createdById             String
-  createdAt               DateTime  @default(now())
+  createdAt               DateTime  @default(now()) @db.Timestamptz(3)
 
   juridicalIntervention JuridicalIntervention @relation(fields: [juridicalInterventionId], references: [id], onDelete: Cascade)
   createdBy             User                  @relation("JuridicalActionCreatedBy", fields: [createdById], references: [id])
@@ -317,10 +317,10 @@ model Referral {
   status                             String    @default("PENDIENTE")
   visibleStatusForOrigin             String    @default("Pendiente de recepción")
   referredById                       String
-  referredAt                         DateTime  @default(now())
-  closedAt                           DateTime?
-  createdAt                          DateTime  @default(now())
-  updatedAt                          DateTime  @updatedAt
+  referredAt                         DateTime  @default(now()) @db.Timestamptz(3)
+  closedAt                           DateTime? @db.Timestamptz(3)
+  createdAt                          DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt                          DateTime  @updatedAt @db.Timestamptz(3)
 
   referredBy                       User                   @relation("ReferralReferredBy", fields: [referredById], references: [id])
   originDispatchRecord             DispatchRecord?        @relation("OriginDispatch", fields: [originDispatchRecordId], references: [id], onDelete: SetNull)
@@ -339,19 +339,19 @@ model Referral {
 }
 
 model InternalExpedient {
-  id               String   @id @default(cuid())
-  internalNumber   String   @unique
+  id               String    @id @default(cuid())
+  internalNumber   String    @unique
   expedienteNumber String?
   codigo           String?
   category         String
   area             String?
   description      String
   observation      String?
-  deadlineAt       DateTime?
-  status           String   @default("INICIADO")
+  deadlineAt       DateTime? @db.Timestamptz(3)
+  status           String    @default("INICIADO")
   createdById      String
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @db.Timestamptz(3)
 
   createdBy User @relation("ExpedientCreatedBy", fields: [createdById], references: [id])
 
@@ -386,8 +386,8 @@ model Appointment {
   caseId           String?
   caseTitle        String?
   expedienteNumber String?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt        DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime @updatedAt @db.Timestamptz(3)
 
   owner          User? @relation("AppointmentOwner", fields: [ownerUserId], references: [id], onDelete: SetNull)
   createdBy      User  @relation("AppointmentCreatedBy", fields: [createdByUserId], references: [id])
@@ -419,7 +419,7 @@ model Attachment {
   size              Int
   isPrivate         Boolean  @default(false)
   uploadedById      String
-  createdAt         DateTime @default(now())
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
 
   uploadedBy User @relation("AttachmentUploadedBy", fields: [uploadedById], references: [id])
 
@@ -432,9 +432,9 @@ model Attachment {
 model Retention {
   id               String    @id @default(cuid())
   internalNumber   String    @unique
-  dateTime         DateTime  @default(now())
-  actCreatedAt     DateTime?
-  sentToTribunalAt DateTime?
+  dateTime         DateTime  @default(now()) @db.Timestamptz(3)
+  actCreatedAt     DateTime? @db.Timestamptz(3)
+  sentToTribunalAt DateTime? @db.Timestamptz(3)
   actNumber        String
   actType          String
   recordNumber     String
@@ -447,8 +447,8 @@ model Retention {
   description      String
   status           String    @default("PENDIENTE")
   createdById      String
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  createdAt        DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt        DateTime  @updatedAt @db.Timestamptz(3)
 
   createdBy   User                  @relation("RetentionCreatedBy", fields: [createdById], references: [id])
   histories   RetentionHistory[]
@@ -471,7 +471,7 @@ model RetentionHistory {
   oldValue    String?
   newValue    String?
   editedById  String
-  editedAt    DateTime @default(now())
+  editedAt    DateTime @default(now()) @db.Timestamptz(3)
 
   retention Retention @relation(fields: [retentionId], references: [id], onDelete: Cascade)
   editedBy  User      @relation("RetentionEditedBy", fields: [editedById], references: [id])
@@ -491,7 +491,7 @@ model RetentionAttachment {
   mimeType          String
   size              Int
   uploadedById      String
-  createdAt         DateTime @default(now())
+  createdAt         DateTime @default(now()) @db.Timestamptz(3)
 
   retention  Retention @relation(fields: [retentionId], references: [id], onDelete: Cascade)
   uploadedBy User      @relation("RetentionAttachmentUploadedBy", fields: [uploadedById], references: [id])
@@ -510,7 +510,7 @@ model AuditLog {
   beforeJson  String?
   afterJson   String?
   createdById String?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
 
   createdBy User? @relation("AuditCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 
@@ -530,8 +530,8 @@ model CatalogItem {
   active      Boolean  @default(true)
   sortOrder   Int      @default(0)
   createdById String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime @updatedAt @db.Timestamptz(3)
 
   createdBy User? @relation("CatalogCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
 

@@ -14,6 +14,7 @@ import {
   normalizeOptionalIdentifier,
 } from "./retentions";
 import { capitalizeFirstLetter } from "./text";
+import { parseArgentinaDate, toArgentinaDateKey } from "./argentina-time";
 
 const retentionFields = [
   "actCreatedAt",
@@ -49,7 +50,7 @@ const optionalDate = z
   .trim()
   .optional()
   .nullable()
-  .transform((value) => (value ? new Date(`${value}T00:00:00.000-03:00`) : null))
+  .transform((value) => (value ? parseArgentinaDate(value) : null))
   .refine((value) => value === null || !Number.isNaN(value.getTime()), "Fecha invalida.");
 const optionalColor = z
   .string()
@@ -104,7 +105,7 @@ export type RetentionDetailRecord = Prisma.RetentionGetPayload<{ include: typeof
 
 function dateKey(value: Date | string | null | undefined) {
   if (!value) return "";
-  return new Date(value).toISOString().slice(0, 10);
+  return toArgentinaDateKey(value);
 }
 
 function serializeBase(record: {

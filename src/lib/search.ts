@@ -1,4 +1,5 @@
 import type { SearchParams } from "./types";
+import { addArgentinaDateKeyDays, parseArgentinaDate } from "./argentina-time";
 
 export const DEFAULT_PAGE_SIZE = 10;
 
@@ -24,8 +25,8 @@ export function pagination(params: SearchParams, pageSize = DEFAULT_PAGE_SIZE) {
 
 export function dateRangeWhere(from?: string, to?: string) {
   if (!from && !to) return undefined;
-  const range: { gte?: Date; lte?: Date } = {};
-  if (from) range.gte = new Date(`${from}T00:00:00`);
-  if (to) range.lte = new Date(`${to}T23:59:59`);
+  const range: { gte?: Date; lt?: Date } = {};
+  if (from) range.gte = parseArgentinaDate(from);
+  if (to) range.lt = parseArgentinaDate(addArgentinaDateKeyDays(to, 1));
   return range;
 }

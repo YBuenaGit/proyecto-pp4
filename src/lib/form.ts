@@ -1,4 +1,5 @@
 import { normalizeName } from "./format";
+import { argentinaYear, parseArgentinaDateTime } from "./argentina-time";
 import { prisma } from "./prisma";
 import { capitalizeFirstLetter, capitalizeOptionalText, personDisplayName } from "./text";
 
@@ -28,7 +29,7 @@ export function checkbox(formData: FormData, key: string) {
 
 export function optionalDate(formData: FormData, key: string) {
   const value = text(formData, key);
-  return value ? new Date(value) : null;
+  return value ? parseArgentinaDateTime(value) : null;
 }
 
 export function complainantFromForm(formData: FormData) {
@@ -91,7 +92,7 @@ export async function upsertPersonFromForm(formData: FormData) {
 }
 
 export async function nextInternalNumber(prefix: string, model: "dispatch" | "juridical" | "expedient" | "retention") {
-  const year = new Date().getFullYear();
+  const year = argentinaYear();
   const count =
     model === "dispatch"
       ? await prisma.dispatchRecord.count()

@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFImage, type PDFPage } from "pdf-lib";
 import { formatDate, formatDateTime, labelFromValue } from "@/lib/format";
+import { ARGENTINA_TIME_ZONE } from "@/lib/argentina-time";
 
 export type LegajoPdfField = {
   label: string;
@@ -109,6 +110,7 @@ function display(value: string | null | undefined) {
 function formatLongDate(value: Date | string | null | undefined) {
   if (!value) return "-";
   return new Intl.DateTimeFormat("es-AR", {
+    timeZone: ARGENTINA_TIME_ZONE,
     day: "numeric",
     month: "long",
     year: "numeric",

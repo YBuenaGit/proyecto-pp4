@@ -35,6 +35,12 @@ Las variables requeridas estan documentadas en `.env.example`. La clave
 `R2_FILE_ENCRYPTION_KEY_V1` debe generarse una sola vez, guardarse como secreto y
 respaldarse: sin ella los adjuntos cifrados no se pueden recuperar.
 
+La URL de ejecucion `DATABASE_URL` usa el endpoint pooler de Neon y debe incluir
+`pgbouncer=true`; `DATABASE_URL_UNPOOLED` conserva el endpoint directo para las
+migraciones. Todas las fechas operativas se interpretan y muestran en
+`America/Argentina/Buenos_Aires`, mientras PostgreSQL guarda instantes con zona
+horaria para que el servidor pueda ejecutarse en cualquier region.
+
 3. Crear/aplicar migraciones y generar Prisma Client:
 
 ```bash
