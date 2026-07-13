@@ -417,7 +417,8 @@ export async function createDispatchRecord(formData: FormData) {
   });
 
   const complainants = parseComplainants(formData);
-  const linkedPersons = parseLinkedPersons(formData);
+  const noLinkedPerson = checkbox(formData, "noLinkedPerson");
+  const linkedPersons = noLinkedPerson ? [] : parseLinkedPersons(formData);
   const firstLinkedPerson = linkedPersons[0];
   const referredArea = optionalText(formData, "referredArea");
   const usesHistoricalDate = checkbox(formData, "usesHistoricalDate");
@@ -506,7 +507,8 @@ export async function updateDispatchRecord(
   });
 
   const complainants = parseComplainants(formData);
-  const linkedPersons = parseLinkedPersons(formData);
+  const noLinkedPerson = checkbox(formData, "noLinkedPerson");
+  const linkedPersons = noLinkedPerson ? [] : parseLinkedPersons(formData);
   const firstLinkedPerson = linkedPersons[0];
   const usesHistoricalDate = checkbox(formData, "usesHistoricalDate");
   const historicalDate = optionalDate(formData, "attendedAt");

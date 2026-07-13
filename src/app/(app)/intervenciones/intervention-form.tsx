@@ -153,6 +153,7 @@ type InterventionWizardValues = {
   expedienteNumber: string;
   complainants: ComplainantDraft[];
   linkedPersons: LinkedPersonDraft[];
+  noLinkedPerson: boolean;
   description: string;
   guidanceProvided: string;
   confidentialNotes: string;
@@ -488,6 +489,13 @@ function valuesFromRecord(
     expedienteNumber: record?.expedienteNumber ?? "",
     complainants: complainantsFromRecord(record),
     linkedPersons: linkedPersonsFromRecord(record),
+    noLinkedPerson: Boolean(
+      record &&
+        !record.linkedPersons?.length &&
+        !record.person &&
+        !record.dniSnapshot &&
+        !record.nameSnapshot,
+    ),
     description: record?.description ?? "",
     guidanceProvided: record?.guidanceProvided ?? "",
     confidentialNotes: record?.confidentialNotes ?? "",
@@ -567,38 +575,40 @@ function validateStep(
           ),
         ];
       }),
-      ...values.linkedPersons.flatMap((person, personIndex) => [
-        ...validateDni(
-          `linkedPersons.${personIndex}.dni`,
-          person.dni,
-          "El DNI de la persona denunciada",
-        ),
-        ...validateName(
-          `linkedPersons.${personIndex}.firstName`,
-          person.firstName,
-          "El nombre de la persona denunciada",
-        ),
-        ...validateName(
-          `linkedPersons.${personIndex}.apellidoApodoManual`,
-          person.apellidoApodoManual,
-          "El apellido o apodo manual de la persona denunciada",
-        ),
-        ...validatePhone(
-          `linkedPersons.${personIndex}.phone1`,
-          person.phone1,
-          "El telefono 1 de la persona denunciada",
-        ),
-        ...validatePhone(
-          `linkedPersons.${personIndex}.phone2`,
-          person.phone2,
-          "El telefono 2 de la persona denunciada",
-        ),
-        ...validateAddress(
-          `linkedPersons.${personIndex}.address`,
-          person.address,
-          "El domicilio de la persona denunciada",
-        ),
-      ]),
+      ...(values.noLinkedPerson
+        ? []
+        : values.linkedPersons.flatMap((person, personIndex) => [
+            ...validateDni(
+              `linkedPersons.${personIndex}.dni`,
+              person.dni,
+              "El DNI de la persona denunciada",
+            ),
+            ...validateName(
+              `linkedPersons.${personIndex}.firstName`,
+              person.firstName,
+              "El nombre de la persona denunciada",
+            ),
+            ...validateName(
+              `linkedPersons.${personIndex}.apellidoApodoManual`,
+              person.apellidoApodoManual,
+              "El apellido o apodo manual de la persona denunciada",
+            ),
+            ...validatePhone(
+              `linkedPersons.${personIndex}.phone1`,
+              person.phone1,
+              "El telefono 1 de la persona denunciada",
+            ),
+            ...validatePhone(
+              `linkedPersons.${personIndex}.phone2`,
+              person.phone2,
+              "El telefono 2 de la persona denunciada",
+            ),
+            ...validateAddress(
+              `linkedPersons.${personIndex}.address`,
+              person.address,
+              "El domicilio de la persona denunciada",
+            ),
+          ])),
     ];
   }
 
@@ -979,8 +989,10 @@ export function InterventionForm({
   );
   const submittedLinkedPersons = useMemo(
     () =>
-      values.linkedPersons.filter(hasLinkedPersonData).map(cleanLinkedPerson),
-    [values.linkedPersons],
+      values.noLinkedPerson
+        ? []
+        : values.linkedPersons.filter(hasLinkedPersonData).map(cleanLinkedPerson),
+    [values.linkedPersons, values.noLinkedPerson],
   );
 
   const stepErrors = useMemo(() => validateAllSteps(values), [values]);
@@ -1239,6 +1251,11 @@ export function InterventionForm({
         type="hidden"
         name="linkedPersonsPayload"
         value={JSON.stringify(submittedLinkedPersons)}
+      />
+      <input
+        type="hidden"
+        name="noLinkedPerson"
+        value={values.noLinkedPerson ? "true" : "false"}
       />
       {record ? (
         <input type="hidden" name="derivedArea" value={values.derivedArea} />
@@ -1693,23 +1710,50 @@ export function InterventionForm({
           <StepCard
             title="Personas denunciadas / vinculadas"
             action={
-              <button
-                type="button"
-                onClick={() =>
-                  setValue("linkedPersons", [
-                    ...values.linkedPersons,
-                    emptyLinkedPerson(),
-                  ])
-                }
-                className="inline-flex h-9 items-center gap-2 rounded-md border border-[#bee5eb] bg-[#d1ecf1] px-3 text-xs font-semibold text-[#0c5460] transition hover:bg-[#bee5eb]"
-              >
-                <Plus className="h-4 w-4" />
-                Agregar persona
-              </button>
+              values.noLinkedPerson ? null : (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setValue("linkedPersons", [
+                      ...values.linkedPersons,
+                      emptyLinkedPerson(),
+                    ])
+                  }
+                  className="inline-flex h-9 items-center gap-2 rounded-md border border-[#bee5eb] bg-[#d1ecf1] px-3 text-xs font-semibold text-[#0c5460] transition hover:bg-[#bee5eb]"
+                >
+                  <Plus className="h-4 w-4" />
+                  Agregar persona
+                </button>
+              )
             }
           >
             <div className="space-y-4">
-              {values.linkedPersons.map((person, personIndex) => (
+              <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-[#ced4da] bg-white px-3 py-2.5 text-sm text-[#212529]">
+                <input
+                  type="checkbox"
+                  checked={values.noLinkedPerson}
+                  onChange={(event) =>
+                    setValue("noLinkedPerson", event.target.checked)
+                  }
+                  className="mt-0.5 h-4 w-4 rounded border-[#ced4da] text-[#0667b0] focus:ring-blue-500"
+                />
+                <span>
+                  <span className="block font-semibold">
+                    No hay persona denunciada o vinculada
+                  </span>
+                  <span className="mt-0.5 block text-xs text-[#6c757d]">
+                    Usá esta opción cuando la intervención sea informativa o no
+                    involucre a un tercero.
+                  </span>
+                </span>
+              </label>
+
+              {values.noLinkedPerson ? (
+                <p className="rounded-md bg-[#f8f9fa] px-3 py-2 text-sm text-[#495057]">
+                  La intervención se guardará sin personas denunciadas o vinculadas.
+                </p>
+              ) : (
+                values.linkedPersons.map((person, personIndex) => (
                 <div
                   key={person.id}
                   className="rounded-lg border border-[#dee2e6] bg-[#f8f9fa] p-3"
@@ -1908,7 +1952,8 @@ export function InterventionForm({
                     </Field>
                   </div>
                 </div>
-              ))}
+                ))
+              )}
             </div>
           </StepCard>
         </div>

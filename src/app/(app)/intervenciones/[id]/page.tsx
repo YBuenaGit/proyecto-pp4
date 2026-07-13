@@ -1306,6 +1306,7 @@ export default async function InterventionDetailPage({
                   </>
                 }
                 size="md"
+                closeOnBackdropClick={false}
               >
                 <AddJuridicalActionForm
                   action={addJuridicalAction.bind(null, intervention.id)}

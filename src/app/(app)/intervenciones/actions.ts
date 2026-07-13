@@ -7,7 +7,7 @@ import { ACTION_TYPES, JURIDICAL_STATUSES, PRIORITIES } from "@/lib/constants";
 import { requireUser } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { saveAttachments } from "@/lib/files";
-import { nextInternalNumber, optionalDate, optionalSentenceText, optionalText, sentenceText, text } from "@/lib/form";
+import { checkbox, nextInternalNumber, optionalDate, optionalSentenceText, optionalText, sentenceText, text } from "@/lib/form";
 import { buildJuridicalActionContent, parseJuridicalActionContent } from "@/lib/juridical-action-content";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessJuridical, canBypassLegajoRestriction } from "@/lib/rbac";
@@ -335,7 +335,8 @@ export async function createJuridicalIntervention(formData: FormData) {
     status: text(formData, "status") || "RECIBIDO",
   });
   const complainants = parseComplainants(formData);
-  const linkedPersons = parseLinkedPersons(formData);
+  const noLinkedPerson = checkbox(formData, "noLinkedPerson");
+  const linkedPersons = noLinkedPerson ? [] : parseLinkedPersons(formData);
   const firstComplainant = complainants[0];
   const firstLinkedPerson = linkedPersons[0];
   const derivedArea = optionalText(formData, "derivedArea");
@@ -422,7 +423,8 @@ export async function updateJuridicalIntervention(interventionId: string, formDa
     status: text(formData, "status") || "RECIBIDO",
   });
   const complainants = parseComplainants(formData);
-  const linkedPersons = parseLinkedPersons(formData);
+  const noLinkedPerson = checkbox(formData, "noLinkedPerson");
+  const linkedPersons = noLinkedPerson ? [] : parseLinkedPersons(formData);
   const firstComplainant = complainants[0];
   const firstLinkedPerson = linkedPersons[0];
   const attendedAt = optionalDate(formData, "attendedAt") ?? before.attendedAt;

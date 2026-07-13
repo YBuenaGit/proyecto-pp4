@@ -69,6 +69,9 @@ export function DispatchForm({
   const apellidoApodoManual = record?.person?.lastName ?? record?.nameSnapshot?.split(" ").slice(1).join(" ") ?? "";
   const complainants = record?.complainants ?? [];
   const linkedPersons = record?.linkedPersons ?? [];
+  const hasLegacyLinkedPerson = Boolean(
+    record?.person || record?.dniSnapshot || record?.nameSnapshot,
+  );
   const fallbackComplainants: StoredComplainant[] = [{ isAnonymous: false }];
   const fallbackLinkedPerson: Omit<LinkedPersonDraft, "id"> = {
     dni: record?.person?.dni ?? record?.dniSnapshot ?? "",
@@ -108,6 +111,9 @@ export function DispatchForm({
     referredArea: record?.referredArea ?? "",
     complainants: initialComplainants,
     linkedPersons: initialLinkedPersons,
+    noLinkedPerson: Boolean(
+      record && linkedPersons.length === 0 && !hasLegacyLinkedPerson,
+    ),
     description: record?.description ?? "",
     initialGuidance: record?.initialGuidance ?? "",
     confidentialNotes: record?.confidentialNotes ?? "",

@@ -45,6 +45,7 @@ export type DispatchWizardValues = {
   referredArea: string;
   complainants: ComplainantDraft[];
   linkedPersons: LinkedPersonDraft[];
+  noLinkedPerson: boolean;
   description: string;
   initialGuidance: string;
   confidentialNotes: string;
@@ -419,38 +420,40 @@ function validateStep(
           ),
         ];
       }),
-      ...values.linkedPersons.flatMap((person, personIndex) => [
-        ...validateDni(
-          `linkedPersons.${personIndex}.dni`,
-          person.dni,
-          "El DNI de la persona denunciada",
-        ),
-        ...validateName(
-          `linkedPersons.${personIndex}.firstName`,
-          person.firstName,
-          "El nombre de la persona denunciada",
-        ),
-        ...validateName(
-          `linkedPersons.${personIndex}.apellidoApodoManual`,
-          person.apellidoApodoManual,
-          "El apellido o apodo manual de la persona denunciada",
-        ),
-        ...validatePhone(
-          `linkedPersons.${personIndex}.phone1`,
-          person.phone1,
-          "El teléfono 1 de la persona denunciada",
-        ),
-        ...validatePhone(
-          `linkedPersons.${personIndex}.phone2`,
-          person.phone2,
-          "El teléfono 2 de la persona denunciada",
-        ),
-        ...validateAddress(
-          `linkedPersons.${personIndex}.address`,
-          person.address,
-          "El domicilio de la persona denunciada",
-        ),
-      ]),
+      ...(values.noLinkedPerson
+        ? []
+        : values.linkedPersons.flatMap((person, personIndex) => [
+            ...validateDni(
+              `linkedPersons.${personIndex}.dni`,
+              person.dni,
+              "El DNI de la persona denunciada",
+            ),
+            ...validateName(
+              `linkedPersons.${personIndex}.firstName`,
+              person.firstName,
+              "El nombre de la persona denunciada",
+            ),
+            ...validateName(
+              `linkedPersons.${personIndex}.apellidoApodoManual`,
+              person.apellidoApodoManual,
+              "El apellido o apodo manual de la persona denunciada",
+            ),
+            ...validatePhone(
+              `linkedPersons.${personIndex}.phone1`,
+              person.phone1,
+              "El teléfono 1 de la persona denunciada",
+            ),
+            ...validatePhone(
+              `linkedPersons.${personIndex}.phone2`,
+              person.phone2,
+              "El teléfono 2 de la persona denunciada",
+            ),
+            ...validateAddress(
+              `linkedPersons.${personIndex}.address`,
+              person.address,
+              "El domicilio de la persona denunciada",
+            ),
+          ])),
     ];
   }
 
@@ -857,8 +860,10 @@ export function DispatchWizardForm({
   );
   const submittedLinkedPersons = useMemo(
     () =>
-      values.linkedPersons.filter(hasLinkedPersonData).map(cleanLinkedPerson),
-    [values.linkedPersons],
+      values.noLinkedPerson
+        ? []
+        : values.linkedPersons.filter(hasLinkedPersonData).map(cleanLinkedPerson),
+    [values.linkedPersons, values.noLinkedPerson],
   );
   const selectedArea = sortedAreas.find(
     (item) =>
@@ -1102,6 +1107,11 @@ export function DispatchWizardForm({
         type="hidden"
         name="linkedPersonsPayload"
         value={JSON.stringify(submittedLinkedPersons)}
+      />
+      <input
+        type="hidden"
+        name="noLinkedPerson"
+        value={values.noLinkedPerson ? "true" : "false"}
       />
       <input
         type="hidden"
@@ -1546,23 +1556,50 @@ export function DispatchWizardForm({
           <StepCard
             title="Personas denunciadas / vinculadas"
             action={
-              <button
-                type="button"
-                onClick={() =>
-                  setValue("linkedPersons", [
-                    ...values.linkedPersons,
-                    emptyLinkedPerson(),
-                  ])
-                }
-                className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-[#bee5eb] bg-[#d1ecf1] px-2.5 py-1 text-xs font-semibold text-[#0c5460] transition hover:bg-[#bee5eb]"
-              >
-                <Plus className="h-4 w-4" />
-                Agregar otra persona denunciada
-              </button>
+              values.noLinkedPerson ? null : (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setValue("linkedPersons", [
+                      ...values.linkedPersons,
+                      emptyLinkedPerson(),
+                    ])
+                  }
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded-md border border-[#bee5eb] bg-[#d1ecf1] px-2.5 py-1 text-xs font-semibold text-[#0c5460] transition hover:bg-[#bee5eb]"
+                >
+                  <Plus className="h-4 w-4" />
+                  Agregar otra persona denunciada
+                </button>
+              )
             }
           >
             <div className="space-y-3">
-              {values.linkedPersons.map((person, personIndex) => (
+              <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-[#ced4da] bg-white px-3 py-2.5 text-sm text-[#212529]">
+                <input
+                  type="checkbox"
+                  checked={values.noLinkedPerson}
+                  onChange={(event) =>
+                    setValue("noLinkedPerson", event.target.checked)
+                  }
+                  className="mt-0.5 h-4 w-4 rounded border-[#ced4da] text-[#0667b0] focus:ring-blue-500"
+                />
+                <span>
+                  <span className="block font-semibold">
+                    No hay persona denunciada o vinculada
+                  </span>
+                  <span className="mt-0.5 block text-xs text-[#6c757d]">
+                    Usá esta opción cuando la atención sea informativa o no
+                    involucre a un tercero.
+                  </span>
+                </span>
+              </label>
+
+              {values.noLinkedPerson ? (
+                <p className="rounded-md bg-[#f8f9fa] px-3 py-2 text-sm text-[#495057]">
+                  La atención se guardará sin personas denunciadas o vinculadas.
+                </p>
+              ) : (
+                values.linkedPersons.map((person, personIndex) => (
                 <div
                   key={person.id}
                   className="rounded-lg border border-[#dee2e6] bg-[#f8f9fa] p-2.5"
@@ -1761,7 +1798,8 @@ export function DispatchWizardForm({
                     </Field>
                   </div>
                 </div>
-              ))}
+                ))
+              )}
             </div>
           </StepCard>
         </div>
