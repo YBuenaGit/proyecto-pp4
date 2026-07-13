@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { ReactNode } from "react";
-import { Download, Edit, FileText, Plus, Send } from "lucide-react";
+import { CheckCheck, Download, Edit, FileText, Plus, Send } from "lucide-react";
+import { ReferralViewTracker } from "@/components/referral-view-tracker";
 import { AppModal } from "@/components/ui/app-modal";
 import { AuditTimeline } from "@/components/ui/audit-timeline";
 import { Button, LinkButton } from "@/components/ui/button";
@@ -28,6 +29,10 @@ import {
   earliestDate,
   isVisibleBeforeReferralCutoff,
 } from "@/lib/referral-privacy";
+import {
+  isInternalReferralModule,
+  referralIdsToMarkForLegajo,
+} from "@/lib/referral-view-rules";
 import {
   assertAccess,
   canAccessDispatch,
@@ -297,7 +302,11 @@ export default async function DispatchDetailPage({
           orderBy: { createdAt: "desc" },
         },
         originReferrals: {
-          include: { destinationJuridicalIntervention: true, referredBy: true },
+          include: {
+            destinationJuridicalIntervention: true,
+            referredBy: true,
+            viewedBy: { select: { name: true } },
+          },
           orderBy: { referredAt: "desc" },
         },
         destinationReferrals: {
@@ -343,6 +352,16 @@ export default async function DispatchDetailPage({
   const derivationDestination = isOriginRestricted
     ? dispatchDerivationDestination(record)
     : null;
+  const outgoingInternalReferral = record.originReferrals.find((referral) =>
+    isInternalReferralModule(referral.destinationModule),
+  );
+  const referralIdsToMark = referralIdsToMarkForLegajo({
+    referrals: [...record.originReferrals, ...record.destinationReferrals],
+    userId: user.id,
+    userRole: user.role,
+    legajoModule: "DESPACHO",
+    legajoId: record.id,
+  });
   const canBypassOriginRestriction = canBypassLegajoRestriction(user);
   const canMutateOriginLegajo =
     canBypassOriginRestriction || !isOriginRestricted;
@@ -658,6 +677,13 @@ export default async function DispatchDetailPage({
 
   return (
     <>
+      {referralIdsToMark.length ? (
+        <ReferralViewTracker
+          referralIds={referralIdsToMark}
+          legajoModule="DESPACHO"
+          legajoId={record.id}
+        />
+      ) : null}
       {showReferralToast ? <SuccessToast /> : null}
       <section className="relative mb-5 overflow-hidden rounded-sm border border-[#b7dfee] bg-[#a1bbcf] p-3 text-[#212529] shadow-sm sm:p-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -686,6 +712,13 @@ export default async function DispatchDetailPage({
               {derivationDestination ? (
                 <span className="rounded-sm border border-[#f1aeb5] bg-[#f8d7da] px-2.5 py-1 text-sm font-bold uppercase text-[#842029]">
                   Derivado al area: {derivationDestination}
+                </span>
+              ) : null}
+              {outgoingInternalReferral?.viewedAt ? (
+                <span className="inline-flex items-center gap-1.5 rounded-sm border border-[#a3cfbb] bg-[#d1e7dd] px-2.5 py-1 text-sm font-semibold text-[#0a3622]">
+                  <CheckCheck className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  Visto{outgoingInternalReferral.viewedBy?.name ? ` por ${outgoingInternalReferral.viewedBy.name}` : ""}
+                  {` · ${formatDateTime(outgoingInternalReferral.viewedAt)}`}
                 </span>
               ) : null}
             </div>

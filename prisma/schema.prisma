@@ -25,6 +25,7 @@ model User {
   juridicalInterventions JuridicalIntervention[] @relation("JuridicalCreatedBy")
   juridicalActions       JuridicalAction[]       @relation("JuridicalActionCreatedBy")
   referralsMade          Referral[]              @relation("ReferralReferredBy")
+  referralsViewed        Referral[]              @relation("ReferralViewedBy")
   internalExpedients     InternalExpedient[]     @relation("ExpedientCreatedBy")
   attachments            Attachment[]            @relation("AttachmentUploadedBy")
   auditLogs              AuditLog[]              @relation("AuditCreatedBy")
@@ -317,12 +318,15 @@ model Referral {
   status                             String    @default("PENDIENTE")
   visibleStatusForOrigin             String    @default("Pendiente de recepción")
   referredById                       String
+  viewedById                         String?
   referredAt                         DateTime  @default(now()) @db.Timestamptz(3)
+  viewedAt                           DateTime? @db.Timestamptz(3)
   closedAt                           DateTime? @db.Timestamptz(3)
   createdAt                          DateTime  @default(now()) @db.Timestamptz(3)
   updatedAt                          DateTime  @updatedAt @db.Timestamptz(3)
 
   referredBy                       User                   @relation("ReferralReferredBy", fields: [referredById], references: [id])
+  viewedBy                         User?                  @relation("ReferralViewedBy", fields: [viewedById], references: [id], onDelete: SetNull)
   originDispatchRecord             DispatchRecord?        @relation("OriginDispatch", fields: [originDispatchRecordId], references: [id], onDelete: SetNull)
   originJuridicalIntervention      JuridicalIntervention? @relation("OriginJuridical", fields: [originJuridicalInterventionId], references: [id], onDelete: SetNull)
   destinationDispatchRecord        DispatchRecord?        @relation("DestinationDispatch", fields: [destinationDispatchRecordId], references: [id], onDelete: SetNull)
@@ -332,6 +336,8 @@ model Referral {
   @@index([destinationModule])
   @@index([status])
   @@index([referredAt])
+  @@index([viewedAt])
+  @@index([viewedById])
   @@index([originDispatchRecordId])
   @@index([originJuridicalInterventionId])
   @@index([destinationDispatchRecordId])
