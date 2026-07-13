@@ -34,16 +34,21 @@ function badgeClass(value: string, tones: Record<string, string>) {
 }
 
 const typeVisuals: Record<AppointmentType, { border: string; iconBox: string; Icon: LucideIcon }> = {
-  CONSULTA: { border: "border-l-emerald-400", iconBox: "bg-emerald-50 text-emerald-700", Icon: UsersRound },
   AUDIENCIA: { border: "border-l-indigo-400", iconBox: "bg-indigo-50 text-indigo-700", Icon: Scale },
-  VENCIMIENTO: { border: "border-l-orange-400", iconBox: "bg-orange-50 text-orange-700", Icon: CalendarClock },
-  REUNION: { border: "border-l-sky-400", iconBox: "bg-[#d1ecf1] text-[#0667b0]", Icon: BriefcaseBusiness },
-  MEDIACION: { border: "border-l-violet-400", iconBox: "bg-violet-50 text-violet-700", Icon: Scale },
+  CAPACITACION: { border: "border-l-fuchsia-400", iconBox: "bg-fuchsia-50 text-fuchsia-700", Icon: ClipboardList },
+  CONSULTA: { border: "border-l-emerald-400", iconBox: "bg-emerald-50 text-emerald-700", Icon: UsersRound },
+  CUMPLEANOS: { border: "border-l-pink-400", iconBox: "bg-pink-50 text-pink-700", Icon: CalendarClock },
+  DIAS_FESTIVOS: { border: "border-l-red-400", iconBox: "bg-red-50 text-red-700", Icon: CalendarClock },
+  EVENTOS_MUNI: { border: "border-l-lime-500", iconBox: "bg-lime-50 text-lime-700", Icon: UsersRound },
   FIRMA_DOCUMENTACION: { border: "border-l-teal-400", iconBox: "bg-teal-50 text-teal-700", Icon: FileSignature },
-  LLAMADA: { border: "border-l-blue-400", iconBox: "bg-blue-50 text-blue-700", Icon: PhoneCall },
-  TAREA_ADMINISTRATIVA: { border: "border-l-cyan-400", iconBox: "bg-cyan-50 text-cyan-700", Icon: ClipboardList },
   GESTION_DOCUMENTAL: { border: "border-l-[#adb5bd]", iconBox: "bg-[#e9ecef] text-[#495057]", Icon: FileText },
+  LLAMADA: { border: "border-l-blue-400", iconBox: "bg-blue-50 text-blue-700", Icon: PhoneCall },
+  MEDIACION: { border: "border-l-violet-400", iconBox: "bg-violet-50 text-violet-700", Icon: Scale },
+  MUNI_EN_TU_BARRIO: { border: "border-l-green-500", iconBox: "bg-green-50 text-green-700", Icon: UsersRound },
   RECORDATORIO: { border: "border-l-amber-400", iconBox: "bg-amber-50 text-amber-700", Icon: CalendarClock },
+  REUNION: { border: "border-l-sky-400", iconBox: "bg-[#d1ecf1] text-[#0667b0]", Icon: BriefcaseBusiness },
+  TAREA_ADMINISTRATIVA: { border: "border-l-cyan-400", iconBox: "bg-cyan-50 text-cyan-700", Icon: ClipboardList },
+  VENCIMIENTO: { border: "border-l-orange-400", iconBox: "bg-orange-50 text-orange-700", Icon: CalendarClock },
   OTRO: { border: "border-l-zinc-400", iconBox: "bg-zinc-100 text-zinc-700", Icon: Circle },
 };
 

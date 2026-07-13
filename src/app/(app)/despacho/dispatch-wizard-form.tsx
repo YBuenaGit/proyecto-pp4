@@ -26,6 +26,7 @@ import { Button, LinkButton } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/components/ui/cn";
 import {
+  DISPATCH_FORM_EXCLUDED_CATEGORIES,
   DISPATCH_INTERNAL_DERIVED_AREAS,
   DISPATCH_STATUSES,
   PRIORITIES,
@@ -826,7 +827,16 @@ export function DispatchWizardForm({
   const [showConfirm, setShowConfirm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const sortedCategories = useMemo(
-    () => sortByLabel(categories, (item) => item.label),
+    () =>
+      sortByLabel(
+        categories.filter(
+          (item) =>
+            !(DISPATCH_FORM_EXCLUDED_CATEGORIES as readonly string[]).includes(
+              item.value,
+            ),
+        ),
+        (item) => item.label,
+      ),
     [categories],
   );
   const sortedAreas = useMemo(() => {

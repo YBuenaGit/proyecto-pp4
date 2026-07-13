@@ -14,16 +14,21 @@ const legendTypes: AppointmentType[] = [
 ];
 
 const legendDots: Record<AppointmentType, string> = {
-  CONSULTA: "bg-emerald-500",
   AUDIENCIA: "bg-indigo-500",
-  VENCIMIENTO: "bg-orange-500",
-  REUNION: "bg-sky-600",
-  MEDIACION: "bg-violet-500",
+  CAPACITACION: "bg-fuchsia-500",
+  CONSULTA: "bg-emerald-500",
+  CUMPLEANOS: "bg-pink-500",
+  DIAS_FESTIVOS: "bg-red-500",
+  EVENTOS_MUNI: "bg-lime-600",
   FIRMA_DOCUMENTACION: "bg-teal-500",
+  GESTION_DOCUMENTAL: "bg-slate-500",
   LLAMADA: "bg-blue-500",
-  TAREA_ADMINISTRATIVA: "bg-cyan-500",
-  GESTION_DOCUMENTAL: "bg-[#f8f9fa]0",
+  MEDIACION: "bg-violet-500",
+  MUNI_EN_TU_BARRIO: "bg-green-600",
   RECORDATORIO: "bg-amber-500",
+  REUNION: "bg-sky-600",
+  TAREA_ADMINISTRATIVA: "bg-cyan-500",
+  VENCIMIENTO: "bg-orange-500",
   OTRO: "bg-zinc-400",
 };
 

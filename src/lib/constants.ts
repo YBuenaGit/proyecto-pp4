@@ -114,14 +114,20 @@ export const JURIDICAL_DERIVED_AREAS = [
 export const DISPATCH_INTERNAL_DERIVED_AREAS = [
   { value: "ATENCION_Y_CONTENCION_A_LA_VICTIMA", label: "Atencion y Contencion a la Victima" },
   { value: "DIRECTIVO", label: "Directivo" },
+  { value: "HONORABLE_TRIBUNAL_DE_FALTA", label: "Honorable tribunal de falta" },
   { value: "INTERVENCIONES", label: "Intervenciones" },
+  { value: "OFICIOS_JUDICIALES", label: "Oficios judiciales" },
 ] as const;
+
+export const DISPATCH_FORM_EXCLUDED_CATEGORIES = ["DERIVACION_AREA"] as const;
 
 export const DISPATCH_CATEGORY_LABELS: Record<string, string> = {
   RECLAMO: "Reclamo",
   CONSULTA: "Consulta",
   SUGERENCIA: "Sugerencia",
   PEDIDO: "Pedido",
+  PEDIDO_ACTA_TRIBUNAL_FALTA: "Pedido de acta por tribunal de falta",
+  // Se conserva solo para mostrar correctamente registros historicos.
   DERIVACION_AREA: "Derivacion a otra area",
   SITUACION_VECINAL: "Situacion vecinal",
   ATENCION_GENERAL: "Atencion general",

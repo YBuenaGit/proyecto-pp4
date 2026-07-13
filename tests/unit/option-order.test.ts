@@ -8,6 +8,7 @@ import {
 } from "../../src/lib/appointment-constants";
 import {
   ACTION_TYPES,
+  DISPATCH_INTERNAL_DERIVED_AREAS,
   DISPATCH_STATUSES,
   EXPEDIENT_AREAS,
   EXPEDIENT_STATUSES,
@@ -36,6 +37,7 @@ test("mantiene alfabeticos los selectores globales y deja Otro al final", () => 
   assertVisibleOrder(PRIORITIES, readableLabel);
   assertVisibleOrder(ACTION_TYPES, readableLabel);
   assertVisibleOrder(EXPEDIENT_AREAS, (item) => item.label);
+  assertVisibleOrder(DISPATCH_INTERNAL_DERIVED_AREAS, (item) => item.label);
   assertVisibleOrder(JURIDICAL_DERIVED_AREAS, (item) => item);
 });
 
