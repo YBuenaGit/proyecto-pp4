@@ -47,11 +47,15 @@ horaria para que el servidor pueda ejecutarse en cualquier region.
 npm run db:migrate
 ```
 
-4. Cargar datos semilla:
+4. Sincronizar los catalogos usados por los selectores:
 
 ```bash
 npm run db:seed
 ```
+
+Este seed es seguro e idempotente: crea o corrige solamente las opciones
+canonicas de `CatalogItem`. No elimina usuarios, expedientes, personas,
+adjuntos ni opciones personalizadas.
 
 5. Ejecutar en local:
 
@@ -61,9 +65,19 @@ npm run dev
 
 Abrir [http://localhost:3000](http://localhost:3000).
 
-## Usuarios seed
+## Datos demo opcionales
 
-Todos usan la contrasena `seguridad123`.
+La carga demo completa es destructiva y no forma parte del seed
+predeterminado. Elimina los datos existentes antes de recrearlos y solo debe
+usarse en una base descartable. En PowerShell requiere esta confirmacion:
+
+```powershell
+$env:ALLOW_DESTRUCTIVE_DEMO_SEED="YES_DELETE_EXISTING_DATA"
+npm run db:seed:demo
+```
+
+Los siguientes usuarios se crean unicamente mediante `db:seed:demo`. Todos
+usan la contrasena `seguridad123`.
 
 | Usuario | Rol |
 | --- | --- |
@@ -109,6 +123,8 @@ La privacidad entre modulos se resuelve con registros separados (`DispatchRecord
 prisma/
   schema.prisma
   seed.ts
+  seed-demo.ts
+  catalog-selector-sync.ts
   migrations/
 src/
   app/
@@ -140,6 +156,12 @@ bucket configurado. La aplicacion solo crea y lee objetos bajo el prefijo
 `secretaria-de-seguridad/`; no lista ni elimina objetos del bucket. Los legajos
 PDF se generan bajo demanda y no se persisten.
 
+## Sincronizacion en produccion
+
+Despues de aplicar migraciones, ejecutar explicitamente `npm run db:seed` con
+las variables de la base del ambiente correspondiente. El comando `build` no
+escribe en la base de datos y no ejecuta semillas automaticamente.
+
 ## Comandos utiles
 
 ```bash
@@ -148,5 +170,6 @@ npm test
 npm run build
 npm run db:migrate
 npm run db:seed
+npm run db:seed:demo # solo bases descartables y con confirmacion explicita
 npm run db:reset
 ```
