@@ -4,7 +4,11 @@ import { useEffect, useState } from "react";
 import { ExternalLink, FileText, X } from "lucide-react";
 
 function canPreview(mimeType: string) {
-  return mimeType === "application/pdf" || mimeType.startsWith("image/") || mimeType.startsWith("text/");
+  return (
+    mimeType === "application/pdf" ||
+    mimeType.startsWith("image/") ||
+    mimeType.startsWith("text/")
+  );
 }
 
 export function AttachmentPreviewButton({
@@ -45,7 +49,9 @@ export function AttachmentPreviewButton({
         className="inline-flex min-h-8 max-w-full items-center gap-1.5 rounded-sm border border-[#17a2b8] bg-[#17a2b8] px-2.5 py-1 text-xs font-semibold text-white shadow-sm transition hover:bg-[#138496] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff]"
       >
         <FileText className="h-3.5 w-3.5 shrink-0" />
-        <span className={compact ? "truncate" : ""}>{compact ? "Abrir archivo" : name}</span>
+        <span className={compact ? "truncate" : ""}>
+          {compact ? "Abrir archivo" : name}
+        </span>
       </button>
 
       {open ? (
@@ -87,13 +93,24 @@ export function AttachmentPreviewButton({
 
             <div className="min-h-0 flex-1 bg-[#e9ecef] p-3">
               {previewable ? (
-                <iframe title={name} src={href} className="h-full w-full rounded-sm border border-[#ced4da] bg-white" />
+                <iframe
+                  title={name}
+                  src={href}
+                  className="h-full w-full rounded-sm border border-[#ced4da] bg-white"
+                />
               ) : (
                 <div className="flex h-full items-center justify-center rounded-sm border border-[#ced4da] bg-white p-6 text-center">
                   <div>
                     <FileText className="mx-auto h-10 w-10 text-[#17a2b8]" />
-                    <p className="mt-3 text-sm font-semibold text-[#212529]">Este tipo de archivo no se puede previsualizar.</p>
-                    <a href={href} target="_blank" rel="noreferrer" className="mt-3 inline-flex rounded-sm border border-[#17a2b8] bg-[#17a2b8] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[#138496]">
+                    <p className="mt-3 text-sm font-semibold text-[#212529]">
+                      Este tipo de archivo no se puede previsualizar.
+                    </p>
+                    <a
+                      href={href}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-3 inline-flex rounded-sm border border-[#17a2b8] bg-[#17a2b8] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[#138496]"
+                    >
                       Abrir archivo
                     </a>
                   </div>

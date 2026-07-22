@@ -117,7 +117,7 @@ export default async function AgendaPage({ searchParams }: { searchParams?: Prom
     <div className="space-y-4">
       <PageHeader
         title="Agenda"
-        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Agenda" }]}
+        breadcrumbs={[{ label: "Anuncios importantes", href: "/" }, { label: "Agenda" }]}
         actions={
           <div className="flex flex-wrap items-center gap-2 rounded-sm border border-[#dee2e6] bg-white p-2 shadow-sm">
             <AppointmentFilters

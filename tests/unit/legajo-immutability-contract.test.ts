@@ -25,6 +25,12 @@ const pdf = source("../../src/lib/legajo-pdf.ts");
 const observationComponent = source(
   "../../src/components/ui/legajo-observations.tsx",
 );
+const observationAttachmentSheet = source(
+  "../../src/components/ui/legajo-observation-attachment-sheet.tsx",
+);
+const attachmentPreview = source(
+  "../../src/components/ui/attachment-preview-button.tsx",
+);
 
 function functionBody(file: string, name: string, nextExport: string) {
   const start = file.indexOf(`export async function ${name}`);
@@ -128,4 +134,21 @@ test("las tablas de legajo no habilitan desplazamiento horizontal", () => {
     observationComponent,
     /triggerClassName="min-h-7 max-w-full whitespace-nowrap px-1\.5 py-1 text-\[10px\]/,
   );
+});
+
+test("los adjuntos de observaciones se abren desde tabla, modal y libro", () => {
+  assert.match(observationComponent, /Ver \$\{attachmentCount\}/);
+  assert.match(observationComponent, /ObservationAttachmentHistory/);
+  assert.match(observationComponent, /Archivo cargado/);
+  assert.match(observationComponent, /<AttachmentPreviewButton/);
+  assert.match(observationAttachmentSheet, /Archivos de observaciones/);
+  assert.match(observationAttachmentSheet, /flattenObservationAttachments/);
+  assert.match(observationAttachmentSheet, /<AttachmentPreviewButton/);
+  assert.match(attachmentPreview, /export function AttachmentPreviewButton/);
+
+  for (const page of [dispatchPage, juridicalPage]) {
+    assert.match(page, /LegajoObservationAttachmentSheet/);
+    assert.match(page, /flattenObservationAttachments/);
+    assert.doesNotMatch(page, /`Archivos adjuntos:/);
+  }
 });

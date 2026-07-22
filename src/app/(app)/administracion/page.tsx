@@ -34,7 +34,7 @@ export default async function AdminPage() {
     <>
       <PageHeader
         title="Administracion"
-        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Administracion" }]}
+        breadcrumbs={[{ label: "Anuncios importantes", href: "/" }, { label: "Administracion" }]}
       />
 
       <div className="space-y-5">

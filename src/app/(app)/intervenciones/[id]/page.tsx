@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { CheckCheck, Download, Edit, FileText, Plus, Send } from "lucide-react";
 import { ReferralViewTracker } from "@/components/referral-view-tracker";
 import { AppModal } from "@/components/ui/app-modal";
+import { AttachmentPreviewButton } from "@/components/ui/attachment-preview-button";
 import { AuditTimeline } from "@/components/ui/audit-timeline";
 import { Button, LinkButton } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -22,6 +23,10 @@ import {
   LegajoObservationList,
   type LegajoObservationItem,
 } from "@/components/ui/legajo-observations";
+import {
+  flattenObservationAttachments,
+  LegajoObservationAttachmentSheet,
+} from "@/components/ui/legajo-observation-attachment-sheet";
 import {
   JURIDICAL_CONTEXT_LABELS,
   JURIDICAL_DERIVED_AREAS,
@@ -61,7 +66,6 @@ import {
 import { InterventionForm } from "../intervention-form";
 import { AddJuridicalActionForm } from "./add-juridical-action-form";
 import { LegajoInterventionRow } from "./legajo-intervention-row";
-import { AttachmentPreviewButton } from "./attachment-preview-button";
 import { LegajoBookViewer, type LegajoBookItem } from "./legajo-book-viewer";
 import { BookSectionCover, BookContentSheet } from "./legajo-book-sheets";
 
@@ -1114,6 +1118,62 @@ export default async function InterventionDetailPage({
   const interventionEyebrow = `Legajo ${intervention.internalNumber}`;
   const firstAttentionType = labelFromValue(intervention.type);
 
+  function appendObservationAttachmentPages({
+    observations,
+    sheetNumber,
+    sectionLabel,
+    title,
+    dateText,
+    statusText,
+    keyPrefix,
+  }: {
+    observations: LegajoObservationItem[];
+    sheetNumber: number;
+    sectionLabel: string;
+    title: string;
+    dateText: string;
+    statusText?: string | null;
+    keyPrefix: string;
+  }) {
+    const attachments = flattenObservationAttachments(observations);
+    const attachmentPages = chunkForBookPages(attachments, 6);
+
+    attachmentPages.forEach((attachmentPage, pageIndex) => {
+      if (!attachmentPage.length) return;
+
+      bookEntries.push({
+        item: {
+          sheetNumber,
+          label:
+            attachmentPages.length > 1
+              ? `${sectionLabel} · archivos de observaciones · hoja ${pageIndex + 1}`
+              : `${sectionLabel} · archivos de observaciones`,
+          title,
+          dateText,
+          statusText:
+            statusText ??
+            `${attachments.length} archivo${attachments.length === 1 ? "" : "s"}`,
+          searchText: attachmentPage
+            .flatMap((attachment) => [
+              attachment.originalName,
+              attachment.observationContent,
+              attachment.observationCreatedBy,
+            ])
+            .join(" "),
+        },
+        node: (
+          <LegajoObservationAttachmentSheet
+            key={`${keyPrefix}-${pageIndex}`}
+            sectionLabel={sectionLabel}
+            attachments={attachmentPage}
+            pageNumber={pageIndex + 1}
+            pageCount={attachmentPages.length}
+          />
+        ),
+      });
+    });
+  }
+
   originDispatchEntries.forEach((entry) => {
     const sectionLabel = entry.recordLabel;
     const textPages = paginateBookTextSections(
@@ -1122,14 +1182,7 @@ export default async function InterventionDetailPage({
         { label: "Lo que se instruyo", text: entry.guidance },
         ...entry.observations.map((observation) => ({
           label: `Observacion · ${formatDateTime(observation.createdAt)} · ${observation.createdBy.name}`,
-          text: [
-            observation.content,
-            observation.attachments.length
-              ? `Archivos adjuntos: ${observation.attachments.map((attachment) => attachment.originalName).join(", ")}`
-              : "",
-          ]
-            .filter(Boolean)
-            .join("\n\n"),
+          text: observation.content,
         })),
       ],
       { firstPageLines: 24, continuationPageLines: 28 },
@@ -1204,6 +1257,16 @@ export default async function InterventionDetailPage({
         ),
       });
     });
+
+    appendObservationAttachmentPages({
+      observations: entry.observations,
+      sheetNumber: entry.sequence,
+      sectionLabel,
+      title: entry.title,
+      dateText: formatDateTime(entry.date),
+      statusText: entry.statusText,
+      keyPrefix: `dispatch-origin-observation-attachments-${entry.id}`,
+    });
   });
 
   bookEntries.push({
@@ -1254,14 +1317,7 @@ export default async function InterventionDetailPage({
       },
       ...interventionObservations.map((observation) => ({
         label: `Observacion · ${formatDateTime(observation.createdAt)} · ${observation.createdBy.name}`,
-        text: [
-          observation.content,
-          observation.attachments.length
-            ? `Archivos adjuntos: ${observation.attachments.map((attachment) => attachment.originalName).join(", ")}`
-            : "",
-        ]
-          .filter(Boolean)
-          .join("\n\n"),
+        text: observation.content,
       })),
     ],
     { firstPageLines: 24, continuationPageLines: 28 },
@@ -1305,6 +1361,16 @@ export default async function InterventionDetailPage({
     });
   });
 
+  appendObservationAttachmentPages({
+    observations: interventionObservations,
+    sheetNumber: 1,
+    sectionLabel: "Primera atencion",
+    title: firstAttentionType,
+    dateText: formatDateTime(intervention.attendedAt),
+    statusText: initialStatusText,
+    keyPrefix: "first-attention-observation-attachments",
+  });
+
   actionSheets.forEach(({ action, sheetNumber, parsed, statusText }) => {
     const actionObservations = observationsByActionId.get(action.id) ?? [];
     const textPages = paginateBookTextSections(
@@ -1314,14 +1380,7 @@ export default async function InterventionDetailPage({
         { label: "Proxima accion", text: parsed.nextStepDescription },
         ...actionObservations.map((observation) => ({
           label: `Observacion · ${formatDateTime(observation.createdAt)} · ${observation.createdBy.name}`,
-          text: [
-            observation.content,
-            observation.attachments.length
-              ? `Archivos adjuntos: ${observation.attachments.map((attachment) => attachment.originalName).join(", ")}`
-              : "",
-          ]
-            .filter(Boolean)
-            .join("\n\n"),
+          text: observation.content,
         })),
       ],
       { firstPageLines: 24, continuationPageLines: 28 },
@@ -1408,6 +1467,16 @@ export default async function InterventionDetailPage({
           />
         ),
       });
+    });
+
+    appendObservationAttachmentPages({
+      observations: actionObservations,
+      sheetNumber,
+      sectionLabel,
+      title: actionTitle,
+      dateText: formatDateTime(action.createdAt),
+      statusText,
+      keyPrefix: `action-observation-attachments-${action.id}`,
     });
   });
 

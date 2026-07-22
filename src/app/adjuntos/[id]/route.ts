@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { requireUser } from "@/lib/auth";
 import { getCloudflareR2Storage, isR2ObjectNotFoundError } from "@/lib/cloudflare-r2";
 import { prisma } from "@/lib/prisma";
-import { canAccessDispatch, canAccessExpedients, canAccessJuridical } from "@/lib/rbac";
+import { canAccessDispatch, canAccessExpedients, canAccessJuridical, isAdmin } from "@/lib/rbac";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const user = await requireUser();
@@ -10,8 +10,17 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const attachment = await prisma.attachment.findUnique({ where: { id } });
   if (!attachment) notFound();
 
+  const announcement =
+    attachment.module === "ANUNCIOS" && attachment.entityType === "Announcement"
+      ? await prisma.announcement.findUnique({
+          where: { id: attachment.entityId },
+          select: { deletedAt: true },
+        })
+      : null;
   const allowed =
-    attachment.module === "JURIDICO"
+    attachment.module === "ANUNCIOS"
+      ? Boolean(announcement && (!announcement.deletedAt || isAdmin(user)))
+      : attachment.module === "JURIDICO"
       ? canAccessJuridical(user)
       : attachment.entityType === "InternalExpedient"
         ? canAccessExpedients(user)

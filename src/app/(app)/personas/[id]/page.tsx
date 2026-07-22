@@ -31,7 +31,7 @@ export default async function PersonDetailPage({ params }: { params: Promise<{ i
       <PageHeader
         title={person.displayName}
         description="Perfil unificado. Los listados de historial respetan permisos por modulo e indican el rol de la persona en cada caso."
-        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Personas", href: "/personas" }, { label: person.displayName }]}
+        breadcrumbs={[{ label: "Anuncios importantes", href: "/" }, { label: "Personas", href: "/personas" }, { label: person.displayName }]}
         actions={
           canJuridical && person.dni ? (
             <>

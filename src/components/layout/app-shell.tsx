@@ -9,7 +9,10 @@ import { SidebarNav, type NavItem } from "./sidebar-nav";
 
 function buildNav(user: CurrentUser): NavItem[] {
   const visible = visibleModules(user);
-  const items: NavItem[] = [{ href: "/", label: "Inicio", icon: "home" }];
+  const items: NavItem[] = [
+    { href: "/", label: "Anuncios importantes", icon: "announcements" },
+    { href: "/panel", label: "Panel general", icon: "home" },
+  ];
 
   if (visible.agenda) {
     items.push({ href: "/agenda", label: "Agenda", icon: "agenda" });

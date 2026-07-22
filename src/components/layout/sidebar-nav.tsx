@@ -9,6 +9,7 @@ import {
   ClipboardList,
   Home,
   Landmark,
+  Newspaper,
   Scale,
   Settings,
   Users,
@@ -16,6 +17,7 @@ import {
 import { cn } from "@/components/ui/cn";
 
 const iconMap = {
+  announcements: Newspaper,
   home: Home,
   agenda: CalendarDays,
   despacho: ClipboardList,

@@ -40,9 +40,27 @@ model User {
   retentionHistories     RetentionHistory[]      @relation("RetentionEditedBy")
   retentionAttachments   RetentionAttachment[]   @relation("RetentionAttachmentUploadedBy")
   notificationReads      NotificationRead[]
+  announcements          Announcement[]           @relation("AnnouncementCreatedBy")
 
   @@index([role])
   @@index([active])
+}
+
+model Announcement {
+  id             String    @id @default(cuid())
+  title          String
+  content        String
+  authorName     String
+  authorRole     String
+  createdById    String
+  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt      DateTime? @db.Timestamptz(3)
+
+  createdBy User @relation("AnnouncementCreatedBy", fields: [createdById], references: [id])
+
+  @@index([deletedAt, createdAt])
+  @@index([createdById])
 }
 
 model NotificationRead {

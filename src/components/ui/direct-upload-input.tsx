@@ -6,6 +6,7 @@ import {
   useState,
   type ChangeEvent,
 } from "react";
+import Image from "next/image";
 import { RefreshCw, Trash2, Upload } from "lucide-react";
 import {
   DIRECT_UPLOAD_CONCURRENCY,
@@ -48,6 +49,38 @@ class UploadSemaphore {
 }
 
 const uploadSemaphore = new UploadSemaphore();
+
+function LocalFilePreview({ file }: { file: File }) {
+  const [url] = useState(() => URL.createObjectURL(file));
+
+  useEffect(() => {
+    return () => URL.revokeObjectURL(url);
+  }, [url]);
+
+  if (file.type.startsWith("image/")) {
+    return (
+      <Image
+        src={url}
+        alt={`Vista previa de ${file.name}`}
+        width={88}
+        height={88}
+        unoptimized
+        className="h-20 w-20 shrink-0 rounded-sm border border-[#bee5eb] object-cover"
+      />
+    );
+  }
+  if (file.type.startsWith("video/")) {
+    return (
+      <video
+        src={url}
+        controls
+        preload="metadata"
+        className="h-20 w-28 shrink-0 rounded-sm border border-[#bee5eb] bg-black object-cover"
+      />
+    );
+  }
+  return null;
+}
 
 function fileKey(file: File) {
   return `${file.name}-${file.size}-${file.lastModified}`;
@@ -105,6 +138,7 @@ export function DirectUploadInput({
   className,
   label = "Seleccionar archivos",
   onFilesChange,
+  showPreviews = false,
 }: {
   intent: DirectUploadIntent;
   accept?: string;
@@ -112,6 +146,7 @@ export function DirectUploadInput({
   className?: string;
   label?: string;
   onFilesChange?: (files: File[]) => void;
+  showPreviews?: boolean;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -333,7 +368,7 @@ export function DirectUploadInput({
         />
       </label>
       <p className="text-xs font-medium text-[#495057]">
-        Hasta {MAX_DIRECT_UPLOAD_FILES} archivos de 1 GB cada uno. La carga se realiza directamente a Cloudflare R2.
+        Hasta {MAX_DIRECT_UPLOAD_FILES} archivos de 1 GB cada uno.
       </p>
       {formError ? (
         <p role="alert" className="rounded-sm border border-[#f5c6cb] bg-[#f8d7da] px-2.5 py-2 text-xs font-semibold text-[#721c24]">
@@ -344,43 +379,48 @@ export function DirectUploadInput({
         <ul className="space-y-2">
           {items.map((item) => (
             <li key={item.key} className="rounded-sm border border-[#dee2e6] bg-white px-3 py-2 text-sm">
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="min-w-0 flex-1 truncate font-medium" title={item.file.name}>
-                  {item.file.name} · {fileSizeLabel(item.file.size)}
-                </span>
-                {item.status === "error" ? (
-                  <button
-                    type="button"
-                    onClick={() => void retryItem(item)}
-                    className="inline-flex min-h-8 items-center gap-1 rounded-sm border border-[#6c757d] px-2 text-xs font-semibold text-[#495057] hover:bg-[#e9ecef]"
-                  >
-                    <RefreshCw className="h-3.5 w-3.5" /> Reintentar
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  onClick={() => void removeItem(item)}
-                  className="inline-flex min-h-8 items-center gap-1 rounded-sm border border-[#dc3545] px-2 text-xs font-semibold text-[#c82333] hover:bg-[#f8d7da]"
-                >
-                  <Trash2 className="h-3.5 w-3.5" /> Quitar
-                </button>
+              <div className="flex min-w-0 items-start gap-3">
+                {showPreviews ? <LocalFilePreview file={item.file} /> : null}
+                <div className="min-w-0 flex-1">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate font-medium" title={item.file.name}>
+                      {item.file.name} · {fileSizeLabel(item.file.size)}
+                    </span>
+                    {item.status === "error" ? (
+                      <button
+                        type="button"
+                        onClick={() => void retryItem(item)}
+                        className="inline-flex min-h-8 items-center gap-1 rounded-sm border border-[#6c757d] px-2 text-xs font-semibold text-[#495057] hover:bg-[#e9ecef]"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5" /> Reintentar
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      onClick={() => void removeItem(item)}
+                      className="inline-flex min-h-8 items-center gap-1 rounded-sm border border-[#dc3545] px-2 text-xs font-semibold text-[#c82333] hover:bg-[#f8d7da]"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" /> Quitar
+                    </button>
+                  </div>
+                  <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e9ecef]">
+                    <div
+                      className={cn(
+                        "h-full transition-[width]",
+                        item.status === "error" ? "bg-[#dc3545]" : item.status === "ready" ? "bg-[#28a745]" : "bg-[#0667b0]",
+                      )}
+                      style={{ width: `${item.progress}%` }}
+                    />
+                  </div>
+                  <p className="mt-1 text-xs text-[#6c757d]">
+                    {item.status === "ready"
+                      ? "Listo para guardar"
+                      : item.status === "error"
+                        ? item.error
+                        : `Subiendo ${item.progress}%`}
+                  </p>
+                </div>
               </div>
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#e9ecef]">
-                <div
-                  className={cn(
-                    "h-full transition-[width]",
-                    item.status === "error" ? "bg-[#dc3545]" : item.status === "ready" ? "bg-[#28a745]" : "bg-[#0667b0]",
-                  )}
-                  style={{ width: `${item.progress}%` }}
-                />
-              </div>
-              <p className="mt-1 text-xs text-[#6c757d]">
-                {item.status === "ready"
-                  ? "Listo para guardar"
-                  : item.status === "error"
-                    ? item.error
-                    : `Subiendo ${item.progress}%`}
-              </p>
             </li>
           ))}
         </ul>

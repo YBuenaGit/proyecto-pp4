@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { CheckCheck, Download, Edit, FileText, Plus, Send } from "lucide-react";
 import { ReferralViewTracker } from "@/components/referral-view-tracker";
 import { AppModal } from "@/components/ui/app-modal";
+import { AttachmentPreviewButton } from "@/components/ui/attachment-preview-button";
 import { AuditTimeline } from "@/components/ui/audit-timeline";
 import { Button, LinkButton } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -21,6 +22,10 @@ import {
   LegajoObservationList,
   type LegajoObservationItem,
 } from "@/components/ui/legajo-observations";
+import {
+  flattenObservationAttachments,
+  LegajoObservationAttachmentSheet,
+} from "@/components/ui/legajo-observation-attachment-sheet";
 import { DISPATCH_INTERNAL_DERIVED_AREAS } from "@/lib/constants";
 import { requireUser } from "@/lib/auth";
 import {
@@ -58,7 +63,6 @@ import {
   type LegajoBookItem,
 } from "../../intervenciones/[id]/legajo-book-viewer";
 import { LegajoInterventionRow } from "../../intervenciones/[id]/legajo-intervention-row";
-import { AttachmentPreviewButton } from "../../intervenciones/[id]/attachment-preview-button";
 import {
   BookSectionCover,
   BookContentSheet,
@@ -531,6 +535,8 @@ export default async function DispatchDetailPage({
   const displayFollowUpRows = [...followUpRows].reverse();
   const bookEntries: Array<{ item: LegajoBookItem; node: ReactNode }> = [];
   const legajoEyebrow = `Legajo ${record.internalNumber}`;
+  const recordObservationAttachments =
+    flattenObservationAttachments(recordObservations);
 
   bookEntries.push({
     item: {
@@ -592,14 +598,7 @@ export default async function DispatchDetailPage({
       },
       ...recordObservations.map((observation) => ({
         label: `Observacion · ${formatDateTime(observation.createdAt)} · ${observation.createdBy.name}`,
-        text: [
-          observation.content,
-          observation.attachments.length
-            ? `Archivos adjuntos: ${observation.attachments.map((attachment) => attachment.originalName).join(", ")}`
-            : "",
-        ]
-          .filter(Boolean)
-          .join("\n\n"),
+        text: observation.content,
       })),
     ],
     { firstPageLines: 24, continuationPageLines: 28 },
@@ -643,12 +642,52 @@ export default async function DispatchDetailPage({
     });
   });
 
+  const recordObservationAttachmentPages = chunkForBookPages(
+    recordObservationAttachments,
+    6,
+  );
+
+  recordObservationAttachmentPages.forEach((attachmentPage, pageIndex) => {
+    if (!attachmentPage.length) return;
+
+    bookEntries.push({
+      item: {
+        sheetNumber: 1,
+        label:
+          recordObservationAttachmentPages.length > 1
+            ? `Primera atencion · archivos de observaciones · hoja ${pageIndex + 1}`
+            : "Primera atencion · archivos de observaciones",
+        title: categoryLabel,
+        dateText: formatDateTime(record.attendedAt),
+        statusText: `${recordObservationAttachments.length} archivo${recordObservationAttachments.length === 1 ? "" : "s"}`,
+        searchText: attachmentPage
+          .flatMap((attachment) => [
+            attachment.originalName,
+            attachment.observationContent,
+            attachment.observationCreatedBy,
+          ])
+          .join(" "),
+      },
+      node: (
+        <LegajoObservationAttachmentSheet
+          key={`record-observation-attachments-${pageIndex}`}
+          sectionLabel="Primera atencion"
+          attachments={attachmentPage}
+          pageNumber={pageIndex + 1}
+          pageCount={recordObservationAttachmentPages.length}
+        />
+      ),
+    });
+  });
+
   followUpsForLegajo.forEach((followUp, index) => {
     const sheetNumber = index + 2;
     const parsed = parseJuridicalActionContent(followUp.content);
     const followUpAttachments = attachmentsByFollowUpId.get(followUp.id) ?? [];
     const followUpObservations =
       observationsByFollowUpId.get(followUp.id) ?? [];
+    const followUpObservationAttachments =
+      flattenObservationAttachments(followUpObservations);
     const sectionLabel = `Seguimiento N° ${sheetNumber}`;
     const followUpPages = paginateBookTextSections(
       [
@@ -659,14 +698,7 @@ export default async function DispatchDetailPage({
         },
         ...followUpObservations.map((observation) => ({
           label: `Observacion · ${formatDateTime(observation.createdAt)} · ${observation.createdBy.name}`,
-          text: [
-            observation.content,
-            observation.attachments.length
-              ? `Archivos adjuntos: ${observation.attachments.map((attachment) => attachment.originalName).join(", ")}`
-              : "",
-          ]
-            .filter(Boolean)
-            .join("\n\n"),
+          text: observation.content,
         })),
       ],
       { firstPageLines: 24, continuationPageLines: 28 },
@@ -747,6 +779,44 @@ export default async function DispatchDetailPage({
                 <DispatchBookAttachments attachments={followUpAttachments} />
               ) : undefined
             }
+          />
+        ),
+      });
+    });
+
+    const followUpObservationAttachmentPages = chunkForBookPages(
+      followUpObservationAttachments,
+      6,
+    );
+
+    followUpObservationAttachmentPages.forEach((attachmentPage, pageIndex) => {
+      if (!attachmentPage.length) return;
+
+      bookEntries.push({
+        item: {
+          sheetNumber,
+          label:
+            followUpObservationAttachmentPages.length > 1
+              ? `${sectionLabel} · archivos de observaciones · hoja ${pageIndex + 1}`
+              : `${sectionLabel} · archivos de observaciones`,
+          title: "Seguimiento de atencion",
+          dateText: formatDateTime(followUp.createdAt),
+          statusText: `${followUpObservationAttachments.length} archivo${followUpObservationAttachments.length === 1 ? "" : "s"}`,
+          searchText: attachmentPage
+            .flatMap((attachment) => [
+              attachment.originalName,
+              attachment.observationContent,
+              attachment.observationCreatedBy,
+            ])
+            .join(" "),
+        },
+        node: (
+          <LegajoObservationAttachmentSheet
+            key={`follow-up-observation-attachments-${followUp.id}-${pageIndex}`}
+            sectionLabel={sectionLabel}
+            attachments={attachmentPage}
+            pageNumber={pageIndex + 1}
+            pageCount={followUpObservationAttachmentPages.length}
           />
         ),
       });

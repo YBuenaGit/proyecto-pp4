@@ -105,7 +105,7 @@ export default async function DispatchListPage({
     <>
       <PageHeader
         title="Despacho · Atenciones / Reclamos"
-        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Despacho" }]}
+        breadcrumbs={[{ label: "Anuncios importantes", href: "/" }, { label: "Despacho" }]}
       />
 
       <ListToolbar

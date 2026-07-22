@@ -568,7 +568,7 @@ export function RetentionsClient() {
     <>
       <PageHeader
         title="Retenciones / actas"
-        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Retenciones / actas" }]}
+        breadcrumbs={[{ label: "Anuncios importantes", href: "/" }, { label: "Retenciones / actas" }]}
       />
 
       <ListToolbar

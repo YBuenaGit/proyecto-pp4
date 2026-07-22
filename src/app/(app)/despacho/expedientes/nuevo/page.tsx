@@ -17,7 +17,7 @@ export default async function NewExpedientPage() {
       <PageHeader
         title="Nuevo expediente interno"
         description="Carga administrativa interna de Despacho."
-        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Despacho", href: "/despacho" }, { label: "Expedientes internos", href: "/despacho/expedientes" }, { label: "Nuevo" }]}
+        breadcrumbs={[{ label: "Anuncios importantes", href: "/" }, { label: "Despacho", href: "/despacho" }, { label: "Expedientes internos", href: "/despacho/expedientes" }, { label: "Nuevo" }]}
         actions={
           <AppModal title="Nuevo expediente interno" trigger={<><Plus className="h-4 w-4" />Nuevo expediente</>} size="lg">
             <ExpedientForm

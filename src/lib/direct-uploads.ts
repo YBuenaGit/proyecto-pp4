@@ -45,6 +45,7 @@ function assertIntentShape(intent: DirectUploadIntent) {
       "JuridicalAction",
       "LegajoObservation",
     ].includes(intent.entityType)) ||
+    (intent.module === "ANUNCIOS" && intent.entityType === "Announcement") ||
     (intent.module === "RETENCIONES" && intent.entityType === "Retention");
   if (!valid) throw new DirectUploadError("Destino de archivo invalido.");
 }
@@ -79,6 +80,13 @@ async function isJuridicalDerivedOut(interventionId: string) {
 
 export async function assertDirectUploadAccess(user: CurrentUser, intent: DirectUploadIntent) {
   assertIntentShape(intent);
+
+  if (intent.module === "ANUNCIOS") {
+    if (intent.scopeId) {
+      throw new DirectUploadError("Los archivos de un anuncio existente no se pueden reemplazar.");
+    }
+    return;
+  }
 
   if (intent.module === "DESPACHO") {
     const isExpedient = intent.entityType === "InternalExpedient";
@@ -137,10 +145,20 @@ export async function initiateDirectUpload(input: {
     throw new DirectUploadError("Cada archivo puede pesar como maximo 1 GB.");
   }
 
+  const requestedMimeType = input.mimeType.trim().toLowerCase();
+  if (
+    input.intent.module === "ANUNCIOS" &&
+    requestedMimeType !== "application/pdf" &&
+    !requestedMimeType.startsWith("image/") &&
+    !requestedMimeType.startsWith("video/")
+  ) {
+    throw new DirectUploadError("Los anuncios solo admiten imagenes, PDF o videos.");
+  }
+
   const id = randomUUID();
   const objectKey = buildCloudflareR2ObjectKey();
   const originalName = input.originalName.trim();
-  const mimeType = input.mimeType.trim().slice(0, 150) || "application/octet-stream";
+  const mimeType = requestedMimeType.slice(0, 150) || "application/octet-stream";
   const storage = getCloudflareR2Storage();
   const multipartId = await storage.createMultipartUpload({
     objectKey,

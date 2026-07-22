@@ -101,7 +101,7 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
     <>
       <PageHeader
         title="Intervenciones Juridico-Institucionales"
-        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Intervenciones" }]}
+        breadcrumbs={[{ label: "Anuncios importantes", href: "/" }, { label: "Intervenciones" }]}
       />
 
       <ListToolbar

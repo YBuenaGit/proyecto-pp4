@@ -98,7 +98,7 @@ export default async function ReportsPage({ searchParams }: { searchParams?: Pro
     <>
       <PageHeader
         title="Reportes"
-        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Reportes" }]}
+        breadcrumbs={[{ label: "Anuncios importantes", href: "/" }, { label: "Reportes" }]}
       />
 
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">

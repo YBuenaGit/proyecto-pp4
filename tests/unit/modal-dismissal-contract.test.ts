@@ -8,7 +8,7 @@ const appModalSource = readFileSync(
 );
 const attachmentPreviewSource = readFileSync(
   new URL(
-    "../../src/app/(app)/intervenciones/[id]/attachment-preview-button.tsx",
+    "../../src/components/ui/attachment-preview-button.tsx",
     import.meta.url,
   ),
   "utf8",

@@ -73,7 +73,7 @@ export default async function NewInterventionPage({ searchParams }: { searchPara
       <PageHeader
         title="Nueva intervencion"
         description="Carga directa del modulo Juridico-Institucional."
-        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Intervenciones", href: "/intervenciones" }, { label: "Nueva" }]}
+        breadcrumbs={[{ label: "Anuncios importantes", href: "/" }, { label: "Intervenciones", href: "/intervenciones" }, { label: "Nueva" }]}
         actions={
           <AppModal
             title="Nueva intervencion"

@@ -32,7 +32,7 @@ export default async function EditDispatchPage({ params }: { params: Promise<{ i
       <PageHeader
         title={`Editar ${record.internalNumber}`}
         description="Solo pueden modificarse Situación, Personas y Estado. Los cambios quedan registrados en auditoría."
-        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Despacho", href: "/despacho" }, { label: record.internalNumber, href: `/despacho/${record.id}` }, { label: "Editar" }]}
+        breadcrumbs={[{ label: "Anuncios importantes", href: "/" }, { label: "Despacho", href: "/despacho" }, { label: record.internalNumber, href: `/despacho/${record.id}` }, { label: "Editar" }]}
         actions={
           <>
             <AppModal title={`Editar ${record.internalNumber}`} trigger={<><Edit className="h-4 w-4" />Editar</>} size="xl">

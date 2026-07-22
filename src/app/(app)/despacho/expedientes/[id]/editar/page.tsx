@@ -24,7 +24,7 @@ export default async function EditExpedientPage({ params }: { params: Promise<{ 
       <PageHeader
         title={`Editar ${expedient.internalNumber}`}
         description="Actualizacion de expediente interno con auditoria."
-        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Despacho", href: "/despacho" }, { label: "Expedientes internos", href: "/despacho/expedientes" }, { label: expedient.internalNumber, href: `/despacho/expedientes/${expedient.id}` }, { label: "Editar" }]}
+        breadcrumbs={[{ label: "Anuncios importantes", href: "/" }, { label: "Despacho", href: "/despacho" }, { label: "Expedientes internos", href: "/despacho/expedientes" }, { label: expedient.internalNumber, href: `/despacho/expedientes/${expedient.id}` }, { label: "Editar" }]}
         actions={
           <>
             <AppModal title={`Editar ${expedient.internalNumber}`} trigger={<><Edit className="h-4 w-4" />Editar</>} size="lg">

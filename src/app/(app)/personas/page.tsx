@@ -32,7 +32,7 @@ export default async function PeoplePage({ searchParams }: { searchParams?: Prom
     <>
       <PageHeader
         title="Personas"
-        breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Personas" }]}
+        breadcrumbs={[{ label: "Anuncios importantes", href: "/" }, { label: "Personas" }]}
       />
 
       <ListToolbar>
