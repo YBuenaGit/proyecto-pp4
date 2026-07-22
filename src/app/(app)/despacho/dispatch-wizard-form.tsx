@@ -20,9 +20,9 @@ import {
   Pencil,
   Plus,
   Trash2,
-  UploadCloud,
 } from "lucide-react";
 import { Button, LinkButton } from "@/components/ui/button";
+import { DirectUploadInput } from "@/components/ui/direct-upload-input";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/components/ui/cn";
 import {
@@ -122,9 +122,6 @@ const inputClass =
 const textareaClass =
   "min-h-28 w-full rounded-sm border border-[#ced4da] bg-white px-2.5 py-2 text-sm leading-6 text-[#212529] outline-none transition duration-150 placeholder:text-[#212529] focus:border-[#80bdff] focus:ring-2 focus:ring-[rgba(0,123,255,.25)]";
 const autosizeTextareaClass = `${textareaClass} resize-none overflow-hidden`;
-
-const fileInputClass =
-  "block w-full rounded-sm border border-dashed border-[#17a2b8] bg-[#d1ecf1]/40 px-3 py-2.5 text-sm text-[#212529] file:mr-2 file:rounded-sm file:border-0 file:bg-[#0667b0] file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white hover:file:bg-[#0a61b9]";
 
 const dniPattern = /^\d{7,8}$/;
 const phonePattern = /^\d{7,10}$/;
@@ -802,6 +799,7 @@ export function DispatchWizardForm({
   modal = false,
   allowAttachments,
   submitLabel,
+  mode = "create",
 }: {
   action: (formData: FormData) => void | Promise<void>;
   initialValues: DispatchWizardValues;
@@ -811,9 +809,9 @@ export function DispatchWizardForm({
   modal?: boolean;
   allowAttachments: boolean;
   submitLabel: string;
+  mode?: "create" | "general-edit";
 }) {
   const formRef = useRef<HTMLFormElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const createRequestedRef = useRef(false);
   const submitLockedRef = useRef(false);
   const [currentStep, setCurrentStep] = useState(0);
@@ -829,6 +827,15 @@ export function DispatchWizardForm({
   const [selectedAttachments, setSelectedAttachments] = useState<File[]>([]);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const isGeneralEdit = mode === "general-edit";
+  const visibleSteps = isGeneralEdit
+    ? [
+        { label: "Situación", contentStep: 0 },
+        { label: "Personas", contentStep: 1 },
+        { label: "Confirmación", contentStep: 3 },
+      ]
+    : steps.map((step, contentStep) => ({ ...step, contentStep }));
+  const contentStep = visibleSteps[currentStep]?.contentStep ?? 0;
   const sortedCategories = useMemo(
     () =>
       sortByLabel(
@@ -870,7 +877,17 @@ export function DispatchWizardForm({
       item.label === values.referredArea || item.value === values.referredArea,
   )?.label;
 
-  const stepErrors = useMemo(() => validateAllSteps(values), [values]);
+  const stepErrors = useMemo(
+    () =>
+      isGeneralEdit
+        ? [
+            validateStep(0, values),
+            validateStep(1, values),
+            validateStep(3, values),
+          ]
+        : validateAllSteps(values),
+    [isGeneralEdit, values],
+  );
   const allValid = stepErrors.every((errors) => errors.length === 0);
   const currentErrors = attemptedSteps[currentStep]
     ? stepErrors[currentStep]
@@ -881,40 +898,6 @@ export function DispatchWizardForm({
     value: DispatchWizardValues[Key],
   ) {
     setValues((current) => ({ ...current, [key]: value }));
-  }
-
-  function syncAttachmentInput(files: File[]) {
-    if (!fileInputRef.current) return;
-    const dataTransfer = new DataTransfer();
-    files.forEach((file) => dataTransfer.items.add(file));
-    fileInputRef.current.files = dataTransfer.files;
-  }
-
-  function addAttachments(event: ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(event.currentTarget.files ?? []);
-    if (!files.length) return;
-
-    setSelectedAttachments((current) => {
-      const existingKeys = new Set(current.map(attachmentKey));
-      const next = [...current];
-      files.forEach((file) => {
-        const key = attachmentKey(file);
-        if (!existingKeys.has(key)) {
-          existingKeys.add(key);
-          next.push(file);
-        }
-      });
-      syncAttachmentInput(next);
-      return next;
-    });
-  }
-
-  function removeAttachment(indexToRemove: number) {
-    setSelectedAttachments((current) => {
-      const next = current.filter((_, index) => index !== indexToRemove);
-      syncAttachmentInput(next);
-      return next;
-    });
   }
 
   function setAutosizedTextareaValue(
@@ -1030,14 +1013,14 @@ export function DispatchWizardForm({
       return;
     }
 
-    const nextStep = Math.min(currentStep + 1, steps.length - 1);
+    const nextStep = Math.min(currentStep + 1, visibleSteps.length - 1);
     setFurthestStep((current) => Math.max(current, nextStep));
     setCurrentStep(nextStep);
     markVisited(nextStep);
   }
 
   function openSummary() {
-    setAttemptedSteps([true, true, true, true]);
+    setAttemptedSteps(visibleSteps.map(() => true));
     const invalidStep = stepErrors.findIndex((errors) => errors.length > 0);
     if (invalidStep >= 0) {
       setCurrentStep(invalidStep);
@@ -1049,7 +1032,7 @@ export function DispatchWizardForm({
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    if (currentStep < steps.length - 1) {
+    if (currentStep < visibleSteps.length - 1) {
       event.preventDefault();
       createRequestedRef.current = false;
       submitLockedRef.current = false;
@@ -1075,7 +1058,7 @@ export function DispatchWizardForm({
       createRequestedRef.current = false;
       submitLockedRef.current = false;
       setIsSubmitting(false);
-      setAttemptedSteps([true, true, true, true]);
+      setAttemptedSteps(visibleSteps.map(() => true));
       setCurrentStep(invalidStep);
       markVisited(invalidStep);
       focusFirstError(invalidStep);
@@ -1118,14 +1101,19 @@ export function DispatchWizardForm({
         name="usesHistoricalDate"
         value={values.usesHistoricalDate ? "true" : "false"}
       />
-      {!allowAttachments ? (
+      {!allowAttachments && !isGeneralEdit ? (
         <input type="hidden" name="referredArea" value={values.referredArea} />
       ) : null}
 
       <div className="space-y-3">
         <div className="rounded-lg border border-[#dee2e6] bg-white p-2.5 shadow-sm">
-          <ol className="grid grid-cols-4 gap-1.5">
-            {steps.map((step, index) => {
+          <ol
+            className={cn(
+              "grid gap-1.5",
+              isGeneralEdit ? "grid-cols-3" : "grid-cols-4",
+            )}
+          >
+            {visibleSteps.map((step, index) => {
               const isCurrent = index === currentStep;
               const isLocked = !isCurrent && !canOpenStep(index);
               const hasError =
@@ -1204,8 +1192,8 @@ export function DispatchWizardForm({
         </div>
 
         <div
-          className={cn(currentStep === 0 ? "grid gap-3" : "hidden")}
-          aria-hidden={currentStep !== 0}
+          className={cn(contentStep === 0 ? "grid gap-3" : "hidden")}
+          aria-hidden={contentStep !== 0}
         >
           <StepCard title="Situación">
             <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
@@ -1282,13 +1270,30 @@ export function DispatchWizardForm({
                   ))}
                 </select>
               </Field>
+              {isGeneralEdit ? (
+                <Field label="Estado" error={errorFor("status")}>
+                  <select
+                    name="status"
+                    value={values.status}
+                    onChange={(event) => setValue("status", event.target.value)}
+                    className={inputClass}
+                    aria-required="true"
+                  >
+                    {DISPATCH_STATUSES.map((item) => (
+                      <option key={item} value={item}>
+                        {labelFromValue(item)}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
+              ) : null}
             </div>
           </StepCard>
         </div>
 
         <div
-          className={cn(currentStep === 1 ? "grid gap-3" : "hidden")}
-          aria-hidden={currentStep !== 1}
+          className={cn(contentStep === 1 ? "grid gap-3" : "hidden")}
+          aria-hidden={contentStep !== 1}
         >
           <StepCard
             title="Personas denunciantes"
@@ -1804,9 +1809,10 @@ export function DispatchWizardForm({
           </StepCard>
         </div>
 
+        {!isGeneralEdit ? (
         <div
-          className={cn(currentStep === 2 ? "grid gap-3" : "hidden")}
-          aria-hidden={currentStep !== 2}
+          className={cn(contentStep === 2 ? "grid gap-3" : "hidden")}
+          aria-hidden={contentStep !== 2}
         >
           <StepCard title="Relato">
             <div className="space-y-3">
@@ -1853,13 +1859,15 @@ export function DispatchWizardForm({
             </div>
           </StepCard>
         </div>
+        ) : null}
 
         <div
-          className={cn(currentStep === 3 ? "grid gap-3" : "hidden")}
-          aria-hidden={currentStep !== 3}
+          className={cn(contentStep === 3 ? "grid gap-3" : "hidden")}
+          aria-hidden={contentStep !== 3}
         >
-          <StepCard title="Cierre">
+          <StepCard title={isGeneralEdit ? "Confirmación" : "Cierre"}>
             <div className="grid gap-2.5 md:grid-cols-2 xl:grid-cols-3">
+              {!isGeneralEdit ? (
               <Field label="Estado" error={errorFor("status")}>
                 <select
                   name="status"
@@ -1875,6 +1883,11 @@ export function DispatchWizardForm({
                   ))}
                 </select>
               </Field>
+              ) : (
+                <p className="md:col-span-2 xl:col-span-3 rounded-md bg-[#f8f9fa] px-3 py-2 text-sm text-[#495057]">
+                  Revisá los cambios de Situación, Personas y Estado antes de guardarlos.
+                </p>
+              )}
               {allowAttachments ? (
                 <Field label="Área derivada">
                   <select
@@ -1896,46 +1909,10 @@ export function DispatchWizardForm({
               ) : null}
               {allowAttachments ? (
                 <Field label="Adjuntos" className="md:col-span-2 xl:col-span-3">
-                  <div className="flex items-start gap-2 rounded-lg bg-[#f8f9fa] p-2.5">
-                    <UploadCloud className="mt-1 h-5 w-5 shrink-0 text-[#0667b0]" />
-                    <div className="w-full space-y-1.5">
-                      <input
-                        ref={fileInputRef}
-                        name="attachments"
-                        type="file"
-                        multiple
-                        onChange={addAttachments}
-                        className={fileInputClass}
-                      />
-                      <p className="text-xs text-[#212529]">
-                        {selectedAttachments.length
-                          ? `${selectedAttachments.length} archivo(s) seleccionado(s).`
-                          : "Sin adjuntos seleccionados."}
-                      </p>
-                      {selectedAttachments.length ? (
-                        <ul className="space-y-1 rounded-md bg-white px-3 py-2 text-sm text-[#495057]">
-                          {selectedAttachments.map((file, index) => (
-                            <li
-                              key={`${attachmentKey(file)}-${index}`}
-                              className="flex items-center justify-between gap-3"
-                            >
-                              <span className="min-w-0 truncate">
-                                {file.name}
-                              </span>
-                              <button
-                                type="button"
-                                onClick={() => removeAttachment(index)}
-                                className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-md border border-rose-100 bg-white px-2 text-xs font-semibold text-rose-600 transition hover:bg-rose-50"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                                Quitar
-                              </button>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : null}
-                    </div>
-                  </div>
+                  <DirectUploadInput
+                    intent={{ module: "DESPACHO", entityType: "DispatchRecord" }}
+                    onFilesChange={setSelectedAttachments}
+                  />
                 </Field>
               ) : null}
             </div>
@@ -1990,6 +1967,12 @@ export function DispatchWizardForm({
                           label="Prioridad"
                           value={labelFromValue(values.priority)}
                         />
+                        {isGeneralEdit ? (
+                          <SummaryItem
+                            label="Estado"
+                            value={labelFromValue(values.status)}
+                          />
+                        ) : null}
                       </SummaryGrid>
                     </SummaryBlock>
 
@@ -2089,6 +2072,7 @@ export function DispatchWizardForm({
                       )}
                     </SummaryBlock>
 
+                    {!isGeneralEdit ? (
                     <SummaryBlock
                       title="Relato"
                       actionLabel="Editar relato"
@@ -2125,7 +2109,9 @@ export function DispatchWizardForm({
                         ) : null}
                       </div>
                     </SummaryBlock>
+                    ) : null}
 
+                    {!isGeneralEdit ? (
                     <SummaryBlock
                       title="Cierre"
                       actionLabel="Editar cierre"
@@ -2161,11 +2147,13 @@ export function DispatchWizardForm({
                         </ul>
                       ) : null}
                     </SummaryBlock>
+                    ) : null}
                   </div>
 
                   <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm leading-6 text-amber-900">
-                    Revisá la información cargada antes de crear la atención.
-                    Una vez creada, quedará registrada en el sistema.
+                    {isGeneralEdit
+                      ? "Solo se actualizarán Situación, Personas y Estado. El relato, la orientación, las notas, la derivación y los adjuntos permanecerán sin cambios."
+                      : "Revisá la información cargada antes de crear la atención. Una vez creada, quedará registrada en el sistema."}
                   </div>
                   <div className="mt-4 flex flex-wrap justify-end gap-2 border-t border-[#dee2e6] pt-4">
                     <Button
@@ -2236,7 +2224,7 @@ export function DispatchWizardForm({
             ) : null}
           </div>
 
-          {currentStep < steps.length - 1 ? (
+          {currentStep < visibleSteps.length - 1 ? (
             <Button
               type="button"
               onClick={goNext}

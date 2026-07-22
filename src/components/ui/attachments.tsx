@@ -3,6 +3,8 @@ import { FileText, Upload } from "lucide-react";
 import { Button } from "./button";
 import { SubmitButton } from "./submit-button";
 import { formatDateTime } from "@/lib/format";
+import type { DirectUploadIntent } from "@/lib/direct-upload-shared";
+import { DirectUploadInput } from "./direct-upload-input";
 
 export function AttachmentList({
   attachments,
@@ -49,23 +51,16 @@ export function AttachmentList({
 
 export function UploadForm({
   action,
+  intent,
   modal = false,
 }: {
   action: (formData: FormData) => void | Promise<void>;
+  intent: DirectUploadIntent;
   modal?: boolean;
 }) {
   return (
     <form action={action} className="flex flex-col gap-3 rounded-sm border border-dashed border-[#17a2b8] bg-[#d1ecf1]/40 p-3">
-      <label className="block">
-        <span className="mb-1.5 block text-xs font-semibold tracking-wide text-[#495057]">Adjuntar archivos</span>
-        <input
-          type="file"
-          name="attachments"
-          multiple
-          required
-          className="block w-full text-sm text-[#212529] file:mr-2 file:rounded-sm file:border-0 file:bg-[#0667b0] file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-white hover:file:bg-[#0a61b9]"
-        />
-      </label>
+      <DirectUploadInput intent={intent} required label="Adjuntar archivos" />
       <div className="flex flex-wrap items-center gap-2">
         <SubmitButton variant="secondary" className="w-fit" pendingLabel="Subiendo...">
           <Upload className="h-4 w-4" />

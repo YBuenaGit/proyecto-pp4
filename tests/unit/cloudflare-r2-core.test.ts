@@ -37,7 +37,7 @@ test("rejects keys outside the project prefix", () => {
   assert.throws(() => assertProjectObjectKey(`${CLOUDFLARE_R2_ROOT_PREFIX}-otro/objects/id.bin`));
 });
 
-test("enforces the 25 MB per-file limit and four-file batch limit", () => {
+test("enforces the 1 GB per-file limit and four-file batch limit", () => {
   assert.doesNotThrow(() => assertUploadLimits([{ size: MAX_UPLOAD_FILE_BYTES }]));
   assert.throws(
     () => assertUploadLimits([{ size: MAX_UPLOAD_FILE_BYTES + 1 }]),
@@ -121,7 +121,8 @@ test("seed checks one deterministic key and writes only when it is absent", asyn
     "HeadObjectCommand",
     "PutObjectCommand",
   ]);
-  assert.match(first.objectKey, /^secretaria-de-seguridad\/seed\/v1\/[0-9a-f]{64}\.bin$/);
+  assert.match(first.objectKey, /^secretaria-de-seguridad\/seed\/native\/[0-9a-f]{64}\.bin$/);
+  assert.equal(first.encryptionVersion, 0);
 
   const existingCommands: unknown[] = [];
   const existingStorage = createCloudflareR2Storage({

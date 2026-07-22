@@ -131,7 +131,7 @@ export async function GET(
     isVisibleBeforeReferralCutoff(action, privacyCutoffAt, isDerivationAction),
   );
   const actionIds = visibleActions.map((action) => action.id);
-  const [attachments, auditLogs] = await Promise.all([
+  const [attachments, auditLogs, observations] = await Promise.all([
     prisma.attachment.findMany({
       where: {
         module: "JURIDICO",
@@ -148,7 +148,44 @@ export async function GET(
       where: { entityType: "JuridicalIntervention", entityId: id },
       orderBy: { createdAt: "asc" },
     }),
+    prisma.legajoObservation.findMany({
+      where: {
+        module: "JURIDICO",
+        ...(privacyCutoffAt ? { createdAt: { lte: privacyCutoffAt } } : {}),
+        OR: [
+          { entityType: "JuridicalIntervention", entityId: intervention.id },
+          ...(actionIds.length
+            ? [{ entityType: "JuridicalAction", entityId: { in: actionIds } }]
+            : []),
+        ],
+      },
+      include: { createdBy: { select: { name: true } } },
+      orderBy: { createdAt: "asc" },
+    }),
   ]);
+
+  const observationAttachments = observations.length
+    ? await prisma.attachment.findMany({
+        where: {
+          module: "JURIDICO",
+          entityType: "LegajoObservation",
+          entityId: { in: observations.map((observation) => observation.id) },
+        },
+        orderBy: { createdAt: "asc" },
+      })
+    : [];
+  const attachmentsByObservationId = new Map<
+    string,
+    Array<{ originalName: string; createdAt: Date }>
+  >();
+  observationAttachments.forEach((attachment) => {
+    const current = attachmentsByObservationId.get(attachment.entityId) ?? [];
+    current.push({
+      originalName: attachment.originalName,
+      createdAt: attachment.createdAt,
+    });
+    attachmentsByObservationId.set(attachment.entityId, current);
+  });
 
   const statusChanges = statusChangeByActionId(auditLogs);
   const attachmentsByActionId = new Map<
@@ -165,6 +202,26 @@ export async function GET(
       });
       attachmentsByActionId.set(attachment.entityId, current);
     });
+  const observationsByTarget = new Map<
+    string,
+    Array<{
+      content: string;
+      createdAt: Date;
+      createdBy: string;
+      attachments: Array<{ originalName: string; createdAt: Date }>;
+    }>
+  >();
+  observations.forEach((observation) => {
+    const key = `${observation.entityType}:${observation.entityId}`;
+    const current = observationsByTarget.get(key) ?? [];
+    current.push({
+      content: observation.content,
+      createdAt: observation.createdAt,
+      createdBy: observation.createdBy.name,
+      attachments: attachmentsByObservationId.get(observation.id) ?? [],
+    });
+    observationsByTarget.set(key, current);
+  });
 
   const sheets: LegajoPdfSheet[] = [
     {
@@ -177,6 +234,10 @@ export async function GET(
       guidance: intervention.guidanceProvided,
       statusText: `Estado inicial: ${labelFromValue(initialStatusFromAudit(auditLogs, intervention.status))}`,
       attachments: [],
+      observations:
+        observationsByTarget.get(
+          `JuridicalIntervention:${intervention.id}`,
+        ) ?? [],
     },
     ...visibleActions.map((action, index) => {
       const parsed = parseJuridicalActionContentForDisplay(
@@ -198,6 +259,8 @@ export async function GET(
         nextStepDescription: parsed.nextStepDescription,
         nextStepDate: action.nextStepDate,
         attachments: attachmentsByActionId.get(action.id) ?? [],
+        observations:
+          observationsByTarget.get(`JuridicalAction:${action.id}`) ?? [],
       };
     }),
   ];

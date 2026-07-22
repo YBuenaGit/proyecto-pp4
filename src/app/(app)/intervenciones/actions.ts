@@ -6,9 +6,9 @@ import { z } from "zod";
 import { ACTION_TYPES, JURIDICAL_STATUSES, PRIORITIES } from "@/lib/constants";
 import { requireUser } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
-import { saveAttachments } from "@/lib/files";
+import { consumeAttachmentUploads } from "@/lib/direct-uploads";
 import { checkbox, nextInternalNumber, optionalDate, optionalSentenceText, optionalText, sentenceText, text } from "@/lib/form";
-import { buildJuridicalActionContent, parseJuridicalActionContent } from "@/lib/juridical-action-content";
+import { buildJuridicalActionContent } from "@/lib/juridical-action-content";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessJuridical, canBypassLegajoRestriction } from "@/lib/rbac";
 import { capitalizeOptionalText, personDisplayName } from "@/lib/text";
@@ -365,7 +365,6 @@ export async function createJuridicalIntervention(formData: FormData) {
       complainantPhone2: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.phone2),
       complainantAddress: firstComplainant?.isAnonymous ? null : capitalizeOptionalText(firstComplainant?.address),
       type: parsed.type,
-      subType: null,
       urgency: parsed.urgency,
       status: parsed.status,
       oficioNumber: optionalText(formData, "oficioNumber"),
@@ -389,8 +388,8 @@ export async function createJuridicalIntervention(formData: FormData) {
     include: juridicalAuditInclude,
   });
 
-  await saveAttachments({
-    files: formData.getAll("attachments"),
+  await consumeAttachmentUploads({
+    formData,
     module: "JURIDICO",
     entityType: "JuridicalIntervention",
     entityId: intervention.id,
@@ -416,8 +415,7 @@ export async function updateJuridicalIntervention(interventionId: string, formDa
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
   const before = await juridicalAuditSnapshot(interventionId);
-  const parsed = interventionSchema.parse({
-    description: sentenceText(formData, "description"),
+  const parsed = interventionSchema.omit({ description: true }).parse({
     type: text(formData, "type"),
     urgency: text(formData, "urgency") || "MEDIA",
     status: text(formData, "status") || "RECIBIDO",
@@ -451,18 +449,11 @@ export async function updateJuridicalIntervention(interventionId: string, formDa
       complainantPhone2: firstComplainant?.isAnonymous ? null : nullable(firstComplainant?.phone2),
       complainantAddress: firstComplainant?.isAnonymous ? null : capitalizeOptionalText(firstComplainant?.address),
       type: parsed.type,
-      subType: null,
       urgency: parsed.urgency,
       status: parsed.status,
       oficioNumber: optionalText(formData, "oficioNumber"),
       expedienteNumber: optionalText(formData, "expedienteNumber"),
       interventionContext: optionalText(formData, "interventionContext"),
-      counterpartType: null,
-      description: parsed.description,
-      guidanceProvided: optionalSentenceText(formData, "guidanceProvided"),
-      referredToAgency: optionalSentenceText(formData, "referredToAgency"),
-      derivedArea: before.derivedArea,
-      confidentialNotes: optionalSentenceText(formData, "confidentialNotes"),
       deadlineAt,
       lastStatusAt: before.status !== parsed.status ? new Date() : before.lastStatusAt,
       complainants: {
@@ -492,33 +483,48 @@ export async function updateJuridicalIntervention(interventionId: string, formDa
   redirect(`/intervenciones/${interventionId}`);
 }
 
-export async function updateJuridicalInitialNarrative(interventionId: string, formData: FormData) {
+export async function addJuridicalObservation(interventionId: string, formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
-  const before = await juridicalAuditSnapshot(interventionId);
   if (!canBypassLegajoRestriction(user) && (await isJuridicalLegajoDerivedOut(interventionId))) {
     revalidatePath(`/intervenciones/${interventionId}`);
     redirect(`/intervenciones/${interventionId}`);
   }
 
-  const description = sentenceText(formData, "description");
-  if (description.length < 3) return;
-  const guidanceProvided = optionalSentenceText(formData, "guidanceProvided");
+  const entityType = text(formData, "entityType");
+  const entityId = text(formData, "entityId");
+  const content = sentenceText(formData, "content");
+  if (content.length < 3) return;
 
-  const after = await prisma.juridicalIntervention.update({
-    where: { id: interventionId },
+  let belongsToLegajo = false;
+  if (entityType === "JuridicalIntervention") {
+    belongsToLegajo = entityId === interventionId;
+  } else if (entityType === "JuridicalAction") {
+    const target = await prisma.juridicalAction.findUnique({
+      where: { id: entityId },
+      select: { juridicalInterventionId: true },
+    });
+    belongsToLegajo = target?.juridicalInterventionId === interventionId;
+  }
+  if (!belongsToLegajo) {
+    throw new Error("La linea indicada no pertenece a este legajo.");
+  }
+
+  const observation = await prisma.legajoObservation.create({
     data: {
-      description,
-      guidanceProvided,
+      module: "JURIDICO",
+      entityType,
+      entityId,
+      content,
+      createdById: user.id,
     },
-    include: juridicalAuditInclude,
   });
-
-  const savedAttachments = await saveAttachments({
-    files: formData.getAll("attachments"),
+  const attachments = await consumeAttachmentUploads({
+    formData,
     module: "JURIDICO",
-    entityType: "JuridicalIntervention",
-    entityId: interventionId,
+    entityType: "LegajoObservation",
+    entityId: observation.id,
+    scopeId: interventionId,
     uploadedById: user.id,
     isPrivate: true,
   });
@@ -527,45 +533,12 @@ export async function updateJuridicalInitialNarrative(interventionId: string, fo
     module: "JURIDICO",
     entityType: "JuridicalIntervention",
     entityId: interventionId,
-    action: "UPDATE",
+    action: "OBSERVATION",
     createdById: user.id,
-    before,
-    after: savedAttachments.length ? { intervention: after, attachments: savedAttachments } : after,
+    after: { observation, attachments, target: { entityType, entityId } },
   });
   revalidatePath(`/intervenciones/${interventionId}`);
   redirect(`/intervenciones/${interventionId}`);
-}
-
-export async function deleteJuridicalAttachment(interventionId: string, formData: FormData) {
-  const user = await requireUser();
-  assertAccess(canAccessJuridical(user));
-  if (!canBypassLegajoRestriction(user) && (await isJuridicalLegajoDerivedOut(interventionId))) {
-    return;
-  }
-  const attachmentId = text(formData, "attachmentId");
-  if (!attachmentId) return;
-  const attachment = await prisma.attachment.findUnique({ where: { id: attachmentId } });
-  const belongsToLegajo =
-    attachment &&
-    attachment.module === "JURIDICO" &&
-    ((attachment.entityType === "JuridicalIntervention" && attachment.entityId === interventionId) ||
-      (attachment.entityType === "JuridicalAction" &&
-        (await prisma.juridicalAction.findUnique({
-          where: { id: attachment.entityId },
-          select: { juridicalInterventionId: true },
-        }))?.juridicalInterventionId === interventionId));
-  if (!attachment || !belongsToLegajo) return;
-
-  await prisma.attachment.delete({ where: { id: attachment.id } });
-  await writeAuditLog({
-    module: "JURIDICO",
-    entityType: "JuridicalIntervention",
-    entityId: interventionId,
-    action: "ATTACHMENT_DELETE",
-    createdById: user.id,
-    before: attachment,
-  });
-  revalidatePath(`/intervenciones/${interventionId}`);
 }
 
 export async function addJuridicalAction(interventionId: string, formData: FormData) {
@@ -615,11 +588,12 @@ export async function addJuridicalAction(interventionId: string, formData: FormD
     await syncJuridicalReferralSummary(interventionId, statusAfter);
   }
 
-  const savedAttachments = await saveAttachments({
-    files: formData.getAll("attachments"),
+  const savedAttachments = await consumeAttachmentUploads({
+    formData,
     module: "JURIDICO",
     entityType: "JuridicalAction",
     entityId: action.id,
+    scopeId: interventionId,
     uploadedById: user.id,
     isPrivate: true,
   });
@@ -635,79 +609,6 @@ export async function addJuridicalAction(interventionId: string, formData: FormD
   });
   revalidatePath(`/intervenciones/${interventionId}`);
   redirect(`/intervenciones/${interventionId}`);
-}
-
-export async function updateJuridicalAction(actionId: string, formData: FormData) {
-  const user = await requireUser();
-  assertAccess(canAccessJuridical(user));
-  const existingAction = await prisma.juridicalAction.findUniqueOrThrow({ where: { id: actionId } });
-  if (!canBypassLegajoRestriction(user) && (await isJuridicalLegajoDerivedOut(existingAction.juridicalInterventionId))) {
-    revalidatePath(`/intervenciones/${existingAction.juridicalInterventionId}`);
-    redirect(`/intervenciones/${existingAction.juridicalInterventionId}`);
-  }
-  const actionType = text(formData, "actionType") || existingAction.actionType;
-  const description = sentenceText(formData, "description") || sentenceText(formData, "content");
-  const existingParts = parseJuridicalActionContent(existingAction.content);
-  const nextStepDescription = formData.has("nextStepDescription")
-    ? optionalSentenceText(formData, "nextStepDescription") ?? ""
-    : existingParts.nextStepDescription;
-  const content = buildJuridicalActionContent({
-    description,
-    guidanceProvided: optionalSentenceText(formData, "guidanceProvided") ?? "",
-    nextStepDescription,
-  });
-  const statusAfter = optionalText(formData, "statusAfter");
-  const createdAt = optionalDate(formData, "createdAt") ?? existingAction.createdAt;
-  const deadlineAt = optionalDate(formData, "deadlineAt");
-  if (!ACTION_TYPES.includes(actionType) || description.length < 3) return;
-  if (Number.isNaN(createdAt.getTime())) {
-    throw new Error("La fecha y hora de atencion no es valida.");
-  }
-  if (deadlineAt && Number.isNaN(deadlineAt.getTime())) {
-    throw new Error("El plazo no es valido.");
-  }
-
-  const before = await juridicalAuditSnapshot(existingAction.juridicalInterventionId);
-  const action = await prisma.juridicalAction.update({
-    where: { id: actionId },
-    data: {
-      actionType,
-      content,
-      createdAt,
-      deadlineAt,
-    },
-  });
-
-  let after = before;
-  if (statusAfter && JURIDICAL_STATUSES.includes(statusAfter) && statusAfter !== before.status) {
-    after = await prisma.juridicalIntervention.update({
-      where: { id: existingAction.juridicalInterventionId },
-      data: { status: statusAfter, lastStatusAt: new Date() },
-      include: juridicalAuditInclude,
-    });
-    await syncJuridicalReferralSummary(existingAction.juridicalInterventionId, statusAfter);
-  }
-
-  const savedAttachments = await saveAttachments({
-    files: formData.getAll("attachments"),
-    module: "JURIDICO",
-    entityType: "JuridicalAction",
-    entityId: action.id,
-    uploadedById: user.id,
-    isPrivate: true,
-  });
-
-  await writeAuditLog({
-    module: "JURIDICO",
-    entityType: "JuridicalIntervention",
-    entityId: existingAction.juridicalInterventionId,
-    action: after.status !== before.status ? "STATUS_CHANGE" : "ACTION_UPDATE",
-    createdById: user.id,
-    before: { intervention: before, action: existingAction },
-    after: { intervention: after, action, attachments: savedAttachments },
-  });
-  revalidatePath(`/intervenciones/${existingAction.juridicalInterventionId}`);
-  redirect(`/intervenciones/${existingAction.juridicalInterventionId}`);
 }
 
 export async function deriveJuridicalToDispatch(interventionId: string, formData: FormData) {
@@ -872,11 +773,12 @@ export async function uploadJuridicalAttachment(interventionId: string, formData
     revalidatePath(`/intervenciones/${interventionId}`);
     redirect(`/intervenciones/${interventionId}`);
   }
-  const saved = await saveAttachments({
-    files: formData.getAll("attachments"),
+  const saved = await consumeAttachmentUploads({
+    formData,
     module: "JURIDICO",
     entityType: "JuridicalIntervention",
     entityId: interventionId,
+    scopeId: interventionId,
     uploadedById: user.id,
     isPrivate: true,
   });

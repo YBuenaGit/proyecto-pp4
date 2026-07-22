@@ -25,9 +25,19 @@ export async function GET(
   });
   if (!attachment) return notFoundResponse();
 
+  const storage = getCloudflareR2Storage();
+  if (attachment.encryptionVersion === 0) {
+    const url = await storage.getDownloadUrl({
+      objectKey: attachment.objectKey,
+      originalName: attachment.originalName,
+      contentType: attachment.mimeType,
+    });
+    return NextResponse.redirect(url, 307);
+  }
+
   let file: Buffer;
   try {
-    file = await getCloudflareR2Storage().downloadFile(
+    file = await storage.downloadFile(
       attachment.objectKey,
       attachment.encryptionVersion,
     );

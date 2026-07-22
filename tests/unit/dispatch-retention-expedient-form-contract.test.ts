@@ -34,7 +34,9 @@ const expedientCodesSource = readFileSync(
 test("retenciones permite fechas nuevas, color/observacion opcionales y adjuntos removibles", () => {
   assert.match(retentionClientSource, /name="actCreatedAt" type="date"/);
   assert.match(retentionClientSource, /name="sentToTribunalAt" type="date"/);
-  assert.match(retentionClientSource, /<SelectedFilesInput\s+name="files"/);
+  assert.match(retentionClientSource, /module: "RETENCIONES"/);
+  assert.match(retentionClientSource, /entityType: "Retention"/);
+  assert.match(retentionClientSource, /getAll\("uploadSessionIds"\)/);
   assert.doesNotMatch(retentionClientSource, /<select name="color"[^>]*required/);
   assert.doesNotMatch(retentionClientSource, /<textarea name="description"[^>]*required/);
 
@@ -50,7 +52,8 @@ test("expedientes internos exige numero, deja descripcion opcional y usa codigo 
   assert.match(expedientFormSource, /name="expedienteNumber"[^>]*required/);
   assert.doesNotMatch(expedientFormSource, /name="description"[^>]*required/);
   assert.match(expedientFormSource, /<ExpedientCodeCombobox defaultValue=\{record\?\.codigo\}/);
-  assert.match(expedientFormSource, /<SelectedFilesInput name="attachments" \/>/);
+  assert.match(expedientFormSource, /module: "DESPACHO"/);
+  assert.match(expedientFormSource, /entityType: "InternalExpedient"/);
   assert.doesNotMatch(expedientFormSource, /DetailSection title="Expediente interno"/);
 
   assert.match(expedientActionsSource, /expedienteNumber: z\.string\(\)\.trim\(\)\.min\(1/);

@@ -21,6 +21,13 @@ export type LegajoPdfAttachment = {
   createdAt: Date;
 };
 
+export type LegajoPdfObservation = {
+  content: string;
+  createdAt: Date;
+  createdBy: string;
+  attachments: LegajoPdfAttachment[];
+};
+
 export type LegajoPdfReferral = {
   origin: string;
   destination: string;
@@ -41,6 +48,7 @@ export type LegajoPdfSheet = {
   nextStepDescription?: string | null;
   nextStepDate?: Date | null;
   attachments: LegajoPdfAttachment[];
+  observations: LegajoPdfObservation[];
 };
 
 export type LegajoPdfInput = {
@@ -414,6 +422,27 @@ function drawSheet(ctx: Ctx, sheet: LegajoPdfSheet) {
   if (sheet.nextStepDescription) {
     smallTitle(ctx, "Proxima accion");
     paragraph(ctx, sheet.nextStepDescription, { indent: 8 });
+  }
+
+  if (sheet.observations.length) {
+    smallTitle(ctx, "Observaciones posteriores");
+    sheet.observations.forEach((observation, index) => {
+      paragraph(
+        ctx,
+        `${index + 1}. ${formatDateTime(observation.createdAt)} - ${display(observation.createdBy)}`,
+        { bold: true, color: COLORS.navy, indent: 8 },
+      );
+      paragraph(ctx, observation.content, { indent: 18 });
+      if (observation.attachments.length) {
+        observation.attachments.forEach((attachment) => {
+          paragraph(
+            ctx,
+            `Archivo adjunto: ${attachment.originalName} (${formatDateTime(attachment.createdAt)})`,
+            { indent: 18, color: COLORS.muted, italic: true },
+          );
+        });
+      }
+    });
   }
 
   if (sheet.attachments.length) {

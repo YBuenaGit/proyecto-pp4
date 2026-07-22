@@ -116,16 +116,6 @@ async function apiJson<T>(input: RequestInfo | URL, init?: RequestInit): Promise
   return data as T;
 }
 
-async function uploadRetentionFiles(retentionId: string, files: File[]) {
-  if (!files.length) return null;
-  const formData = new FormData();
-  files.forEach((file) => formData.append("files", file));
-  return apiJson<{ item: RetentionDetail }>(`/api/retenciones/${retentionId}/archivos`, {
-    method: "POST",
-    body: formData,
-  });
-}
-
 function RetentionForm({
   initial,
   onAttachmentChange,
@@ -136,12 +126,11 @@ function RetentionForm({
   initial?: RetentionRecord;
   onAttachmentChange?: (item: RetentionDetail) => void;
   onCancel: () => void;
-  onSave: (input: RetentionInput, files: File[]) => Promise<void>;
+  onSave: (input: RetentionInput, uploadSessionIds: string[]) => Promise<void>;
   submitLabel: string;
 }) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [existingAttachments, setExistingAttachments] = useState<RetentionAttachment[]>([]);
   const [deletingAttachmentId, setDeletingAttachmentId] = useState<string | null>(null);
 
@@ -162,7 +151,11 @@ function RetentionForm({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const input = retentionInputFromForm(new FormData(event.currentTarget));
+    const formData = new FormData(event.currentTarget);
+    const input = retentionInputFromForm(formData);
+    const uploadSessionIds = formData
+      .getAll("uploadSessionIds")
+      .filter((value): value is string => typeof value === "string" && Boolean(value));
     const hasIdentifier = Boolean(input.domain || input.engineNumber || input.chassisNumber);
     if (!hasIdentifier) {
       setError("Completa al menos dominio, motor o chasis.");
@@ -172,7 +165,7 @@ function RetentionForm({
     setSaving(true);
     setError(null);
     try {
-      await onSave(input, selectedFiles);
+      await onSave(input, uploadSessionIds);
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo guardar la retencion.");
       setSaving(false);
@@ -279,9 +272,12 @@ function RetentionForm({
         </FormField>
         <FormField label="Adjuntos" className="md:col-span-2">
           <SelectedFilesInput
-            name="files"
+            intent={{
+              module: "RETENCIONES",
+              entityType: "Retention",
+              ...(initial ? { scopeId: initial.id } : {}),
+            }}
             accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
-            onFilesChange={setSelectedFiles}
           />
         </FormField>
       </FormGrid>
@@ -533,24 +529,22 @@ export function RetentionsClient() {
     setFilterRenderKey((current) => current + 1);
   }
 
-  async function addRetention(input: RetentionInput, files: File[], close: () => void) {
-    const created = await apiJson<{ item: RetentionDetail }>("/api/retenciones", {
+  async function addRetention(input: RetentionInput, uploadSessionIds: string[], close: () => void) {
+    await apiJson<{ item: RetentionDetail }>("/api/retenciones", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
+      body: JSON.stringify({ input, uploadSessionIds }),
     });
-    await uploadRetentionFiles(created.item.id, files);
     refreshList();
     close();
   }
 
-  async function updateRetention(id: string, input: RetentionInput, files: File[], close: () => void) {
+  async function updateRetention(id: string, input: RetentionInput, uploadSessionIds: string[], close: () => void) {
     await apiJson<{ item: RetentionDetail }>(`/api/retenciones/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
+      body: JSON.stringify({ input, uploadSessionIds }),
     });
-    await uploadRetentionFiles(id, files);
     refreshList();
     close();
   }
@@ -604,7 +598,7 @@ export function RetentionsClient() {
         </div>
       </ListToolbar>
 
-      <p className="mb-2 text-sm font-medium text-[#495057]">Fecha de inicio: 11 de Octubre de 2024</p>
+      <p className="mb-2 text-sm font-medium text-[#495057]">Fecha de inicio: 22 de Julio de 2026</p>
 
       {error ? <div className="mb-3 rounded-sm border border-[#f5c6cb] bg-[#f8d7da] px-3 py-2 text-sm font-semibold text-[#721c24]">{error}</div> : null}
 

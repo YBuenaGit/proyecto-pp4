@@ -19,9 +19,19 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
 
   if (!allowed) notFound();
 
+  const storage = getCloudflareR2Storage();
+  if (attachment.encryptionVersion === 0) {
+    const url = await storage.getDownloadUrl({
+      objectKey: attachment.objectKey,
+      originalName: attachment.originalName,
+      contentType: attachment.mimeType,
+    });
+    return Response.redirect(url, 307);
+  }
+
   let file: Buffer;
   try {
-    file = await getCloudflareR2Storage().downloadFile(attachment.objectKey, attachment.encryptionVersion);
+    file = await storage.downloadFile(attachment.objectKey, attachment.encryptionVersion);
   } catch (error) {
     if (isR2ObjectNotFoundError(error)) notFound();
     throw error;

@@ -1,19 +1,33 @@
-import { GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  AbortMultipartUploadCommand,
+  CompleteMultipartUploadCommand,
+  CreateMultipartUploadCommand,
+  DeleteObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+  S3Client,
+  UploadPartCommand,
+} from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { createCipheriv, createDecipheriv, createHash, randomBytes, randomUUID } from "node:crypto";
+import {
+  MAX_DIRECT_UPLOAD_FILE_BYTES,
+  MAX_DIRECT_UPLOAD_FILES,
+} from "./direct-upload-shared";
 
 export const CLOUDFLARE_R2_REQUIRED_ENV_VARS = [
   "R2_ACCESS_KEY_ID",
   "R2_SECRET_ACCESS_KEY",
   "R2_BUCKET",
   "R2_ACCOUNT_ID",
-  "R2_FILE_ENCRYPTION_KEY_V1",
 ] as const;
 
 export const CLOUDFLARE_R2_ROOT_PREFIX = "secretaria-de-seguridad";
 export const R2_ENCRYPTION_VERSION = 1;
-export const MAX_UPLOAD_FILE_BYTES = 25 * 1024 * 1024;
-export const MAX_UPLOAD_FILES = 4;
-export const MAX_UPLOAD_BATCH_BYTES = 100 * 1024 * 1024;
+export const MAX_UPLOAD_FILE_BYTES = MAX_DIRECT_UPLOAD_FILE_BYTES;
+export const MAX_UPLOAD_FILES = MAX_DIRECT_UPLOAD_FILES;
+export const MAX_UPLOAD_BATCH_BYTES = MAX_UPLOAD_FILE_BYTES * MAX_UPLOAD_FILES;
 
 const ENVELOPE_MAGIC = Buffer.from("SDSR", "ascii");
 const ENVELOPE_VERSION_BYTES = 1;
@@ -23,8 +37,17 @@ const ENVELOPE_HEADER_BYTES = ENVELOPE_MAGIC.length + ENVELOPE_VERSION_BYTES + E
 
 type RequiredR2EnvVar = (typeof CLOUDFLARE_R2_REQUIRED_ENV_VARS)[number];
 type CloudflareR2UploadBody = File | Blob | ArrayBuffer | Uint8Array | Buffer;
-type R2Command = PutObjectCommand | GetObjectCommand | HeadObjectCommand;
+type R2Command =
+  | PutObjectCommand
+  | GetObjectCommand
+  | HeadObjectCommand
+  | CreateMultipartUploadCommand
+  | UploadPartCommand
+  | CompleteMultipartUploadCommand
+  | AbortMultipartUploadCommand
+  | DeleteObjectCommand;
 type R2Send = (command: R2Command) => Promise<unknown>;
+type R2Presign = (command: UploadPartCommand | GetObjectCommand, expiresIn: number) => Promise<string>;
 
 export type UploadFileToCloudflareR2Input = {
   file: CloudflareR2UploadBody;
@@ -71,9 +94,11 @@ function getR2Client() {
 }
 
 async function sendR2Command(command: R2Command) {
-  if (command instanceof PutObjectCommand) return getR2Client().send(command);
-  if (command instanceof GetObjectCommand) return getR2Client().send(command);
-  return getR2Client().send(command);
+  return getR2Client().send(command as never);
+}
+
+async function presignR2Command(command: UploadPartCommand | GetObjectCommand, expiresIn: number) {
+  return getSignedUrl(getR2Client(), command as never, { expiresIn });
 }
 
 function decodeEncryptionKey(value: string) {
@@ -85,7 +110,9 @@ function decodeEncryptionKey(value: string) {
 }
 
 function getDefaultEncryptionKey() {
-  return decodeEncryptionKey(getRequiredEnv("R2_FILE_ENCRYPTION_KEY_V1"));
+  const value = process.env.R2_FILE_ENCRYPTION_KEY_V1;
+  if (!value) throw new Error("R2_FILE_ENCRYPTION_KEY_V1 is required for legacy encrypted objects.");
+  return decodeEncryptionKey(value);
 }
 
 function decodeFileName(name: string) {
@@ -148,7 +175,7 @@ export function buildCloudflareR2ObjectKey() {
 
 function buildSeedObjectKey(content: Buffer) {
   const digest = createHash("sha256").update(content).digest("hex");
-  return `${CLOUDFLARE_R2_ROOT_PREFIX}/seed/v${R2_ENCRYPTION_VERSION}/${digest}.bin`;
+  return `${CLOUDFLARE_R2_ROOT_PREFIX}/seed/native/${digest}.bin`;
 }
 
 export function assertUploadLimits(files: Array<{ size: number }>) {
@@ -158,12 +185,12 @@ export function assertUploadLimits(files: Array<{ size: number }>) {
   let total = 0;
   for (const file of files) {
     if (file.size > MAX_UPLOAD_FILE_BYTES) {
-      throw new FileUploadValidationError("Cada archivo puede pesar como maximo 25 MB.");
+      throw new FileUploadValidationError("Cada archivo puede pesar como maximo 1 GB.");
     }
     total += file.size;
   }
   if (total > MAX_UPLOAD_BATCH_BYTES) {
-    throw new FileUploadValidationError("El envio completo puede pesar como maximo 100 MB.");
+    throw new FileUploadValidationError("El envio completo puede pesar como maximo 4 GB.");
   }
 }
 
@@ -234,12 +261,17 @@ export class CloudflareR2Storage {
   constructor(
     private readonly send: R2Send,
     private readonly bucket: string,
-    private readonly encryptionKey: Buffer,
+    private readonly encryptionKey?: Buffer,
+    private readonly presign: R2Presign = presignR2Command,
   ) {}
+
+  private legacyEncryptionKey() {
+    return this.encryptionKey ?? getDefaultEncryptionKey();
+  }
 
   private async putEncryptedObject(objectKey: string, plainText: Buffer) {
     assertProjectObjectKey(objectKey);
-    const encrypted = encryptR2Object(plainText, this.encryptionKey);
+    const encrypted = encryptR2Object(plainText, this.legacyEncryptionKey());
     await this.send(new PutObjectCommand({
       Bucket: this.bucket,
       Key: objectKey,
@@ -269,7 +301,94 @@ export class CloudflareR2Storage {
   async downloadFile(objectKey: string, encryptionVersion: number) {
     assertProjectObjectKey(objectKey);
     const result = await this.send(new GetObjectCommand({ Bucket: this.bucket, Key: objectKey })) as { Body?: unknown };
-    return decryptR2Object(await bodyToBuffer(result.Body), this.encryptionKey, encryptionVersion);
+    return decryptR2Object(await bodyToBuffer(result.Body), this.legacyEncryptionKey(), encryptionVersion);
+  }
+
+  async createMultipartUpload(input: {
+    objectKey: string;
+    contentType: string;
+    originalName: string;
+    uploadSessionId: string;
+  }) {
+    assertProjectObjectKey(input.objectKey);
+    const result = await this.send(new CreateMultipartUploadCommand({
+      Bucket: this.bucket,
+      Key: input.objectKey,
+      ContentType: input.contentType,
+      ContentDisposition: `inline; filename*=UTF-8''${encodeURIComponent(input.originalName)}`,
+      Metadata: { uploadSessionId: input.uploadSessionId },
+    })) as { UploadId?: string };
+    if (!result.UploadId) throw new Error("Cloudflare R2 did not return a multipart upload id.");
+    return result.UploadId;
+  }
+
+  async getUploadPartUrl(input: {
+    objectKey: string;
+    multipartId: string;
+    partNumber: number;
+    expiresIn?: number;
+  }) {
+    assertProjectObjectKey(input.objectKey);
+    return this.presign(new UploadPartCommand({
+      Bucket: this.bucket,
+      Key: input.objectKey,
+      UploadId: input.multipartId,
+      PartNumber: input.partNumber,
+    }), input.expiresIn ?? 15 * 60);
+  }
+
+  async completeMultipartUpload(input: {
+    objectKey: string;
+    multipartId: string;
+    parts: Array<{ partNumber: number; eTag: string }>;
+  }) {
+    assertProjectObjectKey(input.objectKey);
+    await this.send(new CompleteMultipartUploadCommand({
+      Bucket: this.bucket,
+      Key: input.objectKey,
+      UploadId: input.multipartId,
+      MultipartUpload: {
+        Parts: input.parts.map((part) => ({ ETag: part.eTag, PartNumber: part.partNumber })),
+      },
+    }));
+  }
+
+  async abortMultipartUpload(objectKey: string, multipartId: string) {
+    assertProjectObjectKey(objectKey);
+    await this.send(new AbortMultipartUploadCommand({
+      Bucket: this.bucket,
+      Key: objectKey,
+      UploadId: multipartId,
+    }));
+  }
+
+  async headFile(objectKey: string) {
+    assertProjectObjectKey(objectKey);
+    return this.send(new HeadObjectCommand({ Bucket: this.bucket, Key: objectKey })) as Promise<{
+      ContentLength?: number;
+      ContentType?: string;
+      Metadata?: Record<string, string>;
+    }>;
+  }
+
+  async deleteFile(objectKey: string) {
+    assertProjectObjectKey(objectKey);
+    await this.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: objectKey }));
+  }
+
+  async getDownloadUrl(input: {
+    objectKey: string;
+    originalName: string;
+    contentType: string;
+    expiresIn?: number;
+  }) {
+    assertProjectObjectKey(input.objectKey);
+    return this.presign(new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: input.objectKey,
+      ResponseContentType: input.contentType,
+      ResponseContentDisposition: `inline; filename*=UTF-8''${encodeURIComponent(input.originalName)}`,
+    }), input.expiresIn ?? 15 * 60);
   }
 
   async ensureSeedObject(content: Buffer) {
@@ -279,17 +398,29 @@ export class CloudflareR2Storage {
       await this.send(new HeadObjectCommand({ Bucket: this.bucket, Key: objectKey }));
     } catch (error) {
       if (!isR2ObjectNotFoundError(error)) throw error;
-      await this.putEncryptedObject(objectKey, content);
+      await this.send(new PutObjectCommand({
+        Bucket: this.bucket,
+        Key: objectKey,
+        Body: content,
+        ContentType: "application/octet-stream",
+        ContentLength: content.byteLength,
+      }));
     }
-    return { objectKey, encryptionVersion: R2_ENCRYPTION_VERSION };
+    return { objectKey, encryptionVersion: 0 };
   }
 }
 
-export function createCloudflareR2Storage(options?: { send?: R2Send; bucket?: string; encryptionKey?: Buffer }) {
+export function createCloudflareR2Storage(options?: {
+  send?: R2Send;
+  bucket?: string;
+  encryptionKey?: Buffer;
+  presign?: R2Presign;
+}) {
   return new CloudflareR2Storage(
     options?.send ?? sendR2Command,
     options?.bucket ?? getRequiredEnv("R2_BUCKET"),
-    options?.encryptionKey ?? getDefaultEncryptionKey(),
+    options?.encryptionKey,
+    options?.presign ?? presignR2Command,
   );
 }
 

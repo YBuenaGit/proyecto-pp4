@@ -31,7 +31,7 @@ export default async function EditInterventionPage({ params }: { params: Promise
     <>
       <PageHeader
         title={`Editar ${intervention.internalNumber}`}
-        description="La edicion queda auditada con usuario, fecha y estado."
+        description="Solo pueden modificarse Situación, Personas y Estado. La edición queda auditada."
         breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Intervenciones", href: "/intervenciones" }, { label: intervention.internalNumber, href: `/intervenciones/${intervention.id}` }, { label: "Editar" }]}
         actions={
           <>
@@ -44,13 +44,14 @@ export default async function EditInterventionPage({ params }: { params: Promise
                 backHref={`/intervenciones/${intervention.id}`}
                 modal
                 submitLabel="Guardar cambios"
+                mode="general-edit"
               />
             </AppModal>
             <LinkButton href={`/intervenciones/${intervention.id}`} variant="secondary">Volver</LinkButton>
           </>
         }
       />
-      <p className="text-sm text-[#212529]">La informacion se edita desde el modal para mantener separada la lectura de la modificacion.</p>
+      <p className="text-sm text-[#212529]">El relato, la orientación, las notas, la derivación y los archivos permanecen inmutables.</p>
     </>
   );
 }

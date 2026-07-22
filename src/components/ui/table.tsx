@@ -21,6 +21,7 @@ type TableProps = {
   onPageChange?: (page: number) => void;
   onRefresh?: () => void;
   rowClick?: boolean;
+  allowHorizontalScroll?: boolean;
 };
 
 type TdProps = {
@@ -190,9 +191,9 @@ export function Table({
   onPageChange,
   onRefresh,
   rowClick = true,
+  allowHorizontalScroll = true,
 }: TableProps) {
   const router = useRouter();
-  const pathname = usePathname();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const displayed = rowCount(children);
   const resolvedTotal = total ?? displayed;
@@ -239,11 +240,9 @@ export function Table({
                 return;
               }
 
-              // Recarga completa hacia la URL sin filtros: limpia los campos de
-              // busqueda (que quedan guardados en la URL y en el formulario) y
-              // vuelve a renderizar toda la tabla desde cero.
               setIsRefreshing(true);
-              window.location.assign(pathname);
+              router.refresh();
+              window.setTimeout(() => setIsRefreshing(false), 500);
             }}
             disabled={isRefreshing}
             className="absolute left-2 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-sm text-[#0667b0] transition duration-150 hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8ec5ff] disabled:cursor-not-allowed"
@@ -258,22 +257,34 @@ export function Table({
           </h2>
         </div>
 
-        <div className="max-w-full overflow-x-auto">
+        <div
+          className={cn(
+            "max-w-full",
+            allowHorizontalScroll ? "overflow-x-auto" : "overflow-x-hidden",
+          )}
+        >
           <table
             className="w-full table-fixed border-collapse text-sm max-lg:block"
-            style={{ minWidth: `min(100%, ${minWidth}px)` }}
+            style={
+              allowHorizontalScroll
+                ? { minWidth: `min(100%, ${minWidth}px)` }
+                : undefined
+            }
           >
             <thead className="bg-[#d7e0ea] max-lg:hidden">
               <tr>
                 {headers.map((header, index) => {
                   const isEditColumn =
                     header.toLocaleLowerCase("es-AR") === "edicion";
+                  const isObservationColumn =
+                    header.toLocaleLowerCase("es-AR") === "observaciones";
                   return (
                     <th
                       key={`${header}-${index}`}
                       className={cn(
                         "border border-[#c7d2de] px-2.5 py-2 text-center text-xs font-semibold uppercase tracking-normal text-[#263544]",
                         isEditColumn && "w-[90px] px-1",
+                        isObservationColumn && "w-[160px] px-1.5",
                       )}
                     >
                       {header}

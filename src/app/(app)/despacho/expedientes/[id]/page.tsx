@@ -87,7 +87,15 @@ export default async function ExpedientDetailPage({ params }: { params: Promise<
             <div className="space-y-4">
               <AttachmentList attachments={attachments} />
               <AppModal title="Adjuntar archivo" trigger={<><Upload className="h-4 w-4" />Adjuntar archivo</>} triggerVariant="secondary" size="md">
-                <UploadForm action={uploadExpedientAttachment.bind(null, expedient.id)} modal />
+                <UploadForm
+                  action={uploadExpedientAttachment.bind(null, expedient.id)}
+                  intent={{
+                    module: "DESPACHO",
+                    entityType: "InternalExpedient",
+                    scopeId: expedient.id,
+                  }}
+                  modal
+                />
               </AppModal>
             </div>
           </DetailSection>

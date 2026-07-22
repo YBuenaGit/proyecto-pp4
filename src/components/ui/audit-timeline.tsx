@@ -22,7 +22,9 @@ type AuditDescription = {
 const fieldDescriptors = [
   { key: "status", label: "Estado", format: (value: unknown) => labelFromValue(textValue(value)) },
   { key: "urgency", label: "Urgencia", format: (value: unknown) => labelFromValue(textValue(value)) },
+  { key: "priority", label: "Prioridad", format: (value: unknown) => labelFromValue(textValue(value)) },
   { key: "type", label: "Tipo", format: (value: unknown) => labelFromValue(textValue(value)) },
+  { key: "category", label: "Categoria", format: (value: unknown) => labelFromValue(textValue(value)) },
   {
     key: "interventionContext",
     label: "Contexto",
@@ -37,6 +39,7 @@ const fieldDescriptors = [
   { key: "area", label: "Area" },
   { key: "derivedArea", label: "Area derivada" },
   { key: "attendedAt", label: "Fecha de atencion", format: formatAuditDateTime },
+  { key: "deadlineAt", label: "Plazo", format: formatAuditDateTime },
   { key: "description", label: "Descripcion" },
   { key: "observation", label: "Observacion" },
   { key: "guidanceProvided", label: "Orientacion / intervencion realizada" },
@@ -152,6 +155,10 @@ function afterActionRecord(afterJson: unknown) {
   return asRecord(asRecord(afterJson)?.action);
 }
 
+function afterObservationRecord(afterJson: unknown) {
+  return asRecord(asRecord(afterJson)?.observation);
+}
+
 export function auditLogActionId(log: AuditTimelineLog) {
   const action = afterActionRecord(safeJson(log.afterJson));
   return textValue(action?.id) || null;
@@ -180,6 +187,14 @@ function auditDetails(log: AuditTimelineLog, beforeRecord: JsonRecord | null, af
   }
 
   if (log.action === "ATTACHMENT") return attachmentDetails(afterJson);
+
+  if (log.action === "OBSERVATION") {
+    const observation = afterObservationRecord(afterJson);
+    const content = textValue(observation?.content);
+    return content
+      ? [`Observacion: ${truncate(content, 180)}`]
+      : ["Agrego una observacion al legajo."];
+  }
 
   const action = afterActionRecord(afterJson);
   if (action) {
@@ -218,6 +233,7 @@ function auditTitle(log: AuditTimelineLog, actor: string, afterJson: unknown) {
   if (log.action === "ACTION_UPDATE") return `${actor} edito una hoja del legajo`;
   if (log.action === "ATTACHMENT") return `${actor} adjunto archivos`;
   if (log.action === "REFERRAL") return `${actor} registro una derivacion`;
+  if (log.action === "OBSERVATION") return `${actor} agrego una observacion`;
   return `${actor} registro ${labelFromValue(log.action)}`;
 }
 

@@ -31,7 +31,7 @@ export default async function EditDispatchPage({ params }: { params: Promise<{ i
     <>
       <PageHeader
         title={`Editar ${record.internalNumber}`}
-        description="Los cambios quedan registrados en auditoria."
+        description="Solo pueden modificarse Situación, Personas y Estado. Los cambios quedan registrados en auditoría."
         breadcrumbs={[{ label: "Inicio", href: "/" }, { label: "Despacho", href: "/despacho" }, { label: record.internalNumber, href: `/despacho/${record.id}` }, { label: "Editar" }]}
         actions={
           <>
@@ -44,13 +44,14 @@ export default async function EditDispatchPage({ params }: { params: Promise<{ i
                 backHref={`/despacho/${record.id}`}
                 modal
                 submitLabel="Guardar cambios"
+                mode="general-edit"
               />
             </AppModal>
             <LinkButton href={`/despacho/${record.id}`} variant="secondary">Volver</LinkButton>
           </>
         }
       />
-      <p className="text-sm text-[#212529]">La informacion se edita desde el modal para mantener separada la lectura de la modificacion.</p>
+      <p className="text-sm text-[#212529]">El relato, la orientación, las notas, la derivación y los archivos permanecen inmutables.</p>
     </>
   );
 }

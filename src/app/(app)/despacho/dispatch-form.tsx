@@ -56,6 +56,7 @@ export function DispatchForm({
   backHref,
   modal = false,
   submitLabel,
+  mode,
 }: {
   action: (formData: FormData) => void | Promise<void>;
   record?: DispatchFormRecord;
@@ -64,6 +65,7 @@ export function DispatchForm({
   backHref: string;
   modal?: boolean;
   submitLabel?: string;
+  mode?: "create" | "general-edit";
 }) {
   const firstName = record?.person?.firstName ?? record?.nameSnapshot?.split(" ")[0] ?? "";
   const apellidoApodoManual = record?.person?.lastName ?? record?.nameSnapshot?.split(" ").slice(1).join(" ") ?? "";
@@ -129,6 +131,7 @@ export function DispatchForm({
       modal={modal}
       allowAttachments={!record}
       submitLabel={submitLabel ?? (record ? "Guardar cambios" : "Crear atencion")}
+      mode={mode ?? (record ? "general-edit" : "create")}
     />
   );
 }

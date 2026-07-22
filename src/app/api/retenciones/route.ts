@@ -11,10 +11,12 @@ import {
 } from "@/lib/retentions";
 import {
   createRetention,
+  getRetentionDetail,
   retentionInputSchema,
   retentionListInclude,
   serializeRetentionListItem,
 } from "@/lib/retentions-service";
+import { consumeRetentionUploads, DirectUploadError } from "@/lib/direct-uploads";
 
 export const dynamic = "force-dynamic";
 
@@ -114,11 +116,33 @@ export async function POST(request: NextRequest) {
   const auth = await getRetentionsUser();
   if ("response" in auth) return auth.response;
 
-  const parsed = retentionInputSchema.safeParse(await request.json().catch(() => null));
+  const body = await request.json().catch(() => null) as {
+    input?: unknown;
+    uploadSessionIds?: unknown;
+  } | null;
+  const parsed = retentionInputSchema.safeParse(body?.input);
   if (!parsed.success) {
     return NextResponse.json({ error: "Datos invalidos.", issues: parsed.error.flatten() }, { status: 400 });
   }
 
-  const record = await createRetention(parsed.data, auth.user.id);
-  return NextResponse.json({ item: record }, { status: 201 });
+  const uploadSessionIds = Array.isArray(body?.uploadSessionIds)
+    ? body.uploadSessionIds.filter((value): value is string => typeof value === "string")
+    : [];
+  try {
+    const record = await createRetention(parsed.data, auth.user.id);
+    await consumeRetentionUploads({
+      uploadSessionIds,
+      retentionId: record.id,
+      uploadedById: auth.user.id,
+    });
+    return NextResponse.json(
+      { item: await getRetentionDetail(record.id) },
+      { status: 201 },
+    );
+  } catch (error) {
+    if (error instanceof DirectUploadError) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
+    throw error;
+  }
 }

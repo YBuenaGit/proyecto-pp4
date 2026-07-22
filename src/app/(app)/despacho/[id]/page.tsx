@@ -16,6 +16,11 @@ import { FormField, inputClass } from "@/components/ui/form-controls";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { SuccessToast } from "@/components/ui/success-toast";
 import { Table, Td } from "@/components/ui/table";
+import {
+  LegajoObservationCell,
+  LegajoObservationList,
+  type LegajoObservationItem,
+} from "@/components/ui/legajo-observations";
 import { DISPATCH_INTERNAL_DERIVED_AREAS } from "@/lib/constants";
 import { requireUser } from "@/lib/auth";
 import {
@@ -42,16 +47,12 @@ import { personDisplayName, sortByLabel } from "@/lib/text";
 import type { SearchParams } from "@/lib/types";
 import {
   addDispatchFollowUp,
-  deleteDispatchAttachment,
+  addDispatchObservation,
   referDispatchToArea,
-  updateDispatchFollowUp,
-  updateDispatchInitialNarrative,
   updateDispatchRecord,
 } from "../actions";
 import { DispatchForm } from "../dispatch-form";
 import { AddDispatchFollowUpForm } from "./add-dispatch-followup-form";
-import { EditInitialNarrativeForm } from "../../intervenciones/[id]/edit-initial-narrative-form";
-import { LegajoActionEditButton } from "../../intervenciones/[id]/legajo-action-edit-button";
 import {
   LegajoBookViewer,
   type LegajoBookItem,
@@ -208,6 +209,7 @@ function DispatchReadContent({
   guidance,
   confidentialNotes,
   attachments,
+  observations,
 }: {
   date: Date;
   deadlineAt?: Date | null;
@@ -217,6 +219,7 @@ function DispatchReadContent({
   guidance?: string | null;
   confidentialNotes?: string | null;
   attachments: DispatchAttachment[];
+  observations: LegajoObservationItem[];
 }) {
   return (
     <div className="space-y-4">
@@ -239,6 +242,12 @@ function DispatchReadContent({
       <BookText label="Notas internas confidenciales">
         {confidentialNotes}
       </BookText>
+      <div className="rounded-sm border border-amber-200 bg-amber-50/50 p-3">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-900">
+          Observaciones posteriores
+        </p>
+        <LegajoObservationList observations={observations} />
+      </div>
       {attachments.length ? (
         <div className="rounded-sm border border-[#dee2e6] bg-[#f8f9fa] p-3">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#212529]">
@@ -397,7 +406,7 @@ export default async function DispatchDetailPage({
     (item) => item.label,
   );
   const followUpIds = visibleFollowUps.map((followUp) => followUp.id);
-  const [attachments, auditLogs] = await Promise.all([
+  const [attachments, auditLogs, observations] = await Promise.all([
     prisma.attachment.findMany({
       where: {
         module: "DESPACHO",
@@ -421,7 +430,58 @@ export default async function DispatchDetailPage({
       include: { createdBy: true },
       orderBy: { createdAt: "desc" },
     }),
+    prisma.legajoObservation.findMany({
+      where: {
+        module: "DESPACHO",
+        ...(canBypassOriginRestriction || !privacyCutoffAt
+          ? {}
+          : { createdAt: { lte: privacyCutoffAt } }),
+        OR: [
+          { entityType: "DispatchRecord", entityId: id },
+          ...(followUpIds.length
+            ? [
+                {
+                  entityType: "DispatchFollowUp",
+                  entityId: { in: followUpIds },
+                },
+              ]
+            : []),
+        ],
+      },
+      include: { createdBy: { select: { name: true } } },
+      orderBy: { createdAt: "asc" },
+    }),
   ]);
+
+  const observationAttachments = observations.length
+    ? await prisma.attachment.findMany({
+        where: {
+          module: "DESPACHO",
+          entityType: "LegajoObservation",
+          entityId: { in: observations.map((observation) => observation.id) },
+        },
+        orderBy: { createdAt: "asc" },
+      })
+    : [];
+  const attachmentsByObservationId = new Map<
+    string,
+    Array<{ id: string; originalName: string; mimeType: string }>
+  >();
+  observationAttachments.forEach((attachment) => {
+    const current = attachmentsByObservationId.get(attachment.entityId) ?? [];
+    current.push({
+      id: attachment.id,
+      originalName: attachment.originalName,
+      mimeType: attachment.mimeType,
+    });
+    attachmentsByObservationId.set(attachment.entityId, current);
+  });
+  const observationItems: LegajoObservationItem[] = observations.map(
+    (observation) => ({
+      ...observation,
+      attachments: attachmentsByObservationId.get(observation.id) ?? [],
+    }),
+  );
 
   const generalAttachments = attachments.filter(
     (attachment) => attachment.entityType === "DispatchRecord",
@@ -433,6 +493,17 @@ export default async function DispatchDetailPage({
       const current = attachmentsByFollowUpId.get(attachment.entityId) ?? [];
       current.push(attachment);
       attachmentsByFollowUpId.set(attachment.entityId, current);
+    });
+  const recordObservations = observationItems.filter(
+    (observation) => observation.entityType === "DispatchRecord",
+  );
+  const observationsByFollowUpId = new Map<string, LegajoObservationItem[]>();
+  observationItems
+    .filter((observation) => observation.entityType === "DispatchFollowUp")
+    .forEach((observation) => {
+      const current = observationsByFollowUpId.get(observation.entityId) ?? [];
+      current.push(observation);
+      observationsByFollowUpId.set(observation.entityId, current);
     });
   const complainants = record.complainants;
   const linkedPersons = record.linkedPersons.length
@@ -519,6 +590,17 @@ export default async function DispatchDetailPage({
         label: "Notas internas confidenciales",
         text: record.confidentialNotes,
       },
+      ...recordObservations.map((observation) => ({
+        label: `Observacion · ${formatDateTime(observation.createdAt)} · ${observation.createdBy.name}`,
+        text: [
+          observation.content,
+          observation.attachments.length
+            ? `Archivos adjuntos: ${observation.attachments.map((attachment) => attachment.originalName).join(", ")}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
+      })),
     ],
     { firstPageLines: 24, continuationPageLines: 28 },
   );
@@ -538,6 +620,13 @@ export default async function DispatchDetailPage({
           record.description,
           record.initialGuidance,
           record.confidentialNotes,
+          ...recordObservations.flatMap((observation) => [
+            observation.content,
+            observation.createdBy.name,
+            ...observation.attachments.map(
+              (attachment) => attachment.originalName,
+            ),
+          ]),
         ]
           .filter(Boolean)
           .join(" "),
@@ -558,6 +647,8 @@ export default async function DispatchDetailPage({
     const sheetNumber = index + 2;
     const parsed = parseJuridicalActionContent(followUp.content);
     const followUpAttachments = attachmentsByFollowUpId.get(followUp.id) ?? [];
+    const followUpObservations =
+      observationsByFollowUpId.get(followUp.id) ?? [];
     const sectionLabel = `Seguimiento N° ${sheetNumber}`;
     const followUpPages = paginateBookTextSections(
       [
@@ -566,6 +657,17 @@ export default async function DispatchDetailPage({
           label: "Intervencion realizada / orientacion brindada",
           text: parsed.guidanceProvided,
         },
+        ...followUpObservations.map((observation) => ({
+          label: `Observacion · ${formatDateTime(observation.createdAt)} · ${observation.createdBy.name}`,
+          text: [
+            observation.content,
+            observation.attachments.length
+              ? `Archivos adjuntos: ${observation.attachments.map((attachment) => attachment.originalName).join(", ")}`
+              : "",
+          ]
+            .filter(Boolean)
+            .join("\n\n"),
+        })),
       ],
       { firstPageLines: 24, continuationPageLines: 28 },
     );
@@ -619,7 +721,17 @@ export default async function DispatchDetailPage({
           title: "Seguimiento de atencion",
           dateText: formatDateTime(followUp.createdAt),
           statusText: followUp.statusAfter,
-          searchText: [parsed.description, parsed.guidanceProvided]
+          searchText: [
+            parsed.description,
+            parsed.guidanceProvided,
+            ...followUpObservations.flatMap((observation) => [
+              observation.content,
+              observation.createdBy.name,
+              ...observation.attachments.map(
+                (attachment) => attachment.originalName,
+              ),
+            ]),
+          ]
             .filter(Boolean)
             .join(" "),
         },
@@ -749,6 +861,7 @@ export default async function DispatchDetailPage({
                 backHref={`/despacho/${record.id}`}
                 modal
                 submitLabel="Guardar cambios"
+                mode="general-edit"
               />
             </AppModal>
             {canMutateOriginLegajo ? (
@@ -765,6 +878,7 @@ export default async function DispatchDetailPage({
               >
                 <AddDispatchFollowUpForm
                   action={addDispatchFollowUp.bind(null, record.id)}
+                  recordId={record.id}
                   submitLabel="Crear intervencion"
                 />
               </AppModal>
@@ -1012,13 +1126,14 @@ export default async function DispatchDetailPage({
           total={followUpsForLegajo.length + 1}
           showPagination={false}
           rowClick={false}
+          allowHorizontalScroll={false}
           headers={[
             "Registro",
             "Fecha / usuario",
             "Actuacion",
             "Estado / seguimiento",
             "Archivo",
-            "Edicion",
+            "Observaciones",
           ]}
           minWidth={980}
         >
@@ -1026,7 +1141,9 @@ export default async function DispatchDetailPage({
             const parsed = parseJuridicalActionContent(followUp.content);
             const rowAttachments =
               attachmentsByFollowUpId.get(followUp.id) ?? [];
-            const canEditFollowUp =
+            const rowObservations =
+              observationsByFollowUpId.get(followUp.id) ?? [];
+            const canAddObservation =
               canMutateOriginLegajo && !isDerivationFollowUp(followUp);
             return (
               <LegajoInterventionRow
@@ -1041,6 +1158,7 @@ export default async function DispatchDetailPage({
                     description={parsed.description}
                     guidance={parsed.guidanceProvided}
                     attachments={rowAttachments}
+                    observations={rowObservations}
                   />
                 }
               >
@@ -1100,31 +1218,19 @@ export default async function DispatchDetailPage({
                     ) : null}
                   </div>
                 </Td>
-                <Td className="w-[90px] px-1">
-                  {canEditFollowUp ? (
-                    <LegajoActionEditButton
-                      title={`Editar seguimiento N° ${sheetNumber}`}
-                    >
-                      <AddDispatchFollowUpForm
-                        action={updateDispatchFollowUp.bind(null, followUp.id)}
-                        initialValues={{
-                          createdAt: followUp.createdAt,
-                          deadlineAt: followUp.deadlineAt,
-                          description: parsed.description,
-                          guidanceProvided: parsed.guidanceProvided,
-                          statusAfter: followUp.statusAfter ?? "",
-                        }}
-                        submitLabel="Guardar seguimiento"
-                        existingAttachments={rowAttachments}
-                        deleteAttachmentAction={deleteDispatchAttachment.bind(
-                          null,
-                          record.id,
-                        )}
-                      />
-                    </LegajoActionEditButton>
-                  ) : (
-                    <span className="text-sm text-[#212529]">-</span>
-                  )}
+                <Td className="w-[160px] px-1.5">
+                  <LegajoObservationCell
+                    observations={rowObservations}
+                    action={
+                      canAddObservation
+                        ? addDispatchObservation.bind(null, record.id)
+                        : undefined
+                    }
+                    entityType="DispatchFollowUp"
+                    entityId={followUp.id}
+                    uploadModule="DESPACHO"
+                    scopeId={record.id}
+                  />
                 </Td>
               </LegajoInterventionRow>
             );
@@ -1142,6 +1248,7 @@ export default async function DispatchDetailPage({
                 guidance={record.initialGuidance}
                 confidentialNotes={record.confidentialNotes}
                 attachments={generalAttachments}
+                observations={recordObservations}
               />
             }
           >
@@ -1193,28 +1300,19 @@ export default async function DispatchDetailPage({
                 ) : null}
               </div>
             </Td>
-            <Td className="w-[90px] px-1">
-              {canMutateOriginLegajo ? (
-                <LegajoActionEditButton title="Editar atencion N° 1">
-                  <EditInitialNarrativeForm
-                    action={updateDispatchInitialNarrative.bind(
-                      null,
-                      record.id,
-                    )}
-                    initialValues={{
-                      description: record.description,
-                      guidanceProvided: record.initialGuidance,
-                    }}
-                    existingAttachments={generalAttachments}
-                    deleteAttachmentAction={deleteDispatchAttachment.bind(
-                      null,
-                      record.id,
-                    )}
-                  />
-                </LegajoActionEditButton>
-              ) : (
-                <span className="text-sm text-[#212529]">-</span>
-              )}
+            <Td className="w-[160px] px-1.5">
+              <LegajoObservationCell
+                observations={recordObservations}
+                action={
+                  canMutateOriginLegajo
+                    ? addDispatchObservation.bind(null, record.id)
+                    : undefined
+                }
+                entityType="DispatchRecord"
+                entityId={record.id}
+                uploadModule="DESPACHO"
+                scopeId={record.id}
+              />
             </Td>
           </LegajoInterventionRow>
         </Table>

@@ -78,7 +78,9 @@ export function ExpedientForm({
         </FormField>
         {!record ? (
           <FormField label="Adjuntos" className="md:col-span-2 xl:col-span-3">
-            <SelectedFilesInput name="attachments" />
+            <SelectedFilesInput
+              intent={{ module: "DESPACHO", entityType: "InternalExpedient" }}
+            />
           </FormField>
         ) : null}
       </FormGrid>

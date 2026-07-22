@@ -18,6 +18,11 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { SuccessToast } from "@/components/ui/success-toast";
 import { Table, Td } from "@/components/ui/table";
 import {
+  LegajoObservationCell,
+  LegajoObservationList,
+  type LegajoObservationItem,
+} from "@/components/ui/legajo-observations";
+import {
   JURIDICAL_CONTEXT_LABELS,
   JURIDICAL_DERIVED_AREAS,
 } from "@/lib/constants";
@@ -49,19 +54,15 @@ import {
 import { personDisplayName, sortByLabel } from "@/lib/text";
 import {
   addJuridicalAction,
-  deleteJuridicalAttachment,
+  addJuridicalObservation,
   referJuridicalToArea,
-  updateJuridicalInitialNarrative,
-  updateJuridicalAction,
   updateJuridicalIntervention,
 } from "../actions";
 import { InterventionForm } from "../intervention-form";
 import { AddJuridicalActionForm } from "./add-juridical-action-form";
-import { EditInitialNarrativeForm } from "./edit-initial-narrative-form";
 import { LegajoInterventionRow } from "./legajo-intervention-row";
 import { AttachmentPreviewButton } from "./attachment-preview-button";
 import { LegajoBookViewer, type LegajoBookItem } from "./legajo-book-viewer";
-import { LegajoActionEditButton } from "./legajo-action-edit-button";
 import { BookSectionCover, BookContentSheet } from "./legajo-book-sheets";
 
 type JsonRecord = Record<string, unknown>;
@@ -474,6 +475,7 @@ function InterventionReadContent({
   nextStepDate,
   confidentialNotes,
   attachments,
+  observations,
 }: {
   date: Date;
   deadlineAt?: Date | null;
@@ -487,6 +489,7 @@ function InterventionReadContent({
   nextStepDate?: Date | null;
   confidentialNotes?: string | null;
   attachments: LegajoAttachment[];
+  observations: LegajoObservationItem[];
 }) {
   return (
     <div className="space-y-4">
@@ -519,6 +522,12 @@ function InterventionReadContent({
       <SheetText label="Notas internas confidenciales">
         {confidentialNotes}
       </SheetText>
+      <div className="rounded-sm border border-amber-200 bg-amber-50/50 p-3">
+        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-amber-900">
+          Observaciones posteriores
+        </p>
+        <LegajoObservationList observations={observations} />
+      </div>
 
       {attachments.length ? (
         <div className="rounded-sm border border-[#dee2e6] bg-[#f8f9fa] p-3">
@@ -706,7 +715,13 @@ export default async function InterventionDetailPage({
   const originDispatchFollowUpIds = originDispatchRecords.flatMap((origin) =>
     origin.followUps.map((followUp) => followUp.id),
   );
-  const [attachments, auditLogs, originDispatchAttachments] = await Promise.all(
+  const [
+    attachments,
+    auditLogs,
+    originDispatchAttachments,
+    observations,
+    originDispatchObservations,
+  ] = await Promise.all(
     [
       prisma.attachment.findMany({
         where: {
@@ -753,8 +768,97 @@ export default async function InterventionDetailPage({
             orderBy: { createdAt: "desc" },
           })
         : Promise.resolve([]),
+      prisma.legajoObservation.findMany({
+        where: {
+          module: "JURIDICO",
+          ...(canBypassOriginRestriction || !privacyCutoffAt
+            ? {}
+            : { createdAt: { lte: privacyCutoffAt } }),
+          OR: [
+            {
+              entityType: "JuridicalIntervention",
+              entityId: intervention.id,
+            },
+            ...(actionIds.length
+              ? [
+                  {
+                    entityType: "JuridicalAction",
+                    entityId: { in: actionIds },
+                  },
+                ]
+              : []),
+          ],
+        },
+        include: { createdBy: { select: { name: true } } },
+        orderBy: { createdAt: "asc" },
+      }),
+      originDispatchIds.length || originDispatchFollowUpIds.length
+        ? prisma.legajoObservation.findMany({
+            where: {
+              module: "DESPACHO",
+              OR: [
+                ...(originDispatchIds.length
+                  ? [
+                      {
+                        entityType: "DispatchRecord",
+                        entityId: { in: originDispatchIds },
+                      },
+                    ]
+                  : []),
+                ...(originDispatchFollowUpIds.length
+                  ? [
+                      {
+                        entityType: "DispatchFollowUp",
+                        entityId: { in: originDispatchFollowUpIds },
+                      },
+                    ]
+                  : []),
+              ],
+            },
+            include: { createdBy: { select: { name: true } } },
+            orderBy: { createdAt: "asc" },
+          })
+        : Promise.resolve([]),
     ],
   );
+
+  const allObservationIds = [
+    ...observations.map((observation) => observation.id),
+    ...originDispatchObservations.map((observation) => observation.id),
+  ];
+  const observationAttachments = allObservationIds.length
+    ? await prisma.attachment.findMany({
+        where: {
+          entityType: "LegajoObservation",
+          entityId: { in: allObservationIds },
+        },
+        orderBy: { createdAt: "asc" },
+      })
+    : [];
+  const attachmentsByObservationId = new Map<
+    string,
+    Array<{ id: string; originalName: string; mimeType: string }>
+  >();
+  observationAttachments.forEach((attachment) => {
+    const current = attachmentsByObservationId.get(attachment.entityId) ?? [];
+    current.push({
+      id: attachment.id,
+      originalName: attachment.originalName,
+      mimeType: attachment.mimeType,
+    });
+    attachmentsByObservationId.set(attachment.entityId, current);
+  });
+  const observationItems: LegajoObservationItem[] = observations.map(
+    (observation) => ({
+      ...observation,
+      attachments: attachmentsByObservationId.get(observation.id) ?? [],
+    }),
+  );
+  const originDispatchObservationItems: LegajoObservationItem[] =
+    originDispatchObservations.map((observation) => ({
+      ...observation,
+      attachments: attachmentsByObservationId.get(observation.id) ?? [],
+    }));
 
   const generalAttachments = attachments.filter(
     (attachment) => attachment.entityType === "JuridicalIntervention",
@@ -767,6 +871,24 @@ export default async function InterventionDetailPage({
       current.push(attachment);
       attachmentsByActionId.set(attachment.entityId, current);
     });
+  const interventionObservations = observationItems.filter(
+    (observation) => observation.entityType === "JuridicalIntervention",
+  );
+  const observationsByActionId = new Map<string, LegajoObservationItem[]>();
+  observationItems
+    .filter((observation) => observation.entityType === "JuridicalAction")
+    .forEach((observation) => {
+      const current = observationsByActionId.get(observation.entityId) ?? [];
+      current.push(observation);
+      observationsByActionId.set(observation.entityId, current);
+    });
+  const dispatchObservationsByTarget = new Map<string, LegajoObservationItem[]>();
+  originDispatchObservationItems.forEach((observation) => {
+    const key = `${observation.entityType}:${observation.entityId}`;
+    const current = dispatchObservationsByTarget.get(key) ?? [];
+    current.push(observation);
+    dispatchObservationsByTarget.set(key, current);
+  });
   const dispatchAttachmentsByRecordId = new Map<string, LegajoAttachment[]>();
   const dispatchAttachmentsByFollowUpId = new Map<string, LegajoAttachment[]>();
   originDispatchAttachments.forEach((attachment) => {
@@ -869,6 +991,13 @@ export default async function InterventionDetailPage({
         actionType: "ATENCION_DESPACHO",
         isDerivation: false,
         attachments: dispatchAttachmentsByRecordId.get(origin.id) ?? [],
+        observations: (
+          dispatchObservationsByTarget.get(`DispatchRecord:${origin.id}`) ?? []
+        ).filter(
+          (observation) =>
+            new Date(observation.createdAt).getTime() <=
+            referral.referredAt.getTime(),
+        ),
       };
 
       const followUpEntries = origin.followUps
@@ -907,6 +1036,15 @@ export default async function InterventionDetailPage({
               : "SEGUIMIENTO_DESPACHO",
             isDerivation,
             attachments: dispatchAttachmentsByFollowUpId.get(followUp.id) ?? [],
+            observations: (
+              dispatchObservationsByTarget.get(
+                `DispatchFollowUp:${followUp.id}`,
+              ) ?? []
+            ).filter(
+              (observation) =>
+                new Date(observation.createdAt).getTime() <=
+                referral.referredAt.getTime(),
+            ),
           };
         });
 
@@ -982,6 +1120,17 @@ export default async function InterventionDetailPage({
       [
         { label: "Descripcion del relato", text: entry.description },
         { label: "Lo que se instruyo", text: entry.guidance },
+        ...entry.observations.map((observation) => ({
+          label: `Observacion · ${formatDateTime(observation.createdAt)} · ${observation.createdBy.name}`,
+          text: [
+            observation.content,
+            observation.attachments.length
+              ? `Archivos adjuntos: ${observation.attachments.map((attachment) => attachment.originalName).join(", ")}`
+              : "",
+          ]
+            .filter(Boolean)
+            .join("\n\n"),
+        })),
       ],
       { firstPageLines: 24, continuationPageLines: 28 },
     );
@@ -999,6 +1148,13 @@ export default async function InterventionDetailPage({
           entry.actor,
           entry.description,
           entry.guidance,
+          ...entry.observations.flatMap((observation) => [
+            observation.content,
+            observation.createdBy.name,
+            ...observation.attachments.map(
+              (attachment) => attachment.originalName,
+            ),
+          ]),
         ]
           .filter(Boolean)
           .join(" "),
@@ -1096,6 +1252,17 @@ export default async function InterventionDetailPage({
         label: "Notas internas confidenciales",
         text: intervention.confidentialNotes,
       },
+      ...interventionObservations.map((observation) => ({
+        label: `Observacion · ${formatDateTime(observation.createdAt)} · ${observation.createdBy.name}`,
+        text: [
+          observation.content,
+          observation.attachments.length
+            ? `Archivos adjuntos: ${observation.attachments.map((attachment) => attachment.originalName).join(", ")}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n\n"),
+      })),
     ],
     { firstPageLines: 24, continuationPageLines: 28 },
   );
@@ -1115,6 +1282,13 @@ export default async function InterventionDetailPage({
           intervention.description,
           intervention.guidanceProvided,
           intervention.confidentialNotes,
+          ...interventionObservations.flatMap((observation) => [
+            observation.content,
+            observation.createdBy.name,
+            ...observation.attachments.map(
+              (attachment) => attachment.originalName,
+            ),
+          ]),
         ]
           .filter(Boolean)
           .join(" "),
@@ -1132,11 +1306,23 @@ export default async function InterventionDetailPage({
   });
 
   actionSheets.forEach(({ action, sheetNumber, parsed, statusText }) => {
+    const actionObservations = observationsByActionId.get(action.id) ?? [];
     const textPages = paginateBookTextSections(
       [
         { label: "Descripcion del relato", text: parsed.description },
         { label: "Lo que se instruyo", text: parsed.guidanceProvided },
         { label: "Proxima accion", text: parsed.nextStepDescription },
+        ...actionObservations.map((observation) => ({
+          label: `Observacion · ${formatDateTime(observation.createdAt)} · ${observation.createdBy.name}`,
+          text: [
+            observation.content,
+            observation.attachments.length
+              ? `Archivos adjuntos: ${observation.attachments.map((attachment) => attachment.originalName).join(", ")}`
+              : "",
+          ]
+            .filter(Boolean)
+            .join("\n\n"),
+        })),
       ],
       { firstPageLines: 24, continuationPageLines: 28 },
     );
@@ -1196,6 +1382,13 @@ export default async function InterventionDetailPage({
             parsed.description,
             parsed.guidanceProvided,
             parsed.nextStepDescription,
+            ...actionObservations.flatMap((observation) => [
+              observation.content,
+              observation.createdBy.name,
+              ...observation.attachments.map(
+                (attachment) => attachment.originalName,
+              ),
+            ]),
           ]
             .filter(Boolean)
             .join(" "),
@@ -1326,6 +1519,7 @@ export default async function InterventionDetailPage({
                 backHref={`/intervenciones/${intervention.id}`}
                 modal
                 submitLabel="Guardar cambios"
+                mode="general-edit"
               />
             </AppModal>
             {canMutateOriginLegajo ? (
@@ -1342,6 +1536,7 @@ export default async function InterventionDetailPage({
               >
                 <AddJuridicalActionForm
                   action={addJuridicalAction.bind(null, intervention.id)}
+                  interventionId={intervention.id}
                   submitLabel="Crear intervencion"
                   showFollowUp={false}
                 />
@@ -1522,13 +1717,14 @@ export default async function InterventionDetailPage({
           total={legajoTimelineRows.length}
           showPagination={false}
           rowClick={false}
+          allowHorizontalScroll={false}
           headers={[
             "Intervencion",
             "Fecha / usuario",
             "Actuacion",
             "Estado / seguimiento",
             "Archivo",
-            "Edicion",
+            "Observaciones",
           ]}
           minWidth={980}
         >
@@ -1552,6 +1748,7 @@ export default async function InterventionDetailPage({
                       nextStepDescription={null}
                       nextStepDate={null}
                       attachments={entry.attachments}
+                      observations={entry.observations}
                     />
                   }
                 >
@@ -1611,8 +1808,16 @@ export default async function InterventionDetailPage({
                       ) : null}
                     </div>
                   </Td>
-                  <Td className="w-[90px] px-1">
-                    <span className="text-sm text-[#212529]">-</span>
+                  <Td className="w-[160px] px-1.5">
+                    <LegajoObservationCell
+                      observations={entry.observations}
+                      entityType={
+                        entry.actionType === "ATENCION_DESPACHO"
+                          ? "DispatchRecord"
+                          : "DispatchFollowUp"
+                      }
+                      entityId={entry.id}
+                    />
                   </Td>
                 </LegajoInterventionRow>
               );
@@ -1621,6 +1826,7 @@ export default async function InterventionDetailPage({
             if (row.kind === "action") {
               const { action, sheetNumber, parsed, statusText } = row.sheet;
               const rowAttachments = attachmentsByActionId.get(action.id) ?? [];
+              const rowObservations = observationsByActionId.get(action.id) ?? [];
               return (
                 <LegajoInterventionRow
                   key={action.id}
@@ -1638,6 +1844,7 @@ export default async function InterventionDetailPage({
                       nextStepDescription={parsed.nextStepDescription}
                       nextStepDate={action.nextStepDate}
                       attachments={rowAttachments}
+                      observations={rowObservations}
                     />
                   }
                 >
@@ -1708,33 +1915,19 @@ export default async function InterventionDetailPage({
                       ) : null}
                     </div>
                   </Td>
-                  <Td className="w-[90px] px-1">
-                    {canMutateOriginLegajo ? (
-                      <LegajoActionEditButton
-                        title={`Editar intervencion N° ${sheetNumber}`}
-                      >
-                        <AddJuridicalActionForm
-                          action={updateJuridicalAction.bind(null, action.id)}
-                          initialValues={{
-                            actionType: action.actionType,
-                            createdAt: action.createdAt,
-                            deadlineAt: action.deadlineAt,
-                            description: parsed.description,
-                            guidanceProvided: parsed.guidanceProvided,
-                            nextStepDescription: parsed.nextStepDescription,
-                          }}
-                          submitLabel="Guardar intervencion"
-                          showFollowUp={false}
-                          existingAttachments={rowAttachments}
-                          deleteAttachmentAction={deleteJuridicalAttachment.bind(
-                            null,
-                            intervention.id,
-                          )}
-                        />
-                      </LegajoActionEditButton>
-                    ) : (
-                      <span className="text-sm text-[#212529]">-</span>
-                    )}
+                  <Td className="w-[160px] px-1.5">
+                    <LegajoObservationCell
+                      observations={rowObservations}
+                      action={
+                        canMutateOriginLegajo
+                          ? addJuridicalObservation.bind(null, intervention.id)
+                          : undefined
+                      }
+                      entityType="JuridicalAction"
+                      entityId={action.id}
+                      uploadModule="JURIDICO"
+                      scopeId={intervention.id}
+                    />
                   </Td>
                 </LegajoInterventionRow>
               );
@@ -1758,6 +1951,7 @@ export default async function InterventionDetailPage({
                     nextStepDate={null}
                     confidentialNotes={intervention.confidentialNotes}
                     attachments={generalAttachments}
+                    observations={interventionObservations}
                   />
                 }
               >
@@ -1814,28 +2008,19 @@ export default async function InterventionDetailPage({
                     ) : null}
                   </div>
                 </Td>
-                <Td className="w-[90px] px-1">
-                  {canMutateOriginLegajo ? (
-                    <LegajoActionEditButton title="Editar intervencion N° 1">
-                      <EditInitialNarrativeForm
-                        action={updateJuridicalInitialNarrative.bind(
-                          null,
-                          intervention.id,
-                        )}
-                        initialValues={{
-                          description: intervention.description,
-                          guidanceProvided: intervention.guidanceProvided,
-                        }}
-                        existingAttachments={generalAttachments}
-                        deleteAttachmentAction={deleteJuridicalAttachment.bind(
-                          null,
-                          intervention.id,
-                        )}
-                      />
-                    </LegajoActionEditButton>
-                  ) : (
-                    <span className="text-sm text-[#212529]">-</span>
-                  )}
+                <Td className="w-[160px] px-1.5">
+                  <LegajoObservationCell
+                    observations={interventionObservations}
+                    action={
+                      canMutateOriginLegajo
+                        ? addJuridicalObservation.bind(null, intervention.id)
+                        : undefined
+                    }
+                    entityType="JuridicalIntervention"
+                    entityId={intervention.id}
+                    uploadModule="JURIDICO"
+                    scopeId={intervention.id}
+                  />
                 </Td>
               </LegajoInterventionRow>
             );

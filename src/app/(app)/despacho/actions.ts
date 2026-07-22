@@ -20,7 +20,7 @@ import {
   nextInternalNumber,
 } from "@/lib/form";
 import { buildJuridicalActionContent } from "@/lib/juridical-action-content";
-import { saveAttachments } from "@/lib/files";
+import { consumeAttachmentUploads } from "@/lib/direct-uploads";
 import { prisma } from "@/lib/prisma";
 import {
   canAccessDispatch,
@@ -260,6 +260,18 @@ function linkedPersonCreateData(person: LinkedPersonPayload, index: number) {
   };
 }
 
+const dispatchAuditInclude = {
+  complainants: { orderBy: { sortOrder: "asc" as const } },
+  linkedPersons: { orderBy: { sortOrder: "asc" as const } },
+};
+
+async function dispatchAuditSnapshot(recordId: string) {
+  return prisma.dispatchRecord.findUniqueOrThrow({
+    where: { id: recordId },
+    include: dispatchAuditInclude,
+  });
+}
+
 async function syncDispatchReferralSummary(recordId: string, status: string) {
   await prisma.referral.updateMany({
     where: { destinationDispatchRecordId: recordId },
@@ -460,8 +472,8 @@ export async function createDispatchRecord(formData: FormData) {
     },
   });
 
-  await saveAttachments({
-    files: formData.getAll("attachments"),
+  await consumeAttachmentUploads({
+    formData,
     module: "DESPACHO",
     entityType: "DispatchRecord",
     entityId: record.id,
@@ -495,12 +507,9 @@ export async function updateDispatchRecord(
 ) {
   const user = await requireUser();
   assertAccess(canAccessDispatch(user));
-  const before = await prisma.dispatchRecord.findUniqueOrThrow({
-    where: { id: recordId },
-  });
+  const before = await dispatchAuditSnapshot(recordId);
 
-  const parsed = dispatchSchema.parse({
-    description: sentenceText(formData, "description"),
+  const parsed = dispatchSchema.omit({ description: true }).parse({
     category: text(formData, "category"),
     priority: text(formData, "priority") || "MEDIA",
     status: text(formData, "status") || "RECIBIDO",
@@ -529,9 +538,6 @@ export async function updateDispatchRecord(
       personId: null,
       dniSnapshot: firstLinkedPerson?.dni || null,
       nameSnapshot: linkedPersonName(firstLinkedPerson),
-      description: parsed.description,
-      initialGuidance: optionalSentenceText(formData, "initialGuidance"),
-      confidentialNotes: optionalSentenceText(formData, "confidentialNotes"),
       deadlineAt,
       category: parsed.category,
       priority: parsed.priority,
@@ -548,6 +554,7 @@ export async function updateDispatchRecord(
         create: linkedPersons.map(linkedPersonCreateData),
       },
     },
+    include: dispatchAuditInclude,
   });
 
   await writeAuditLog({
@@ -619,11 +626,12 @@ export async function addDispatchFollowUp(
     await syncDispatchReferralSummary(recordId, statusAfter);
   }
 
-  const savedAttachments = await saveAttachments({
-    files: formData.getAll("attachments"),
+  const savedAttachments = await consumeAttachmentUploads({
+    formData,
     module: "DESPACHO",
     entityType: "DispatchFollowUp",
     entityId: followUp.id,
+    scopeId: recordId,
     uploadedById: user.id,
   });
 
@@ -640,7 +648,7 @@ export async function addDispatchFollowUp(
   redirect(`/despacho/${recordId}`);
 }
 
-export async function updateDispatchInitialNarrative(
+export async function addDispatchObservation(
   recordId: string,
   formData: FormData,
 ) {
@@ -654,153 +662,40 @@ export async function updateDispatchInitialNarrative(
     redirect(`/despacho/${recordId}`);
   }
 
-  const description = sentenceText(formData, "description");
-  if (description.length < 3) return;
-  const initialGuidance = optionalSentenceText(formData, "guidanceProvided");
-  const before = await prisma.dispatchRecord.findUniqueOrThrow({
-    where: { id: recordId },
-  });
-  const after = await prisma.dispatchRecord.update({
-    where: { id: recordId },
-    data: {
-      description,
-      initialGuidance,
-    },
-  });
+  const entityType = text(formData, "entityType");
+  const entityId = text(formData, "entityId");
+  const content = sentenceText(formData, "content");
+  if (content.length < 3) return;
 
-  const savedAttachments = await saveAttachments({
-    files: formData.getAll("attachments"),
-    module: "DESPACHO",
-    entityType: "DispatchRecord",
-    entityId: recordId,
-    uploadedById: user.id,
-  });
-
-  await writeAuditLog({
-    module: "DESPACHO",
-    entityType: "DispatchRecord",
-    entityId: recordId,
-    action: "UPDATE",
-    createdById: user.id,
-    before,
-    after: savedAttachments.length ? { record: after, attachments: savedAttachments } : after,
-  });
-  revalidatePath(`/despacho/${recordId}`);
-  redirect(`/despacho/${recordId}`);
-}
-
-export async function deleteDispatchAttachment(
-  recordId: string,
-  formData: FormData,
-) {
-  const user = await requireUser();
-  assertAccess(canAccessDispatch(user));
-  if (
-    !canBypassLegajoRestriction(user) &&
-    (await isDispatchLegajoDerivedOut(recordId))
-  ) {
-    return;
-  }
-  const attachmentId = text(formData, "attachmentId");
-  if (!attachmentId) return;
-  const attachment = await prisma.attachment.findUnique({
-    where: { id: attachmentId },
-  });
-  const belongsToLegajo =
-    attachment &&
-    attachment.module === "DESPACHO" &&
-    ((attachment.entityType === "DispatchRecord" &&
-      attachment.entityId === recordId) ||
-      (attachment.entityType === "DispatchFollowUp" &&
-        (
-          await prisma.dispatchFollowUp.findUnique({
-            where: { id: attachment.entityId },
-            select: { dispatchRecordId: true },
-          })
-        )?.dispatchRecordId === recordId));
-  if (!attachment || !belongsToLegajo) return;
-
-  await prisma.attachment.delete({ where: { id: attachment.id } });
-  await writeAuditLog({
-    module: "DESPACHO",
-    entityType: "DispatchRecord",
-    entityId: recordId,
-    action: "ATTACHMENT_DELETE",
-    createdById: user.id,
-    before: attachment,
-  });
-  revalidatePath(`/despacho/${recordId}`);
-}
-
-export async function updateDispatchFollowUp(
-  followUpId: string,
-  formData: FormData,
-) {
-  const user = await requireUser();
-  assertAccess(canAccessDispatch(user));
-  const existingFollowUp = await prisma.dispatchFollowUp.findUniqueOrThrow({
-    where: { id: followUpId },
-    include: { dispatchRecord: true },
-  });
-  const recordId = existingFollowUp.dispatchRecordId;
-  if (
-    existingFollowUp.statusAfter === "DERIVADO" ||
-    (!canBypassLegajoRestriction(user) &&
-      (await isDispatchLegajoDerivedOut(recordId)))
-  ) {
-    revalidatePath(`/despacho/${recordId}`);
-    redirect(`/despacho/${recordId}`);
-  }
-
-  const description =
-    sentenceText(formData, "description") || sentenceText(formData, "content");
-  if (description.length < 3) return;
-  const content = buildJuridicalActionContent({
-    description,
-    guidanceProvided: optionalSentenceText(formData, "guidanceProvided") ?? "",
-  });
-  const submittedStatus = optionalText(formData, "statusAfter");
-  const statusAfter =
-    submittedStatus &&
-    submittedStatus !== "DERIVADO" &&
-    DISPATCH_STATUSES.includes(submittedStatus)
-      ? submittedStatus
-      : null;
-  const createdAt =
-    optionalDate(formData, "createdAt") ?? existingFollowUp.createdAt;
-  const deadlineAt = optionalDate(formData, "deadlineAt");
-  if (Number.isNaN(createdAt.getTime())) {
-    throw new Error("La fecha y hora no es válida.");
-  }
-  if (deadlineAt && Number.isNaN(deadlineAt.getTime())) {
-    throw new Error("El plazo no es válido.");
-  }
-
-  const before = existingFollowUp.dispatchRecord;
-  const followUp = await prisma.dispatchFollowUp.update({
-    where: { id: followUpId },
-    data: {
-      content,
-      statusAfter,
-      deadlineAt,
-      createdAt,
-    },
-  });
-
-  let after = before;
-  if (statusAfter && statusAfter !== before.status) {
-    after = await prisma.dispatchRecord.update({
-      where: { id: recordId },
-      data: { status: statusAfter, lastStatusAt: new Date() },
+  let belongsToLegajo = false;
+  if (entityType === "DispatchRecord") {
+    belongsToLegajo = entityId === recordId;
+  } else if (entityType === "DispatchFollowUp") {
+    const target = await prisma.dispatchFollowUp.findUnique({
+      where: { id: entityId },
+      select: { dispatchRecordId: true },
     });
-    await syncDispatchReferralSummary(recordId, statusAfter);
+    belongsToLegajo = target?.dispatchRecordId === recordId;
+  }
+  if (!belongsToLegajo) {
+    throw new Error("La linea indicada no pertenece a este legajo.");
   }
 
-  const savedAttachments = await saveAttachments({
-    files: formData.getAll("attachments"),
+  const observation = await prisma.legajoObservation.create({
+    data: {
+      module: "DESPACHO",
+      entityType,
+      entityId,
+      content,
+      createdById: user.id,
+    },
+  });
+  const attachments = await consumeAttachmentUploads({
+    formData,
     module: "DESPACHO",
-    entityType: "DispatchFollowUp",
-    entityId: followUp.id,
+    entityType: "LegajoObservation",
+    entityId: observation.id,
+    scopeId: recordId,
     uploadedById: user.id,
   });
 
@@ -808,11 +703,9 @@ export async function updateDispatchFollowUp(
     module: "DESPACHO",
     entityType: "DispatchRecord",
     entityId: recordId,
-    action:
-      after.status !== before.status ? "STATUS_CHANGE" : "FOLLOW_UP_UPDATE",
+    action: "OBSERVATION",
     createdById: user.id,
-    before: { record: before, followUp: existingFollowUp },
-    after: { record: after, followUp, attachments: savedAttachments },
+    after: { observation, attachments, target: { entityType, entityId } },
   });
   revalidatePath(`/despacho/${recordId}`);
   redirect(`/despacho/${recordId}`);
@@ -986,11 +879,12 @@ export async function uploadDispatchAttachment(
     revalidatePath(`/despacho/${recordId}`);
     redirect(`/despacho/${recordId}`);
   }
-  const saved = await saveAttachments({
-    files: formData.getAll("attachments"),
+  const saved = await consumeAttachmentUploads({
+    formData,
     module: "DESPACHO",
     entityType: "DispatchRecord",
     entityId: recordId,
+    scopeId: recordId,
     uploadedById: user.id,
   });
   if (saved.length) {
@@ -1039,8 +933,8 @@ export async function createExpedient(formData: FormData) {
     },
   });
 
-  await saveAttachments({
-    files: formData.getAll("attachments"),
+  await consumeAttachmentUploads({
+    formData,
     module: "DESPACHO",
     entityType: "InternalExpedient",
     entityId: expedient.id,
@@ -1100,11 +994,12 @@ export async function uploadExpedientAttachment(
 ) {
   const user = await requireUser();
   assertAccess(canAccessExpedients(user));
-  const saved = await saveAttachments({
-    files: formData.getAll("attachments"),
+  const saved = await consumeAttachmentUploads({
+    formData,
     module: "DESPACHO",
     entityType: "InternalExpedient",
     entityId: expedientId,
+    scopeId: expedientId,
     uploadedById: user.id,
   });
   if (saved.length) {

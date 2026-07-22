@@ -183,3 +183,138 @@ test("integra una derivacion entre Despacho y Juridico", async () => {
     if (userId) await prisma.user.deleteMany({ where: { id: userId } });
   }
 });
+
+test("conserva multiples observaciones con autor, fecha y orden", async () => {
+  const suffix = randomUUID();
+  const username = `integration-observation-${suffix}`;
+  const internalNumber = `IT-OBS-${suffix.slice(0, 12).toUpperCase()}`;
+  let userId: string | undefined;
+  let dispatchId: string | undefined;
+  let observationIds: string[] = [];
+
+  try {
+    const user = await prisma.user.create({
+      data: {
+        name: "Prueba Observaciones",
+        username,
+        passwordHash: "integration-test-only",
+        role: "despacho",
+      },
+    });
+    userId = user.id;
+
+    const dispatch = await prisma.dispatchRecord.create({
+      data: {
+        internalNumber,
+        createdById: user.id,
+        description: "Contenido original que debe permanecer inmutable.",
+        category: "RECLAMO",
+        priority: "MEDIA",
+        status: "RECIBIDO",
+      },
+    });
+    dispatchId = dispatch.id;
+
+    const firstAt = new Date("2099-01-01T12:00:00.000Z");
+    const secondAt = new Date("2099-01-01T13:00:00.000Z");
+    await prisma.legajoObservation.createMany({
+      data: [
+        {
+          module: "DESPACHO",
+          entityType: "DispatchRecord",
+          entityId: dispatch.id,
+          content: "Primera aclaracion.",
+          createdById: user.id,
+          createdAt: firstAt,
+        },
+        {
+          module: "DESPACHO",
+          entityType: "DispatchRecord",
+          entityId: dispatch.id,
+          content: "Segunda aclaracion.",
+          createdById: user.id,
+          createdAt: secondAt,
+        },
+      ],
+    });
+
+    const observations = await prisma.legajoObservation.findMany({
+      where: {
+        module: "DESPACHO",
+        entityType: "DispatchRecord",
+        entityId: dispatch.id,
+      },
+      include: { createdBy: true },
+      orderBy: { createdAt: "asc" },
+    });
+    observationIds = observations.map((observation) => observation.id);
+    await prisma.attachment.createMany({
+      data: [
+        {
+          module: "DESPACHO",
+          entityType: "LegajoObservation",
+          entityId: observations[0]!.id,
+          fileName: "aclaracion-1.pdf",
+          originalName: "Aclaracion 1.pdf",
+          objectKey: `integration/${suffix}/aclaracion-1.pdf`,
+          mimeType: "application/pdf",
+          size: 128,
+          uploadedById: user.id,
+        },
+        {
+          module: "DESPACHO",
+          entityType: "LegajoObservation",
+          entityId: observations[0]!.id,
+          fileName: "aclaracion-2.pdf",
+          originalName: "Aclaracion 2.pdf",
+          objectKey: `integration/${suffix}/aclaracion-2.pdf`,
+          mimeType: "application/pdf",
+          size: 256,
+          uploadedById: user.id,
+        },
+      ],
+    });
+    const observationAttachments = await prisma.attachment.findMany({
+      where: {
+        entityType: "LegajoObservation",
+        entityId: observations[0]!.id,
+      },
+      orderBy: { originalName: "asc" },
+    });
+    const unchanged = await prisma.dispatchRecord.findUniqueOrThrow({
+      where: { id: dispatch.id },
+    });
+
+    assert.deepEqual(
+      observations.map((observation) => observation.content),
+      ["Primera aclaracion.", "Segunda aclaracion."],
+    );
+    assert.equal(observations[0]?.createdBy.id, user.id);
+    assert.equal(observations[0]?.createdAt.getTime(), firstAt.getTime());
+    assert.equal(observations[1]?.createdAt.getTime(), secondAt.getTime());
+    assert.deepEqual(
+      observationAttachments.map((attachment) => attachment.originalName),
+      ["Aclaracion 1.pdf", "Aclaracion 2.pdf"],
+    );
+    assert.equal(
+      unchanged.description,
+      "Contenido original que debe permanecer inmutable.",
+    );
+  } finally {
+    if (dispatchId) {
+      if (observationIds.length) {
+        await prisma.attachment.deleteMany({
+          where: {
+            entityType: "LegajoObservation",
+            entityId: { in: observationIds },
+          },
+        });
+      }
+      await prisma.legajoObservation.deleteMany({
+        where: { entityId: dispatchId },
+      });
+      await prisma.dispatchRecord.deleteMany({ where: { id: dispatchId } });
+    }
+    if (userId) await prisma.user.deleteMany({ where: { id: userId } });
+  }
+});
