@@ -34,7 +34,6 @@ export function AppModal({
   triggerClassName,
   size = "lg",
   defaultOpen = false,
-  closeOnBackdropClick = true,
   open: controlledOpen,
   onOpenChange,
   children,
@@ -46,7 +45,6 @@ export function AppModal({
   triggerClassName?: string;
   size?: keyof typeof modalSizes;
   defaultOpen?: boolean;
-  closeOnBackdropClick?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   children: ModalChildren;
@@ -85,9 +83,6 @@ export function AppModal({
       <div
         className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4"
         role="presentation"
-        onMouseDown={(event) => {
-          if (closeOnBackdropClick && event.target === event.currentTarget) close();
-        }}
         onClick={(event) => {
           const target = event.target as HTMLElement;
           if (target.closest("[data-modal-close]")) close();

@@ -70,7 +70,7 @@ test("expedientes internos exige numero, deja descripcion opcional y usa codigo 
 test("mantiene completos los codigos de expediente del PDF", () => {
   const codes = [...expedientCodesSource.matchAll(/codigo: "(GENE\d+)"/g)].map((match) => match[1]);
 
-  assert.equal(codes.length, 177);
+  assert.equal(codes.length, 292);
   assert.equal(codes[0], "GENE00001");
-  assert.equal(codes.at(-1), "GENE00177");
+  assert.equal(codes.at(-1), "GENE00292");
 });

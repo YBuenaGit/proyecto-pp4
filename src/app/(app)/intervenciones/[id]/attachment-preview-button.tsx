@@ -52,9 +52,6 @@ export function AttachmentPreviewButton({
         <div
           className="fixed inset-0 z-[70] flex items-center justify-center bg-black/65 p-3 sm:p-6"
           role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setOpen(false);
-          }}
         >
           <div
             className="flex h-[92dvh] w-full max-w-5xl flex-col overflow-hidden rounded-sm border border-[#0f8a9b] bg-white shadow-2xl"

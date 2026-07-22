@@ -762,7 +762,6 @@ export default async function DispatchDetailPage({
                   </>
                 }
                 size="md"
-                closeOnBackdropClick={false}
               >
                 <AddDispatchFollowUpForm
                   action={addDispatchFollowUp.bind(null, record.id)}

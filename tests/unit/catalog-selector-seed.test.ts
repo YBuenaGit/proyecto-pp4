@@ -256,7 +256,7 @@ test("todos los selectores estaticos auditados tienen opciones unicas", () => {
   ];
 
   for (const [name, values] of selectors) assertNonEmptyUnique(name, values);
-  assert.equal(CODIGOS_EXPEDIENTES.length, 177);
+  assert.equal(CODIGOS_EXPEDIENTES.length, 292);
 });
 
 test("el seed predeterminado solo opera sobre CatalogItem y el demo exige confirmacion", () => {
