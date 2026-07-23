@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import { CheckCheck, Download, Edit, FileText, Plus, Send } from "lucide-react";
 import { ReferralViewTracker } from "@/components/referral-view-tracker";
 import { AppModal } from "@/components/ui/app-modal";
-import { AttachmentPreviewButton } from "@/components/ui/attachment-preview-button";
 import { AuditTimeline } from "@/components/ui/audit-timeline";
 import { Button, LinkButton } from "@/components/ui/button";
 import { SubmitButton } from "@/components/ui/submit-button";
@@ -18,6 +17,7 @@ import { FormField, inputClass } from "@/components/ui/form-controls";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { SuccessToast } from "@/components/ui/success-toast";
 import { Table, Td } from "@/components/ui/table";
+import { LegajoBookAttachmentSheet } from "@/components/ui/legajo-book-attachment-sheet";
 import {
   LegajoAttachmentCount,
   LegajoAttachmentList,
@@ -254,48 +254,6 @@ function SheetText({
   );
 }
 
-function SheetAttachments({
-  attachments,
-}: {
-  attachments: LegajoAttachment[];
-}) {
-  if (!attachments.length) return null;
-  return (
-    <div className="rounded-sm border border-[#dee2e6] bg-[#f8f9fa] p-3">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#212529]">
-        Adjuntos de esta intervencion
-      </p>
-      <div className="grid gap-2 sm:grid-cols-2">
-        {attachments.map((attachment) => (
-          <div
-            key={attachment.id}
-            className="flex min-w-0 items-start gap-2 rounded-sm border border-[#dee2e6] bg-white px-3 py-2 text-sm text-[#212529] transition hover:bg-[#e9ecef]"
-          >
-            <FileText className="mt-0.5 h-4 w-4 shrink-0 text-[#0667b0]" />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate font-semibold">
-                {attachment.originalName}
-              </span>
-              <span className="block text-xs text-[#212529]">
-                {Math.ceil(attachment.size / 1024)} KB Â·{" "}
-                {attachment.uploadedBy.name}
-              </span>
-              <span className="mt-2 block">
-                <AttachmentPreviewButton
-                  href={`/adjuntos/${attachment.id}`}
-                  name={attachment.originalName}
-                  mimeType={attachment.mimeType}
-                  compact
-                />
-              </span>
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 function CoverField({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="border-b border-[#b7dfee] py-2">
@@ -400,7 +358,7 @@ function LegajoCoverSheet({
           <CoverField label="Oficio" value={oficioNumber} />
           <CoverField label="Expediente / legajo" value={expedienteNumber} />
           <CoverField
-            label="Archivos generales"
+            label="Archivos de la primera atencion"
             value={
               attachments.length === 1
                 ? "1 archivo vinculado"
@@ -408,63 +366,6 @@ function LegajoCoverSheet({
             }
           />
         </div>
-      </div>
-    </article>
-  );
-}
-
-function LegajoAttachmentSheet({
-  attachments,
-  pageNumber,
-  pageCount,
-}: {
-  attachments: LegajoAttachment[];
-  pageNumber?: number;
-  pageCount?: number;
-}) {
-  return (
-    <article className="book-leaf rounded-sm border border-[#b7dfee] bg-[#eefaff] shadow-[0_12px_34px_rgba(0,0,0,0.22)]">
-      <div className="border-b border-[#b7dfee] bg-[#dff3fb] px-4 py-4 sm:px-5">
-        <p className="text-xs font-semibold uppercase tracking-wide text-[#0c5460]">
-          Archivos
-        </p>
-        <h3 className="mt-1 text-lg font-semibold text-[#212529]">
-          Archivos generales del legajo
-          {pageCount && pageCount > 1
-            ? ` · hoja ${pageNumber} de ${pageCount}`
-            : ""}
-        </h3>
-        <p className="mt-1 text-sm text-[#212529]">
-          Documentacion adjunta disponible para abrir o descargar.
-        </p>
-      </div>
-      <div className="book-leaf-body grid gap-3 px-4 py-4 sm:grid-cols-2 sm:px-5">
-        {attachments.map((attachment) => (
-          <div
-            key={attachment.id}
-            className="rounded-sm border border-[#dee2e6] bg-white px-3 py-3 shadow-sm"
-          >
-            <div className="flex min-w-0 items-start gap-2">
-              <FileText className="mt-1 h-4 w-4 shrink-0 text-[#0667b0]" />
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-[#212529]">
-                  {attachment.originalName}
-                </p>
-                <p className="text-xs text-[#212529]">
-                  {Math.ceil(attachment.size / 1024)} KB Â·{" "}
-                  {attachment.uploadedBy.name}
-                </p>
-                <div className="mt-3">
-                  <AttachmentPreviewButton
-                    href={`/adjuntos/${attachment.id}`}
-                    name={attachment.originalName}
-                    mimeType={attachment.mimeType}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-        ))}
       </div>
     </article>
   );
@@ -1105,6 +1006,60 @@ export default async function InterventionDetailPage({
   const interventionEyebrow = `Legajo ${intervention.internalNumber}`;
   const firstAttentionType = labelFromValue(intervention.type);
 
+  function appendAttachmentPages({
+    attachments,
+    sheetNumber,
+    selectionLabel,
+    sectionLabel,
+    title,
+    dateText,
+    keyPrefix,
+  }: {
+    attachments: LegajoAttachment[];
+    sheetNumber: number;
+    selectionLabel: string;
+    sectionLabel: string;
+    title: string;
+    dateText: string;
+    keyPrefix: string;
+  }) {
+    const attachmentPages = chunkForBookPages(attachments, 6);
+
+    attachmentPages.forEach((attachmentPage, pageIndex) => {
+      if (!attachmentPage.length) return;
+
+      bookEntries.push({
+        item: {
+          sheetNumber,
+          label:
+            attachmentPages.length > 1
+              ? `${selectionLabel} · hoja ${pageIndex + 1}`
+              : selectionLabel,
+          title,
+          dateText,
+          statusText: `${attachments.length} archivo${attachments.length === 1 ? "" : "s"}`,
+          searchText: attachmentPage
+            .flatMap((attachment) => [
+              attachment.originalName,
+              attachment.uploadedBy.name,
+            ])
+            .join(" "),
+        },
+        node: (
+          <LegajoBookAttachmentSheet
+            key={`${keyPrefix}-${pageIndex}`}
+            attachments={attachmentPage}
+            sectionLabel={sectionLabel}
+            title={title}
+            pageNumber={pageIndex + 1}
+            pageCount={attachmentPages.length}
+            totalAttachments={attachments.length}
+          />
+        ),
+      });
+    });
+  }
+
   function appendObservationAttachmentPages({
     observations,
     sheetNumber,
@@ -1245,6 +1200,16 @@ export default async function InterventionDetailPage({
       });
     });
 
+    appendAttachmentPages({
+      attachments: entry.attachments,
+      sheetNumber: entry.sequence,
+      selectionLabel: `${sectionLabel} · archivos`,
+      sectionLabel,
+      title: `Archivos de ${sectionLabel}`,
+      dateText: formatDateTime(entry.date),
+      keyPrefix: `dispatch-origin-attachments-${entry.id}`,
+    });
+
     appendObservationAttachmentPages({
       observations: entry.observations,
       sheetNumber: entry.sequence,
@@ -1348,6 +1313,16 @@ export default async function InterventionDetailPage({
     });
   });
 
+  appendAttachmentPages({
+    attachments: generalAttachments,
+    sheetNumber: 1,
+    selectionLabel: "Primera atencion · archivos",
+    sectionLabel: "Primera atencion",
+    title: "Archivos de la primera atencion",
+    dateText: formatDateTime(intervention.attendedAt),
+    keyPrefix: "initial-attachments",
+  });
+
   appendObservationAttachmentPages({
     observations: interventionObservations,
     sheetNumber: 1,
@@ -1446,14 +1421,19 @@ export default async function InterventionDetailPage({
             textBlocks={textPage.blocks}
             pageNumber={pageIndex + 1}
             pageCount={textPages.length}
-            footer={
-              pageIndex === textPages.length - 1 ? (
-                <SheetAttachments attachments={rowAttachments} />
-              ) : undefined
-            }
           />
         ),
       });
+    });
+
+    appendAttachmentPages({
+      attachments: rowAttachments,
+      sheetNumber,
+      selectionLabel: `${sectionLabel} · archivos`,
+      sectionLabel,
+      title: `Archivos de ${sectionLabel}`,
+      dateText: formatDateTime(action.createdAt),
+      keyPrefix: `action-attachments-${action.id}`,
     });
 
     appendObservationAttachmentPages({
@@ -1466,38 +1446,6 @@ export default async function InterventionDetailPage({
       keyPrefix: `action-observation-attachments-${action.id}`,
     });
   });
-
-  if (generalAttachments.length) {
-    const attachmentPages = chunkForBookPages(generalAttachments, 8);
-
-    attachmentPages.forEach((attachmentPage, pageIndex) => {
-      bookEntries.push({
-        item: {
-          sheetNumber: displayActionSheets.length + 2,
-          label:
-            attachmentPages.length > 1
-              ? `Archivos · hoja ${pageIndex + 1}`
-              : "Archivos",
-          title: "Archivos del legajo",
-          dateText: formatDateTime(
-            generalAttachments[0]?.createdAt ?? intervention.createdAt,
-          ),
-          statusText: `${generalAttachments.length} archivo${generalAttachments.length === 1 ? "" : "s"}`,
-          searchText: generalAttachments
-            .map((attachment) => attachment.originalName)
-            .join(" "),
-        },
-        node: (
-          <LegajoAttachmentSheet
-            key={`attachments-${pageIndex}`}
-            attachments={attachmentPage}
-            pageNumber={pageIndex + 1}
-            pageCount={attachmentPages.length}
-          />
-        ),
-      });
-    });
-  }
 
   const bookItems = bookEntries.map((entry) => entry.item);
 

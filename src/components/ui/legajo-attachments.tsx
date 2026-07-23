@@ -11,7 +11,7 @@ export type LegajoAttachmentItem = {
   };
 };
 
-function formatFileSize(bytes: number) {
+export function formatFileSize(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
 
   const units = ["KB", "MB", "GB", "TB"];

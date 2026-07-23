@@ -27,3 +27,12 @@ test("agrupa elementos en hojas de tamano estable", () => {
   assert.deepEqual(chunkForBookPages([1, 2, 3, 4, 5], 2), [[1, 2], [3, 4], [5]]);
   assert.deepEqual(chunkForBookPages([], 2), [[]]);
 });
+
+test("distribuye treinta archivos en cinco hojas sin perder elementos", () => {
+  const files = Array.from({ length: 30 }, (_, index) => `archivo-${index + 1}`);
+  const pages = chunkForBookPages(files, 6);
+
+  assert.equal(pages.length, 5);
+  assert.deepEqual(pages.flat(), files);
+  assert.ok(pages.every((page) => page.length <= 6));
+});

@@ -34,6 +34,9 @@ const attachmentPreview = source(
 const legajoAttachments = source(
   "../../src/components/ui/legajo-attachments.tsx",
 );
+const legajoBookAttachmentSheet = source(
+  "../../src/components/ui/legajo-book-attachment-sheet.tsx",
+);
 
 function functionBody(file: string, name: string, nextExport: string) {
   const start = file.indexOf(`export async function ${name}`);
@@ -171,4 +174,28 @@ test("las tablas resumen adjuntos y el detalle muestra sus datos completos", () 
   assert.match(legajoAttachments, /attachment\.uploadedBy\.name/);
   assert.match(legajoAttachments, /sm:grid-cols-2/);
   assert.match(legajoAttachments, /<AttachmentPreviewButton/);
+});
+
+test("el modo libro pagina y abre todos los adjuntos por actuacion", () => {
+  for (const page of [dispatchPage, juridicalPage]) {
+    assert.match(page, /<LegajoBookAttachmentSheet/);
+    assert.match(page, /chunkForBookPages\(attachments, 6\)/);
+    assert.match(page, /selectionLabel: "Primera atencion · archivos"/);
+    assert.doesNotMatch(page, /selectionLabel: "Archivos generales"/);
+  }
+
+  assert.match(dispatchPage, /attachments: followUpAttachments/);
+  assert.doesNotMatch(dispatchPage, /DispatchBookAttachments/);
+  assert.match(juridicalPage, /attachments: entry\.attachments/);
+  assert.match(juridicalPage, /attachments: rowAttachments/);
+  assert.doesNotMatch(juridicalPage, /SheetAttachments/);
+
+  assert.match(legajoBookAttachmentSheet, /attachment\.originalName/);
+  assert.match(
+    legajoBookAttachmentSheet,
+    /formatFileSize\(attachment\.size\)/,
+  );
+  assert.match(legajoBookAttachmentSheet, /attachment\.uploadedBy\.name/);
+  assert.match(legajoBookAttachmentSheet, /sm:grid-cols-2/);
+  assert.match(legajoBookAttachmentSheet, /<AttachmentPreviewButton/);
 });
