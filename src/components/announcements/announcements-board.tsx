@@ -287,7 +287,7 @@ function ComposerForm({
         }
         submitLockedRef.current = true;
       }}
-      className="relative mx-auto max-w-3xl space-y-4 rounded-xl border border-[#9fdbe5] bg-white/95 p-4 shadow-md"
+      className="relative mx-auto max-w-3xl space-y-4 rounded-2xl border border-white/15 bg-[#0b2239]/70 p-4 text-white shadow-[0_18px_45px_rgba(3,63,107,0.35)] ring-1 ring-inset ring-[#17a2b8]/30 backdrop-blur-2xl"
     >
       {actionState.status === "error" ? (
         <p role="alert" className="rounded-sm border border-[#f5c6cb] bg-[#f8d7da] px-3 py-2 text-sm font-semibold text-[#721c24]">
@@ -299,14 +299,14 @@ function ComposerForm({
           attachmentId={currentUserAvatarAttachmentId}
           name={currentUserName}
           size="lg"
-          className="border-[#9fdbe5] ring-2 ring-[#e8f7fa]"
+          className="border-white/30 ring-2 ring-white/20"
         />
         <input
           name="title"
           required
           minLength={3}
           maxLength={160}
-          className="h-10 min-w-0 flex-1 rounded-full border border-[#9fdbe5] bg-[#eefaff] px-4 text-sm text-[#212529] outline-none focus:border-[#17a2b8] focus:ring-2 focus:ring-[#80bdff]"
+          className="h-10 min-w-0 flex-1 rounded-full border border-white/20 bg-[#0f2e4d]/90 px-4 text-sm text-white placeholder:text-[#9fdbe5]/60 outline-none focus:border-[#80bdff] focus:ring-2 focus:ring-[#80bdff]"
           placeholder="Título del anuncio"
         />
       </div>
@@ -315,8 +315,13 @@ function ComposerForm({
         required
         minLength={3}
         maxLength={10_000}
-        rows={4}
-        className="max-h-60 min-h-28 w-full resize-none rounded-sm border border-[#9fdbe5] bg-[#eefaff] px-4 py-3 text-sm leading-6 text-[#212529] outline-none focus:border-[#17a2b8] focus:ring-2 focus:ring-[#80bdff]"
+        rows={3}
+        onInput={(event) => {
+          const el = event.currentTarget;
+          el.style.height = "auto";
+          el.style.height = `${el.scrollHeight}px`;
+        }}
+        className="min-h-28 w-full resize-none overflow-hidden rounded-sm border border-white/20 bg-[#0f2e4d]/90 px-4 py-3 text-sm leading-6 text-white placeholder:text-[#9fdbe5]/60 outline-none focus:border-[#80bdff] focus:ring-2 focus:ring-[#80bdff]"
         placeholder="Escribe algo..."
       />
       <DirectUploadInput
@@ -324,8 +329,9 @@ function ComposerForm({
         accept="image/*,application/pdf,video/*"
         label="Subir archivos"
         showPreviews
+        tone="glass"
       />
-      <div className="flex justify-end border-t border-[#d1ecf1] pt-3">
+      <div className="flex justify-end border-t border-white/15 pt-3">
         <button
           type="submit"
           disabled={pending}
@@ -398,16 +404,7 @@ function AnnouncementCard({
   }, [onResult, router, updateState]);
 
   return (
-    <article className="relative mx-auto my-5 max-w-3xl overflow-hidden rounded-2xl border border-white/45 bg-[#075f9e]/90 p-4 text-white shadow-[0_18px_45px_rgba(3,63,107,0.28)] ring-1 ring-[#17a2b8]/35 backdrop-blur-xl">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_8%,rgba(255,255,255,0.22),transparent_36%),linear-gradient(135deg,rgba(23,162,184,0.32),rgba(4,65,112,0.2))]" />
-      <Image
-        src="/logo-gum1.webp"
-        alt=""
-        width={310}
-        height={380}
-        aria-hidden="true"
-        className="pointer-events-none absolute -bottom-28 -right-12 h-auto w-72 rotate-[-7deg] object-contain opacity-[0.11] brightness-0 invert"
-      />
+    <article className="relative mx-auto my-5 max-w-3xl rounded-2xl border border-white/15 bg-[#0b2239]/70 p-4 text-white shadow-[0_18px_45px_rgba(3,63,107,0.35)] ring-1 ring-inset ring-[#17a2b8]/30 backdrop-blur-2xl">
       <div className="relative z-10">
       <div className="flex items-center gap-3">
         <UserAvatar
@@ -438,7 +435,7 @@ function AnnouncementCard({
             required
             minLength={3}
             maxLength={160}
-            className="h-10 w-full rounded-sm border border-[#9fdbe5] bg-white/95 px-3 text-sm font-semibold text-[#212529] outline-none focus:ring-2 focus:ring-[#80bdff]"
+            className="h-10 w-full rounded-sm border border-white/20 bg-[#0f2e4d]/90 px-3 text-sm font-semibold text-white outline-none focus:ring-2 focus:ring-[#80bdff]"
           />
           <textarea
             name="content"
@@ -447,7 +444,7 @@ function AnnouncementCard({
             minLength={3}
             maxLength={10_000}
             rows={5}
-            className="min-h-32 w-full resize-y rounded-sm border border-[#9fdbe5] bg-white/95 px-3 py-2 text-sm leading-6 text-[#212529] outline-none focus:ring-2 focus:ring-[#80bdff]"
+            className="min-h-32 w-full resize-y rounded-sm border border-white/20 bg-[#0f2e4d]/90 px-3 py-2 text-sm leading-6 text-white outline-none focus:ring-2 focus:ring-[#80bdff]"
           />
           <p className="text-xs font-medium text-white/75">Los archivos existentes se conservarán sin cambios.</p>
           <div className="flex justify-end gap-2">
@@ -497,23 +494,23 @@ function DeletedAnnouncements({
   onResult: (result: AnnouncementActionState) => void;
 }) {
   return (
-    <section className="mx-auto mt-8 max-w-4xl rounded-xl border border-[#9fdbe5] bg-white/95 p-4 shadow-md sm:p-6">
-      <h2 className="text-xl font-bold text-[#0667b0]">Mensajes borrados</h2>
+    <section className="mx-auto mt-8 max-w-4xl rounded-2xl border border-white/15 bg-[#0b2239] p-4 text-white shadow-[0_18px_45px_rgba(3,63,107,0.35)] ring-1 ring-inset ring-[#17a2b8]/30 sm:p-6">
+      <h2 className="text-xl font-bold text-white">Mensajes borrados</h2>
       {!announcements.length ? (
-        <p className="mt-3 text-sm text-[#6c757d]">No hay mensajes borrados.</p>
+        <p className="mt-3 text-sm text-[#9fdbe5]">No hay mensajes borrados.</p>
       ) : (
         <ul className="mt-4 space-y-5">
           {announcements.map((announcement) => (
-            <li key={announcement.id} className="rounded-sm border border-[#bee5eb] bg-[#eefaff] p-3">
+            <li key={announcement.id} className="rounded-sm border border-white/12 bg-[#0c3457]/70 p-3">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-[#212529]">{announcement.title}</h3>
-                  <p className="text-xs text-[#6c757d]">
+                  <h3 className="font-semibold text-white">{announcement.title}</h3>
+                  <p className="text-xs text-[#9fdbe5]">
                     {announcement.authorName} · {announcement.authorRole} · {formatDateTime(announcement.createdAt)}
                   </p>
-                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#495057]">{announcement.content}</p>
+                  <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-[#eaf4ff]">{announcement.content}</p>
                   <div className="mt-3">
-                    <AnnouncementAttachments attachments={announcement.attachments} />
+                    <AnnouncementAttachments attachments={announcement.attachments} tone="glass" />
                   </div>
                 </div>
                 <div className="flex shrink-0 flex-wrap gap-2">
@@ -578,13 +575,21 @@ export function AnnouncementsBoard({
   }, []);
 
   return (
-    <div className="relative min-h-[calc(100dvh-6rem)] overflow-hidden rounded-sm border border-[#b7dfee] bg-[#dff3fb] px-3 py-6 shadow-sm sm:px-6">
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center opacity-[0.08]">
-        <Image src="/logo-gum1.webp" alt="" width={420} height={520} className="h-auto w-80 object-contain sm:w-[26rem]" />
+    <div className="relative min-h-[calc(100dvh-6rem)] overflow-hidden rounded-sm border border-white/10 bg-[#061829] bg-[linear-gradient(135deg,#061829_0%,#0a1f36_45%,#0c3355_100%)] px-3 py-6 shadow-[0_18px_45px_rgba(3,25,47,0.45)] sm:px-6">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(23,162,184,0.16),transparent_42%),radial-gradient(circle_at_88%_84%,rgba(6,103,176,0.18),transparent_46%)]" />
+      <div className="pointer-events-none fixed inset-0 flex items-center justify-center">
+        <Image
+          src="/logo-gum1.png"
+          alt=""
+          aria-hidden
+          width={520}
+          height={490}
+          className="h-auto w-[26rem] object-contain opacity-40 sm:w-[40rem]"
+        />
       </div>
       <div className="relative z-10">
-        <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.2em] text-[#0c5460]">Portal interno · {currentUserName}</p>
-        <h1 className="mb-9 text-center text-3xl font-bold text-[#0667b0]">ANUNCIOS IMPORTANTES</h1>
+        <p className="mb-2 text-center text-xs font-semibold uppercase tracking-[0.2em] text-[#cfe8ff]">Portal interno · {currentUserName}</p>
+        <h1 className="mb-9 text-center text-3xl font-bold text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.35)]">ANUNCIOS IMPORTANTES</h1>
 
         {flash ? (
           <div className={flash.tone === "success" ? "fixed left-1/2 top-20 z-[90] -translate-x-1/2 rounded-sm border border-[#c3e6cb] bg-[#d4edda] px-4 py-3 text-sm font-semibold text-[#155724] shadow-lg" : "fixed left-1/2 top-20 z-[90] -translate-x-1/2 rounded-sm border border-[#f5c6cb] bg-[#f8d7da] px-4 py-3 text-sm font-semibold text-[#721c24] shadow-lg"}>
@@ -610,7 +615,7 @@ export function AnnouncementsBoard({
               />
             ))
           ) : (
-            <p className="rounded-sm border border-[#bee5eb] bg-white/85 px-4 py-8 text-center text-sm font-semibold text-[#495057]">
+            <p className="rounded-2xl border border-white/15 bg-[#0b2239]/70 px-4 py-8 text-center text-sm font-semibold text-[#eaf4ff] shadow-[0_18px_45px_rgba(3,63,107,0.35)] ring-1 ring-inset ring-[#17a2b8]/30 backdrop-blur-2xl">
               No hay mensajes disponibles.
             </p>
           )}

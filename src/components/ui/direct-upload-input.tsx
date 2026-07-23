@@ -153,6 +153,7 @@ export function DirectUploadInput({
   showPreviews = false,
   maxFiles = MAX_DIRECT_UPLOAD_FILES,
   helperText,
+  tone = "light",
 }: {
   intent: DirectUploadIntent;
   accept?: string;
@@ -163,6 +164,7 @@ export function DirectUploadInput({
   showPreviews?: boolean;
   maxFiles?: number;
   helperText?: string;
+  tone?: "light" | "glass";
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -172,6 +174,7 @@ export function DirectUploadInput({
   const [items, setItems] = useState<UploadItem[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
   const fileLimit = Math.max(1, Math.min(maxFiles, MAX_DIRECT_UPLOAD_FILES));
+  const glass = tone === "glass";
 
   function syncItems(updater: (current: UploadItem[]) => UploadItem[]) {
     setItems((current) => {
@@ -372,7 +375,14 @@ export function DirectUploadInput({
       {items.filter((item) => item.status === "ready").map((item) => (
         <input key={item.key} type="hidden" name="uploadSessionIds" value={item.sessionId} />
       ))}
-      <label className="flex cursor-pointer items-center justify-center gap-2 rounded-sm border border-dashed border-[#17a2b8] bg-[#d1ecf1]/40 px-3 py-3 text-sm font-semibold text-[#0c5460] transition hover:bg-[#d1ecf1] focus-within:ring-2 focus-within:ring-[#80bdff]">
+      <label
+        className={cn(
+          "flex cursor-pointer items-center justify-center gap-2 rounded-sm border border-dashed px-3 py-3 text-sm font-semibold transition focus-within:ring-2 focus-within:ring-[#80bdff]",
+          glass
+            ? "border-white/40 bg-white/10 text-[#cfe8ff] hover:bg-white/15"
+            : "border-[#17a2b8] bg-[#d1ecf1]/40 text-[#0c5460] hover:bg-[#d1ecf1]",
+        )}
+      >
         <Upload className="h-4 w-4" />
         {label}
         <input
@@ -384,7 +394,7 @@ export function DirectUploadInput({
           onChange={addFiles}
         />
       </label>
-      <p className="text-xs font-medium text-[#495057]">
+      <p className={cn("text-xs font-medium", glass ? "text-[#9fdbe5]" : "text-[#495057]")}>
         {helperText ?? `Hasta ${fileLimit} archivos de 1 GB cada uno.`}
       </p>
       {formError ? (
