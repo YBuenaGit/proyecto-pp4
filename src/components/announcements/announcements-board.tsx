@@ -287,7 +287,7 @@ function ComposerForm({
         }
         submitLockedRef.current = true;
       }}
-      className="relative mx-auto max-w-3xl space-y-4 rounded-2xl border border-white/15 bg-[#0b2239]/70 p-4 text-white shadow-[0_18px_45px_rgba(3,63,107,0.35)] ring-1 ring-inset ring-[#17a2b8]/30 backdrop-blur-2xl"
+      className="relative mx-auto max-w-3xl space-y-4 rounded-2xl border border-white/15 bg-[#0b2239]/70 p-4 text-white shadow-[0_18px_45px_rgba(3,63,107,0.35)] ring-1 ring-inset ring-[#17a2b8]/30"
     >
       {actionState.status === "error" ? (
         <p role="alert" className="rounded-sm border border-[#f5c6cb] bg-[#f8d7da] px-3 py-2 text-sm font-semibold text-[#721c24]">
@@ -404,7 +404,7 @@ function AnnouncementCard({
   }, [onResult, router, updateState]);
 
   return (
-    <article className="relative mx-auto my-5 max-w-3xl rounded-2xl border border-white/15 bg-[#0b2239]/70 p-4 text-white shadow-[0_18px_45px_rgba(3,63,107,0.35)] ring-1 ring-inset ring-[#17a2b8]/30 backdrop-blur-2xl">
+    <article className="relative mx-auto my-5 max-w-3xl rounded-2xl border border-white/15 bg-[#0b2239]/70 p-4 text-white shadow-[0_18px_45px_rgba(3,63,107,0.35)] ring-1 ring-inset ring-[#17a2b8]/30">
       <div className="relative z-10">
       <div className="flex items-center gap-3">
         <UserAvatar
@@ -494,7 +494,7 @@ function DeletedAnnouncements({
   onResult: (result: AnnouncementActionState) => void;
 }) {
   return (
-    <section className="mx-auto mt-8 max-w-4xl rounded-2xl border border-white/15 bg-[#0b2239] p-4 text-white shadow-[0_18px_45px_rgba(3,63,107,0.35)] ring-1 ring-inset ring-[#17a2b8]/30 sm:p-6">
+    <section className="mx-auto mt-8 max-w-4xl rounded-2xl border border-white/15 bg-[#0b2239]/70 p-4 text-white shadow-[0_18px_45px_rgba(3,63,107,0.35)] ring-1 ring-inset ring-[#17a2b8]/30 sm:p-6">
       <h2 className="text-xl font-bold text-white">Mensajes borrados</h2>
       {!announcements.length ? (
         <p className="mt-3 text-sm text-[#9fdbe5]">No hay mensajes borrados.</p>
@@ -577,14 +577,14 @@ export function AnnouncementsBoard({
   return (
     <div className="relative min-h-[calc(100dvh-6rem)] overflow-hidden rounded-sm border border-white/10 bg-[#061829] bg-[linear-gradient(135deg,#061829_0%,#0a1f36_45%,#0c3355_100%)] px-3 py-6 shadow-[0_18px_45px_rgba(3,25,47,0.45)] sm:px-6">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_12%,rgba(23,162,184,0.16),transparent_42%),radial-gradient(circle_at_88%_84%,rgba(6,103,176,0.18),transparent_46%)]" />
-      <div className="pointer-events-none fixed inset-0 flex items-center justify-center">
+      <div className="pointer-events-none fixed inset-x-0 top-[180px] flex justify-center lg:left-64">
         <Image
           src="/logo-gum1.png"
           alt=""
           aria-hidden
           width={520}
           height={490}
-          className="h-auto w-[26rem] object-contain opacity-40 sm:w-[40rem]"
+          className="h-[min(60vh,26rem)] w-auto max-w-[80%] object-contain opacity-50"
         />
       </div>
       <div className="relative z-10">
@@ -615,7 +615,7 @@ export function AnnouncementsBoard({
               />
             ))
           ) : (
-            <p className="rounded-2xl border border-white/15 bg-[#0b2239]/70 px-4 py-8 text-center text-sm font-semibold text-[#eaf4ff] shadow-[0_18px_45px_rgba(3,63,107,0.35)] ring-1 ring-inset ring-[#17a2b8]/30 backdrop-blur-2xl">
+            <p className="rounded-2xl border border-white/15 bg-[#0b2239]/70 px-4 py-8 text-center text-sm font-semibold text-[#eaf4ff] shadow-[0_18px_45px_rgba(3,63,107,0.35)] ring-1 ring-inset ring-[#17a2b8]/30">
               No hay mensajes disponibles.
             </p>
           )}
