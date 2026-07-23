@@ -49,6 +49,7 @@ export const BRANDS = [
   "Fiat",
   "Ford",
   "Gilera",
+  "Guerrero",
   "Honda",
   "Hyundai",
   "Jeep",
