@@ -190,7 +190,7 @@ export function assertUploadLimits(files: Array<{ size: number }>) {
     total += file.size;
   }
   if (total > MAX_UPLOAD_BATCH_BYTES) {
-    throw new FileUploadValidationError("El envio completo puede pesar como maximo 4 GB.");
+    throw new FileUploadValidationError("El envio completo puede pesar como maximo 30 GB.");
   }
 }
 

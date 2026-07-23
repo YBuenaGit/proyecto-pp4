@@ -76,7 +76,7 @@ function ExpedientFollowUpForm({
           }}
           required
           onUploadStateChange={setUploadState}
-          helperText="Obligatorio: entre 1 y 4 archivos de hasta 1 GB cada uno."
+          helperText="Obligatorio: entre 1 y 30 archivos de hasta 1 GB cada uno."
         />
       </div>
 

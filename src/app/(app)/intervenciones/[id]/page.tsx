@@ -19,6 +19,10 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { SuccessToast } from "@/components/ui/success-toast";
 import { Table, Td } from "@/components/ui/table";
 import {
+  LegajoAttachmentCount,
+  LegajoAttachmentList,
+} from "@/components/ui/legajo-attachments";
+import {
   LegajoObservationCell,
   LegajoObservationList,
   type LegajoObservationItem,
@@ -533,24 +537,7 @@ function InterventionReadContent({
         <LegajoObservationList observations={observations} />
       </div>
 
-      {attachments.length ? (
-        <div className="rounded-sm border border-[#dee2e6] bg-[#f8f9fa] p-3">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-[#212529]">
-            Archivos vinculados
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {attachments.map((attachment) => (
-              <AttachmentPreviewButton
-                key={attachment.id}
-                href={`/adjuntos/${attachment.id}`}
-                name={attachment.originalName}
-                mimeType={attachment.mimeType}
-                compact
-              />
-            ))}
-          </div>
-        </div>
-      ) : null}
+      <LegajoAttachmentList attachments={attachments} />
     </div>
   );
 }
@@ -1792,7 +1779,7 @@ export default async function InterventionDetailPage({
             "Fecha / usuario",
             "Actuacion",
             "Estado / seguimiento",
-            "Archivo",
+            "Archivos",
             "Observaciones",
           ]}
           minWidth={980}
@@ -1861,21 +1848,8 @@ export default async function InterventionDetailPage({
                       ) : null}
                     </div>
                   </Td>
-                  <Td className="w-[180px]">
-                    <div className="flex flex-col items-start gap-2">
-                      {entry.attachments.map((attachment) => (
-                        <AttachmentPreviewButton
-                          key={attachment.id}
-                          href={`/adjuntos/${attachment.id}`}
-                          name={attachment.originalName}
-                          mimeType={attachment.mimeType}
-                          compact
-                        />
-                      ))}
-                      {!entry.attachments.length ? (
-                        <span className="text-sm text-[#212529]">-</span>
-                      ) : null}
-                    </div>
+                  <Td className="w-[130px]">
+                    <LegajoAttachmentCount count={entry.attachments.length} />
                   </Td>
                   <Td className="w-[160px] px-1.5">
                     <LegajoObservationCell
@@ -1968,21 +1942,8 @@ export default async function InterventionDetailPage({
                       ) : null}
                     </div>
                   </Td>
-                  <Td className="w-[180px]">
-                    <div className="flex flex-col items-start gap-2">
-                      {rowAttachments.map((attachment) => (
-                        <AttachmentPreviewButton
-                          key={attachment.id}
-                          href={`/adjuntos/${attachment.id}`}
-                          name={attachment.originalName}
-                          mimeType={attachment.mimeType}
-                          compact
-                        />
-                      ))}
-                      {!rowAttachments.length ? (
-                        <span className="text-sm text-[#212529]">-</span>
-                      ) : null}
-                    </div>
+                  <Td className="w-[130px]">
+                    <LegajoAttachmentCount count={rowAttachments.length} />
                   </Td>
                   <Td className="w-[160px] px-1.5">
                     <LegajoObservationCell
@@ -2061,21 +2022,8 @@ export default async function InterventionDetailPage({
                     ) : null}
                   </div>
                 </Td>
-                <Td className="w-[180px]">
-                  <div className="flex flex-col items-start gap-2">
-                    {generalAttachments.map((attachment) => (
-                      <AttachmentPreviewButton
-                        key={attachment.id}
-                        href={`/adjuntos/${attachment.id}`}
-                        name={attachment.originalName}
-                        mimeType={attachment.mimeType}
-                        compact
-                      />
-                    ))}
-                    {!generalAttachments.length ? (
-                      <span className="text-sm text-[#212529]">-</span>
-                    ) : null}
-                  </div>
+                <Td className="w-[130px]">
+                  <LegajoAttachmentCount count={generalAttachments.length} />
                 </Td>
                 <Td className="w-[160px] px-1.5">
                   <LegajoObservationCell

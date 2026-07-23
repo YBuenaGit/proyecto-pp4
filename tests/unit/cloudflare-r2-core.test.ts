@@ -6,6 +6,7 @@ import {
   CLOUDFLARE_R2_ROOT_PREFIX,
   FileUploadValidationError,
   MAX_UPLOAD_FILE_BYTES,
+  MAX_UPLOAD_FILES,
   assertProjectObjectKey,
   assertUploadLimits,
   createCloudflareR2Storage,
@@ -37,14 +38,17 @@ test("rejects keys outside the project prefix", () => {
   assert.throws(() => assertProjectObjectKey(`${CLOUDFLARE_R2_ROOT_PREFIX}-otro/objects/id.bin`));
 });
 
-test("enforces the 1 GB per-file limit and four-file batch limit", () => {
+test("enforces the 1 GB per-file limit and thirty-file batch limit", () => {
   assert.doesNotThrow(() => assertUploadLimits([{ size: MAX_UPLOAD_FILE_BYTES }]));
   assert.throws(
     () => assertUploadLimits([{ size: MAX_UPLOAD_FILE_BYTES + 1 }]),
     FileUploadValidationError,
   );
+  assert.doesNotThrow(
+    () => assertUploadLimits(Array.from({ length: MAX_UPLOAD_FILES }, () => ({ size: 1 }))),
+  );
   assert.throws(
-    () => assertUploadLimits(Array.from({ length: 5 }, () => ({ size: 1 }))),
+    () => assertUploadLimits(Array.from({ length: MAX_UPLOAD_FILES + 1 }, () => ({ size: 1 }))),
     FileUploadValidationError,
   );
 });

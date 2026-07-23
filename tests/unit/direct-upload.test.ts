@@ -22,8 +22,8 @@ test("divide archivos grandes en partes multipart estables", () => {
   );
 });
 
-test("mantiene el limite acordado de cuatro archivos de un GB", () => {
-  assert.equal(MAX_DIRECT_UPLOAD_FILES, 4);
+test("mantiene el limite acordado de treinta archivos de un GB", () => {
+  assert.equal(MAX_DIRECT_UPLOAD_FILES, 30);
   assert.equal(MAX_DIRECT_UPLOAD_FILE_BYTES, 1024 ** 3);
 });
 
@@ -31,6 +31,7 @@ test("conserva los endpoints multipart y previews compatibles con Strict Mode", 
   const partsRoute = source("../../src/app/api/uploads/[id]/parts/route.ts");
   const completeRoute = source("../../src/app/api/uploads/[id]/complete/route.ts");
   const input = source("../../src/components/ui/direct-upload-input.tsx");
+  const service = source("../../src/lib/direct-uploads.ts");
 
   assert.match(partsRoute, /export async function POST/);
   assert.match(partsRoute, /getDirectUploadPartUrls/);
@@ -41,6 +42,8 @@ test("conserva los endpoints multipart y previews compatibles con Strict Mode", 
   assert.match(input, /image\.removeAttribute\("src"\)/);
   assert.match(input, /video\.removeAttribute\("src"\)/);
   assert.doesNotMatch(input, /useState\(\(\) => URL\.createObjectURL/);
+  assert.match(service, /const attachments = await tx\.attachment\.createManyAndReturn/);
+  assert.match(service, /const updatedSessions = await tx\.uploadSession\.updateMany/);
 });
 
 test("despacho bloquea la revision mientras haya archivos sin terminar", () => {

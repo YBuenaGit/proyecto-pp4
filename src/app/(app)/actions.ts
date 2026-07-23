@@ -35,6 +35,7 @@ function validationMessage(result: ReturnType<typeof parseAnnouncement>) {
 
 function actionError(error: unknown, fallback: string) {
   if (error instanceof DirectUploadError) return error.message;
+  console.error("No se pudieron vincular los archivos al anuncio.", error);
   return fallback;
 }
 

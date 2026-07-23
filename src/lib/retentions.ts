@@ -50,6 +50,7 @@ export const BRANDS = [
   "Ford",
   "Gilera",
   "Guerrero",
+  "Ika",
   "Honda",
   "Hyundai",
   "Jeep",

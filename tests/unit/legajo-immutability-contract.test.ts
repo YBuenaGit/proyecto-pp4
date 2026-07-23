@@ -31,6 +31,9 @@ const observationAttachmentSheet = source(
 const attachmentPreview = source(
   "../../src/components/ui/attachment-preview-button.tsx",
 );
+const legajoAttachments = source(
+  "../../src/components/ui/legajo-attachments.tsx",
+);
 
 function functionBody(file: string, name: string, nextExport: string) {
   const start = file.indexOf(`export async function ${name}`);
@@ -151,4 +154,21 @@ test("los adjuntos de observaciones se abren desde tabla, modal y libro", () => 
     assert.match(page, /flattenObservationAttachments/);
     assert.doesNotMatch(page, /`Archivos adjuntos:/);
   }
+});
+
+test("las tablas resumen adjuntos y el detalle muestra sus datos completos", () => {
+  for (const page of [dispatchPage, juridicalPage]) {
+    assert.match(page, /"Archivos"/);
+    assert.match(page, /<LegajoAttachmentList attachments=\{attachments\} \/>/);
+    assert.match(page, /<LegajoAttachmentCount count=\{/);
+  }
+
+  assert.match(legajoAttachments, /if \(count === 0\) return "Sin archivos"/);
+  assert.match(legajoAttachments, /if \(count === 1\) return "1 archivo"/);
+  assert.match(legajoAttachments, /return `\$\{count\} archivos`/);
+  assert.match(legajoAttachments, /attachment\.originalName/);
+  assert.match(legajoAttachments, /formatFileSize\(attachment\.size\)/);
+  assert.match(legajoAttachments, /attachment\.uploadedBy\.name/);
+  assert.match(legajoAttachments, /sm:grid-cols-2/);
+  assert.match(legajoAttachments, /<AttachmentPreviewButton/);
 });

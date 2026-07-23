@@ -44,14 +44,14 @@ type UploadSessionReader = {
 
 type AttachmentUploadClient = UploadSessionReader & {
   uploadSession: UploadSessionReader["uploadSession"] & {
-    update: (args: {
-      where: { id: string };
+    updateMany: (args: {
+      where: { id: { in: string[] }; status: string };
       data: { status: string; consumedAt: Date };
-    }) => Promise<UploadSession>;
+    }) => Promise<{ count: number }>;
   };
   attachment: {
-    create: (args: {
-      data: {
+    createManyAndReturn: (args: {
+      data: Array<{
         module: string;
         entityType: string;
         entityId: string;
@@ -63,8 +63,8 @@ type AttachmentUploadClient = UploadSessionReader & {
         size: number;
         uploadedById: string;
         isPrivate: boolean;
-      };
-    }) => Promise<Attachment>;
+      }>;
+    }) => Promise<Attachment[]>;
   };
 };
 
@@ -482,29 +482,42 @@ export async function consumeAttachmentUploads(input: {
   const consume = async (
     tx: AttachmentUploadClient,
   ) => {
-    const attachments = [];
-    for (const session of sessions) {
-      attachments.push(await tx.attachment.create({
-        data: {
-          module: input.module,
-          entityType: input.entityType,
-          entityId: input.entityId,
-          fileName: session.fileName,
-          originalName: session.originalName,
-          objectKey: session.objectKey,
-          encryptionVersion: 0,
-          mimeType: session.mimeType,
-          size: session.size,
-          uploadedById: input.uploadedById,
-          isPrivate: Boolean(input.isPrivate),
-        },
-      }));
-      await tx.uploadSession.update({
-        where: { id: session.id },
-        data: { status: "CONSUMED", consumedAt: new Date() },
-      });
+    const attachments = await tx.attachment.createManyAndReturn({
+      data: sessions.map((session) => ({
+        module: input.module,
+        entityType: input.entityType,
+        entityId: input.entityId,
+        fileName: session.fileName,
+        originalName: session.originalName,
+        objectKey: session.objectKey,
+        encryptionVersion: 0,
+        mimeType: session.mimeType,
+        size: session.size,
+        uploadedById: input.uploadedById,
+        isPrivate: Boolean(input.isPrivate),
+      })),
+    });
+    const sessionIds = sessions.map((session) => session.id);
+    const updatedSessions = await tx.uploadSession.updateMany({
+      where: { id: { in: sessionIds }, status: "READY" },
+      data: { status: "CONSUMED", consumedAt: new Date() },
+    });
+    if (
+      attachments.length !== sessions.length ||
+      updatedSessions.count !== sessions.length
+    ) {
+      throw new DirectUploadError("No se pudieron vincular todos los archivos.");
     }
-    return attachments;
+    const attachmentsByObjectKey = new Map(
+      attachments.map((attachment) => [attachment.objectKey, attachment]),
+    );
+    return sessions.map((session) => {
+      const attachment = attachmentsByObjectKey.get(session.objectKey);
+      if (!attachment) {
+        throw new DirectUploadError("No se pudieron vincular todos los archivos.");
+      }
+      return attachment;
+    });
   };
 
   return input.transaction
