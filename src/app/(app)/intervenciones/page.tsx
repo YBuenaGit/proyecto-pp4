@@ -7,7 +7,11 @@ import { ListToolbar } from "@/components/ui/list-toolbar";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Table, Td } from "@/components/ui/table";
-import { JURIDICAL_STATUSES, PRIORITIES } from "@/lib/constants";
+import {
+  JURIDICAL_DERIVED_AREAS,
+  JURIDICAL_STATUSES,
+  PRIORITIES,
+} from "@/lib/constants";
 import { requireUser } from "@/lib/auth";
 import { formatDateTime, labelFromValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
@@ -27,6 +31,7 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
   const type = param(params, "type");
   const status = param(params, "status");
   const urgency = param(params, "urgency");
+  const derivedArea = param(params, "derivedArea");
   const dni = param(params, "dni");
   const apellido = param(params, "apellido");
   const nombre = param(params, "nombre");
@@ -72,6 +77,7 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
     ...(type ? { type } : {}),
     ...(status ? { status } : {}),
     ...(urgency ? { urgency } : {}),
+    ...(derivedArea ? { derivedArea } : {}),
     ...(oficioNumber ? { oficioNumber: { contains: oficioNumber, mode: "insensitive" } } : {}),
     ...(expedienteNumber ? { expedienteNumber: { contains: expedienteNumber, mode: "insensitive" } } : {}),
     ...(createdById ? { createdById } : {}),
@@ -124,6 +130,12 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
           <FilterSelect label="Tipo" name="type" defaultValue={type} options={types.map((item) => [item.value, item.label])} />
           <FilterSelect label="Estado" name="status" defaultValue={status} options={JURIDICAL_STATUSES.map((s) => [s, labelFromValue(s)])} />
           <FilterSelect label="Urgencia" name="urgency" defaultValue={urgency} options={PRIORITIES.map((p) => [p, labelFromValue(p)])} />
+          <FilterSelect
+            label="Area derivada"
+            name="derivedArea"
+            defaultValue={derivedArea}
+            options={JURIDICAL_DERIVED_AREAS.map((area) => [area, area])}
+          />
           <FilterInput label="DNI" name="dni" defaultValue={dni} />
           <FilterInput label="Apellido" name="apellido" defaultValue={apellido} />
           <FilterInput label="Nombre" name="nombre" defaultValue={nombre} />

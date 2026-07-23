@@ -65,9 +65,9 @@ function assertNonEmptyUnique(name: string, values: readonly string[]) {
   assert.ok(values.every((value) => value.trim().length > 0), `${name} contiene valores vacios.`);
 }
 
-test("define exactamente los 73 selectores de catalogo requeridos", () => {
+test("define exactamente los 79 selectores de catalogo requeridos", () => {
   assert.equal(CATALOG_SELECTOR_ITEMS.length, CATALOG_SELECTOR_TOTAL);
-  assert.equal(CATALOG_SELECTOR_TOTAL, 73);
+  assert.equal(CATALOG_SELECTOR_TOTAL, 79);
 
   const keys = CATALOG_SELECTOR_ITEMS.map((item) => `${item.type}:${item.value}`);
   assertNonEmptyUnique("catalogos dependientes de base", keys);
@@ -161,7 +161,7 @@ test("ejecuta el seed dos veces sin duplicar ni modificar datos ajenos", async (
   const secondRun = await syncCatalogSelectors(client);
 
   assert.deepEqual(firstRun, {
-    created: 73,
+    created: 79,
     updated: 0,
     deactivatedDuplicates: 0,
     unchanged: 0,
@@ -170,9 +170,9 @@ test("ejecuta el seed dos veces sin duplicar ni modificar datos ajenos", async (
     created: 0,
     updated: 0,
     deactivatedDuplicates: 0,
-    unchanged: 73,
+    unchanged: 79,
   });
-  assert.equal(records.length, 74);
+  assert.equal(records.length, 80);
   assert.deepEqual(existingUser, { id: "user-existing", username: "usuario-real" });
   assert.deepEqual(existingExpedient, {
     id: "expedient-existing",

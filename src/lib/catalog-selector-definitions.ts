@@ -38,13 +38,18 @@ function optionsFromLabels(
 }
 
 const dispatchAreaOptions: CatalogSelectorOption[] = [
-  { value: "HONORABLE_TRIBUNAL_DE_FALTA", label: "Honorable tribunal de falta" },
-  { value: "OFICIOS_JUDICIALES", label: "Oficios judiciales" },
-  { value: "OBRAS_PUBLICAS", label: "Obras Publicas" },
-  { value: "SERVICIOS_URBANOS", label: "Servicios Urbanos" },
-  { value: "TRANSITO", label: "Transito" },
+  { value: "CATASTRO", label: "Catastro" },
   { value: "DEFENSA_CIVIL", label: "Defensa Civil" },
   { value: "DESARROLLO_SOCIAL", label: "Desarrollo Social" },
+  { value: "HACIENDA", label: "Hacienda" },
+  { value: "HONORABLE_TRIBUNAL_DE_FALTA", label: "Honorable tribunal de falta" },
+  { value: "OBRAS_PUBLICAS", label: "Obras Publicas" },
+  { value: "OFICIOS_JUDICIALES", label: "Oficios judiciales" },
+  { value: "POLICIA_DE_LA_PROVINCIA", label: "Policia de la Provincia" },
+  { value: "RECURSOS_HUMANOS", label: "Recursos Humanos" },
+  { value: "SANEAMIENTO", label: "Saneamiento" },
+  { value: "SERVICIOS_URBANOS", label: "Servicios Urbanos" },
+  { value: "TRANSITO", label: "Transito" },
 ];
 
 export const CATALOG_SELECTOR_GROUPS: ReadonlyArray<{
@@ -87,11 +92,11 @@ export const CATALOG_SELECTOR_ITEMS: readonly CatalogSelectorItem[] = CATALOG_SE
 );
 
 export const CATALOG_SELECTOR_EXPECTED_COUNTS: Readonly<Record<CatalogSelectorType, number>> = {
-  dispatch_category: 7,
-  dispatch_area: 7,
+  dispatch_category: 8,
+  dispatch_area: 12,
   juridical_type: 17,
   intervention_context: 13,
   expedient_category: 29,
 };
 
-export const CATALOG_SELECTOR_TOTAL = 73;
+export const CATALOG_SELECTOR_TOTAL = 79;

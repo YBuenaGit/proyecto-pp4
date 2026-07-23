@@ -20,6 +20,11 @@ import {
   nextInternalNumber,
 } from "@/lib/form";
 import { buildJuridicalActionContent } from "@/lib/juridical-action-content";
+import {
+  hasIntakeComplainantData,
+  hasIntakeLinkedPersonData,
+  hasIntakePeopleResolution,
+} from "@/lib/intake-validation";
 import { consumeAttachmentUploads } from "@/lib/direct-uploads";
 import { prisma } from "@/lib/prisma";
 import {
@@ -37,6 +42,10 @@ const dispatchSchema = z.object({
   category: z.string().min(1),
   priority: z.string().refine((value) => PRIORITIES.includes(value)),
   status: z.string().refine((value) => DISPATCH_STATUSES.includes(value)),
+});
+
+const dispatchCreationSchema = dispatchSchema.extend({
+  initialGuidance: z.string().trim().min(1),
 });
 
 const expedientSchema = z.object({
@@ -121,29 +130,6 @@ const linkedPersonPayloadSchema = z.object({
 type ComplainantPayload = z.infer<typeof complainantPayloadSchema>;
 type LinkedPersonPayload = z.infer<typeof linkedPersonPayloadSchema>;
 
-function hasLinkedPersonData(person: LinkedPersonPayload) {
-  return Boolean(
-    person.dni ||
-    person.firstName ||
-    person.apellidoApodoManual ||
-    person.phone1 ||
-    person.phone2 ||
-    person.address,
-  );
-}
-
-function hasComplainantData(person: ComplainantPayload) {
-  return Boolean(
-    person.isAnonymous ||
-    person.dni ||
-    person.firstName ||
-    person.lastName ||
-    person.phone1 ||
-    person.phone2 ||
-    person.address,
-  );
-}
-
 function parseJsonArray(formData: FormData, key: string) {
   const raw = text(formData, key);
   if (!raw) return [];
@@ -168,14 +154,14 @@ function parseComplainants(formData: FormData) {
           }
         : person,
     )
-    .filter(hasComplainantData);
+    .filter(hasIntakeComplainantData);
 }
 
 function parseLinkedPersons(formData: FormData) {
   return z
     .array(linkedPersonPayloadSchema)
     .parse(parseJsonArray(formData, "linkedPersonsPayload"))
-    .filter(hasLinkedPersonData);
+    .filter(hasIntakeLinkedPersonData);
 }
 
 function nullable(value: string) {
@@ -421,8 +407,9 @@ export async function createDispatchRecord(formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessDispatch(user));
 
-  const parsed = dispatchSchema.parse({
+  const parsed = dispatchCreationSchema.parse({
     description: sentenceText(formData, "description"),
+    initialGuidance: sentenceText(formData, "initialGuidance"),
     category: text(formData, "category"),
     priority: text(formData, "priority") || "MEDIA",
     status: text(formData, "status") || "RECIBIDO",
@@ -431,6 +418,17 @@ export async function createDispatchRecord(formData: FormData) {
   const complainants = parseComplainants(formData);
   const noLinkedPerson = checkbox(formData, "noLinkedPerson");
   const linkedPersons = noLinkedPerson ? [] : parseLinkedPersons(formData);
+  if (
+    !hasIntakePeopleResolution({
+      complainants,
+      linkedPersons,
+      noLinkedPerson,
+    })
+  ) {
+    throw new Error(
+      "Debe cargar al menos un denunciante o marcarlo como anónimo y, además, cargar una persona vinculada o indicar que no existe.",
+    );
+  }
   const firstLinkedPerson = linkedPersons[0];
   const referredArea = optionalText(formData, "referredArea");
   const usesHistoricalDate = checkbox(formData, "usesHistoricalDate");
@@ -455,7 +453,7 @@ export async function createDispatchRecord(formData: FormData) {
       dniSnapshot: firstLinkedPerson?.dni || null,
       nameSnapshot: linkedPersonName(firstLinkedPerson),
       description: parsed.description,
-      initialGuidance: optionalSentenceText(formData, "initialGuidance"),
+      initialGuidance: parsed.initialGuidance,
       confidentialNotes: optionalSentenceText(formData, "confidentialNotes"),
       deadlineAt,
       category: parsed.category,

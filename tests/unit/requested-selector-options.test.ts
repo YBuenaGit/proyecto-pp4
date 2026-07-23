@@ -5,9 +5,13 @@ import {
   APPOINTMENT_TYPES,
 } from "../../src/lib/appointment-constants";
 import {
+  CATALOG_SELECTOR_ITEMS,
+} from "../../src/lib/catalog-selector-definitions";
+import {
   DISPATCH_CATEGORY_LABELS,
   DISPATCH_FORM_EXCLUDED_CATEGORIES,
   DISPATCH_INTERNAL_DERIVED_AREAS,
+  JURIDICAL_DERIVED_AREAS,
 } from "../../src/lib/constants";
 
 test("agenda incorpora los nuevos tipos de evento para todos los roles", () => {
@@ -30,6 +34,7 @@ test("despacho actualiza categoria y areas del formulario", () => {
     DISPATCH_CATEGORY_LABELS.PEDIDO_ACTA_TRIBUNAL_FALTA,
     "Pedido de acta por tribunal de falta",
   );
+  assert.equal(DISPATCH_CATEGORY_LABELS.OTROS, "Otros");
   assert.equal(
     (DISPATCH_FORM_EXCLUDED_CATEGORIES as readonly string[]).includes(
       "DERIVACION_AREA",
@@ -40,4 +45,20 @@ test("despacho actualiza categoria y areas del formulario", () => {
   const areaLabels = DISPATCH_INTERNAL_DERIVED_AREAS.map((item) => item.label);
   assert.equal(areaLabels.includes("Honorable tribunal de falta"), true);
   assert.equal(areaLabels.includes("Oficios judiciales"), true);
+
+  const requestedAreas = [
+    "Hacienda",
+    "Recursos Humanos",
+    "Saneamiento",
+    "Catastro",
+    "Policia de la Provincia",
+  ];
+  const dispatchAreaLabels = CATALOG_SELECTOR_ITEMS.filter(
+    (item) => item.type === "dispatch_area",
+  ).map((item) => item.label);
+
+  for (const area of requestedAreas) {
+    assert.equal(dispatchAreaLabels.includes(area), true);
+    assert.equal(JURIDICAL_DERIVED_AREAS.includes(area), true);
+  }
 });

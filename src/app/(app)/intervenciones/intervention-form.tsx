@@ -22,7 +22,10 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button, LinkButton } from "@/components/ui/button";
-import { DirectUploadInput } from "@/components/ui/direct-upload-input";
+import {
+  DirectUploadInput,
+  type DirectUploadState,
+} from "@/components/ui/direct-upload-input";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/components/ui/cn";
 import {
@@ -36,6 +39,12 @@ import {
   normalizeName,
   toDateInputValue,
 } from "@/lib/format";
+import {
+  hasIntakeComplainantData,
+  hasIntakeComplainantResolution,
+  hasIntakeLinkedPersonData,
+  hasIntakeLinkedPersonResolution,
+} from "@/lib/intake-validation";
 import { sortByLabel } from "@/lib/text";
 import { parseArgentinaDateTime, toArgentinaDateTimeInputValue } from "@/lib/argentina-time";
 
@@ -312,29 +321,6 @@ function cleanLinkedPerson(person: LinkedPersonDraft) {
   };
 }
 
-function hasComplainantData(person: ComplainantDraft) {
-  return Boolean(
-    person.isAnonymous ||
-    person.dni ||
-    person.firstName ||
-    person.lastName ||
-    person.phone1 ||
-    person.phone2 ||
-    person.address,
-  );
-}
-
-function hasLinkedPersonData(person: LinkedPersonDraft) {
-  return Boolean(
-    person.dni ||
-    person.firstName ||
-    person.apellidoApodoManual ||
-    person.phone1 ||
-    person.phone2 ||
-    person.address,
-  );
-}
-
 function validateDni(field: string, value: string, label: string): StepError[] {
   if (!value) return [];
   return dniPattern.test(value)
@@ -503,6 +489,7 @@ function valuesFromRecord(
 function validateStep(
   index: number,
   values: InterventionWizardValues,
+  requirePeopleResolution = true,
 ): StepError[] {
   if (index === 0) {
     const errors: StepError[] = [];
@@ -536,6 +523,26 @@ function validateStep(
 
   if (index === 1) {
     return [
+      ...(requirePeopleResolution &&
+      !hasIntakeComplainantResolution(values.complainants)
+        ? [
+            {
+              field: "complainantSelection",
+              message:
+                "Cargá al menos una persona denunciante o marcá Denunciante anónimo.",
+            },
+          ]
+        : []),
+      ...(requirePeopleResolution &&
+      !hasIntakeLinkedPersonResolution(values)
+        ? [
+            {
+              field: "linkedPersonSelection",
+              message:
+                "Cargá una persona denunciada o vinculada, o marcá que no hay persona denunciada o vinculada.",
+            },
+          ]
+        : []),
       ...values.complainants.flatMap((person, personIndex) => {
         if (person.isAnonymous) return [];
         return [
@@ -608,10 +615,24 @@ function validateStep(
     ];
   }
 
-  if (index === 2 && !values.description.trim()) {
-    return [
-      { field: "description", message: "La descripcion es obligatoria." },
-    ];
+  if (index === 2) {
+    const errors: StepError[] = [];
+
+    if (!values.description.trim()) {
+      errors.push({
+        field: "description",
+        message: "La descripción es obligatoria.",
+      });
+    }
+
+    if (!values.guidanceProvided.trim()) {
+      errors.push({
+        field: "guidanceProvided",
+        message: "La orientación o intervención realizada es obligatoria.",
+      });
+    }
+
+    return errors;
   }
 
   if (
@@ -969,6 +990,16 @@ export function InterventionForm({
     valuesFromRecord(record),
   );
   const [selectedAttachments, setSelectedAttachments] = useState<File[]>([]);
+  const [attachmentUploadState, setAttachmentUploadState] =
+    useState<DirectUploadState>({
+      totalFiles: 0,
+      uploadingFiles: 0,
+      readyFiles: 0,
+      errorFiles: 0,
+    });
+  const [attachmentAdvanceError, setAttachmentAdvanceError] = useState<
+    string | null
+  >(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isGeneralEdit = mode === "general-edit" || Boolean(record);
@@ -991,14 +1022,17 @@ export function InterventionForm({
   );
 
   const submittedComplainants = useMemo(
-    () => values.complainants.filter(hasComplainantData).map(cleanComplainant),
+    () =>
+      values.complainants
+        .filter(hasIntakeComplainantData)
+        .map(cleanComplainant),
     [values.complainants],
   );
   const submittedLinkedPersons = useMemo(
     () =>
       values.noLinkedPerson
         ? []
-        : values.linkedPersons.filter(hasLinkedPersonData).map(cleanLinkedPerson),
+        : values.linkedPersons.filter(hasIntakeLinkedPersonData).map(cleanLinkedPerson),
     [values.linkedPersons, values.noLinkedPerson],
   );
 
@@ -1007,13 +1041,16 @@ export function InterventionForm({
       isGeneralEdit
         ? [
             validateStep(0, values),
-            validateStep(1, values),
+            validateStep(1, values, false),
             validateStep(3, values),
           ]
         : validateAllSteps(values),
     [isGeneralEdit, values],
   );
   const allValid = stepErrors.every((errors) => errors.length === 0);
+  const hasIncompleteAttachmentUploads =
+    attachmentUploadState.uploadingFiles > 0 ||
+    attachmentUploadState.errorFiles > 0;
   const currentErrors = attemptedSteps[currentStep]
     ? stepErrors[currentStep]
     : [];
@@ -1119,9 +1156,10 @@ export function InterventionForm({
     if (!field) return;
     window.requestAnimationFrame(() => {
       const control = formRef.current?.querySelector<HTMLElement>(
-        `[name="${field.replace(/"/g, '\\"')}"]`,
+        `[name="${field.replace(/"/g, '\\"')}"], [data-error-field="${field.replace(/"/g, '\\"')}"]`,
       );
-      control?.focus();
+      control?.focus({ preventScroll: true });
+      control?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
   }
 
@@ -1179,6 +1217,13 @@ export function InterventionForm({
       return;
     }
 
+    if (!record && hasIncompleteAttachmentUploads) {
+      setAttachmentAdvanceError(
+        "Espera a que terminen todas las cargas de los archivos para continuar.",
+      );
+      return;
+    }
+
     const invalidStep = stepErrors.findIndex((errors) => errors.length > 0);
     if (invalidStep >= 0) {
       event.preventDefault();
@@ -1196,6 +1241,14 @@ export function InterventionForm({
   }
 
   function openSummaryFromClosure() {
+    if (!record && hasIncompleteAttachmentUploads) {
+      setAttachmentAdvanceError(
+        "Espera a que terminen todas las cargas de los archivos para continuar.",
+      );
+      return;
+    }
+
+    setAttachmentAdvanceError(null);
     setAttemptedSteps(visibleSteps.map(() => true));
     const invalidStep = stepErrors.findIndex((errors) => errors.length > 0);
     if (invalidStep >= 0) {
@@ -1442,6 +1495,7 @@ export function InterventionForm({
               ) : null}
             </div>
           </StepCard>
+
         </div>
 
         <div
@@ -1960,6 +2014,27 @@ export function InterventionForm({
               )}
             </div>
           </StepCard>
+
+          {errorFor("complainantSelection") ||
+          errorFor("linkedPersonSelection") ? (
+            <div
+              role="alert"
+              tabIndex={-1}
+              data-error-field={
+                errorFor("complainantSelection")
+                  ? "complainantSelection"
+                  : "linkedPersonSelection"
+              }
+              className="rounded-[18px] border border-[var(--danger)]/25 bg-[var(--danger-soft)] px-4 py-3 text-sm font-semibold text-[var(--danger)]"
+            >
+              {errorFor("complainantSelection") ? (
+                <p>{errorFor("complainantSelection")}</p>
+              ) : null}
+              {errorFor("linkedPersonSelection") ? (
+                <p>{errorFor("linkedPersonSelection")}</p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         {!isGeneralEdit ? (
@@ -1978,9 +2053,13 @@ export function InterventionForm({
                   }
                   data-autosize="true"
                   className={autosizeTextareaClass}
+                  aria-required="true"
                 />
               </Field>
-              <Field label="Orientacion o intervencion realizada">
+              <Field
+                label="Orientacion o intervencion realizada"
+                error={errorFor("guidanceProvided")}
+              >
                 <textarea
                   name="guidanceProvided"
                   value={values.guidanceProvided}
@@ -1989,6 +2068,7 @@ export function InterventionForm({
                   }
                   data-autosize="true"
                   className={autosizeTextareaClass}
+                  aria-required="true"
                 />
               </Field>
               <Field label="Notas internas confidenciales">
@@ -2053,10 +2133,22 @@ export function InterventionForm({
                 </Field>
               ) : null}
               {!record ? (
-                <Field label="Adjuntos" className="md:col-span-2 xl:col-span-3">
+                <Field
+                  label="Adjuntos"
+                  error={attachmentAdvanceError ?? undefined}
+                  className="md:col-span-2 xl:col-span-3"
+                >
                   <DirectUploadInput
                     intent={{ module: "JURIDICO", entityType: "JuridicalIntervention" }}
                     onFilesChange={setSelectedAttachments}
+                    onUploadStateChange={(state) => {
+                      setAttachmentUploadState(state);
+                      setAttachmentAdvanceError(
+                        state.uploadingFiles > 0 || state.errorFiles > 0
+                          ? "Espera a que terminen todas las cargas de los archivos para continuar."
+                          : null,
+                      );
+                    }}
                   />
                 </Field>
               ) : null}
@@ -2111,7 +2203,9 @@ export function InterventionForm({
           ) : (
             <Button
               type="button"
-              disabled={!allValid}
+              disabled={
+                !allValid || (!record && hasIncompleteAttachmentUploads)
+              }
               onClick={openSummaryFromClosure}
               className="border-[#0667b0] bg-[#0667b0] hover:bg-blue-700"
             >

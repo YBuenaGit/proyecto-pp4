@@ -8,6 +8,11 @@ import { requireUser } from "@/lib/auth";
 import { writeAuditLog } from "@/lib/audit";
 import { consumeAttachmentUploads } from "@/lib/direct-uploads";
 import { checkbox, nextInternalNumber, optionalDate, optionalSentenceText, optionalText, sentenceText, text } from "@/lib/form";
+import {
+  hasIntakeComplainantData,
+  hasIntakeLinkedPersonData,
+  hasIntakePeopleResolution,
+} from "@/lib/intake-validation";
 import { buildJuridicalActionContent } from "@/lib/juridical-action-content";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessJuridical, canBypassLegajoRestriction } from "@/lib/rbac";
@@ -18,6 +23,10 @@ const interventionSchema = z.object({
   type: z.string().min(1),
   urgency: z.string().refine((value) => PRIORITIES.includes(value)),
   status: z.string().refine((value) => JURIDICAL_STATUSES.includes(value)),
+});
+
+const interventionCreationSchema = interventionSchema.extend({
+  guidanceProvided: z.string().trim().min(1),
 });
 
 const dniPattern = /^\d{7,8}$/;
@@ -74,24 +83,16 @@ function parseJsonArray(formData: FormData, key: string) {
   return Array.isArray(parsed) ? parsed : [];
 }
 
-function hasComplainantData(person: ComplainantPayload) {
-  return Boolean(person.isAnonymous || person.dni || person.firstName || person.lastName || person.phone1 || person.phone2 || person.address);
-}
-
-function hasLinkedPersonData(person: LinkedPersonPayload) {
-  return Boolean(person.dni || person.firstName || person.apellidoApodoManual || person.phone1 || person.phone2 || person.address);
-}
-
 function parseComplainants(formData: FormData) {
   return z.array(complainantPayloadSchema).parse(parseJsonArray(formData, "complainantsPayload")).map((person) =>
     person.isAnonymous
       ? { isAnonymous: true, dni: "", firstName: "", lastName: "", phone1: "", phone2: "", address: "" }
       : person,
-  ).filter(hasComplainantData);
+  ).filter(hasIntakeComplainantData);
 }
 
 function parseLinkedPersons(formData: FormData) {
-  return z.array(linkedPersonPayloadSchema).parse(parseJsonArray(formData, "linkedPersonsPayload")).filter(hasLinkedPersonData);
+  return z.array(linkedPersonPayloadSchema).parse(parseJsonArray(formData, "linkedPersonsPayload")).filter(hasIntakeLinkedPersonData);
 }
 
 function nullable(value: string | null | undefined) {
@@ -328,8 +329,9 @@ async function applyJuridicalReferralFromArea(interventionId: string, area: stri
 export async function createJuridicalIntervention(formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessJuridical(user));
-  const parsed = interventionSchema.parse({
+  const parsed = interventionCreationSchema.parse({
     description: sentenceText(formData, "description"),
+    guidanceProvided: sentenceText(formData, "guidanceProvided"),
     type: text(formData, "type"),
     urgency: text(formData, "urgency") || "MEDIA",
     status: text(formData, "status") || "RECIBIDO",
@@ -337,6 +339,17 @@ export async function createJuridicalIntervention(formData: FormData) {
   const complainants = parseComplainants(formData);
   const noLinkedPerson = checkbox(formData, "noLinkedPerson");
   const linkedPersons = noLinkedPerson ? [] : parseLinkedPersons(formData);
+  if (
+    !hasIntakePeopleResolution({
+      complainants,
+      linkedPersons,
+      noLinkedPerson,
+    })
+  ) {
+    throw new Error(
+      "Debe cargar al menos un denunciante o marcarlo como anónimo y, además, cargar una persona vinculada o indicar que no existe.",
+    );
+  }
   const firstComplainant = complainants[0];
   const firstLinkedPerson = linkedPersons[0];
   const derivedArea = optionalText(formData, "derivedArea");
@@ -372,7 +385,7 @@ export async function createJuridicalIntervention(formData: FormData) {
       interventionContext: optionalText(formData, "interventionContext"),
       counterpartType: null,
       description: parsed.description,
-      guidanceProvided: optionalSentenceText(formData, "guidanceProvided"),
+      guidanceProvided: parsed.guidanceProvided,
       referredToAgency: optionalSentenceText(formData, "referredToAgency"),
       derivedArea,
       confidentialNotes: optionalSentenceText(formData, "confidentialNotes"),

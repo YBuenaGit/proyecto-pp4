@@ -42,3 +42,19 @@ test("conserva los endpoints multipart y previews compatibles con Strict Mode", 
   assert.match(input, /video\.removeAttribute\("src"\)/);
   assert.doesNotMatch(input, /useState\(\(\) => URL\.createObjectURL/);
 });
+
+test("despacho bloquea la revision mientras haya archivos sin terminar", () => {
+  const input = source("../../src/components/ui/direct-upload-input.tsx");
+  const dispatchWizard = source(
+    "../../src/app/(app)/despacho/dispatch-wizard-form.tsx",
+  );
+  const warning =
+    "Espera a que terminen todas las cargas de los archivos para continuar.";
+
+  assert.match(input, /onUploadStateChange\?: \(state: DirectUploadState\)/);
+  assert.match(input, new RegExp(warning.replace(".", "\\.")));
+  assert.match(dispatchWizard, /attachmentUploadState\.uploadingFiles > 0/);
+  assert.match(dispatchWizard, /attachmentUploadState\.errorFiles > 0/);
+  assert.match(dispatchWizard, /setAttachmentAdvanceError/);
+  assert.match(dispatchWizard, new RegExp(warning.replace(".", "\\.")));
+});

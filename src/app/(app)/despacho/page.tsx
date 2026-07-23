@@ -7,14 +7,18 @@ import { ListToolbar } from "@/components/ui/list-toolbar";
 import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Table, Td } from "@/components/ui/table";
-import { DISPATCH_STATUSES, PRIORITIES } from "@/lib/constants";
+import {
+  DISPATCH_INTERNAL_DERIVED_AREAS,
+  DISPATCH_STATUSES,
+  PRIORITIES,
+} from "@/lib/constants";
 import { requireUser } from "@/lib/auth";
 import { formatDateTime, labelFromValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessDispatch } from "@/lib/rbac";
 import { dateRangeWhere, pagination, param } from "@/lib/search";
 import type { SearchParams } from "@/lib/types";
-import { personDisplayName } from "@/lib/text";
+import { personDisplayName, sortByLabel } from "@/lib/text";
 import { createDispatchRecord } from "./actions";
 import { DispatchForm } from "./dispatch-form";
 
@@ -32,6 +36,7 @@ export default async function DispatchListPage({
   const category = param(params, "category");
   const status = param(params, "status");
   const priority = param(params, "priority");
+  const referredArea = param(params, "referredArea");
   const dni = param(params, "dni");
   const apellido = param(params, "apellido");
   const nombre = param(params, "nombre");
@@ -75,6 +80,7 @@ export default async function DispatchListPage({
     ...(category ? { category } : {}),
     ...(status ? { status } : {}),
     ...(priority ? { priority } : {}),
+    ...(referredArea ? { referredArea } : {}),
     ...(createdById ? { createdById } : {}),
     ...(andFilters.length ? { AND: andFilters } : {}),
   };
@@ -100,6 +106,21 @@ export default async function DispatchListPage({
     prisma.user.findMany({ where: { role: "despacho", active: true }, orderBy: { name: "asc" } }),
     prisma.catalogItem.findMany({ where: { type: "dispatch_area", active: true }, orderBy: { sortOrder: "asc" } }),
   ]);
+
+  const areaFilterOptions = sortByLabel(
+    Array.from(
+      new Map(
+        [
+          ...areas.map((item) => ({ value: item.label, label: item.label })),
+          ...DISPATCH_INTERNAL_DERIVED_AREAS.map((item) => ({
+            value: item.label,
+            label: item.label,
+          })),
+        ].map((item) => [item.label.toLocaleLowerCase("es-AR"), item]),
+      ).values(),
+    ),
+    (item) => item.label,
+  );
 
   return (
     <>
@@ -142,6 +163,12 @@ export default async function DispatchListPage({
             options={users.map((item) => [item.id, item.name])}
           />
           <FilterSelect label="Prioridad" name="priority" defaultValue={priority} options={PRIORITIES.map((p) => [p, labelFromValue(p)])} />
+          <FilterSelect
+            label="Area derivada"
+            name="referredArea"
+            defaultValue={referredArea}
+            options={areaFilterOptions.map((item) => [item.value, item.label])}
+          />
         </FilterBar>
       </ListToolbar>
 

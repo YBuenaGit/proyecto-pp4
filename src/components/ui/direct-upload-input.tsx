@@ -28,6 +28,22 @@ type UploadItem = {
   error?: string;
 };
 
+export type DirectUploadState = {
+  totalFiles: number;
+  uploadingFiles: number;
+  readyFiles: number;
+  errorFiles: number;
+};
+
+function uploadState(items: readonly UploadItem[]): DirectUploadState {
+  return {
+    totalFiles: items.length,
+    uploadingFiles: items.filter((item) => item.status === "uploading").length,
+    readyFiles: items.filter((item) => item.status === "ready").length,
+    errorFiles: items.filter((item) => item.status === "error").length,
+  };
+}
+
 class UploadSemaphore {
   private active = 0;
   private waiting: Array<() => void> = [];
@@ -150,6 +166,7 @@ export function DirectUploadInput({
   className,
   label = "Seleccionar archivos",
   onFilesChange,
+  onUploadStateChange,
   showPreviews = false,
   maxFiles = MAX_DIRECT_UPLOAD_FILES,
   helperText,
@@ -161,6 +178,7 @@ export function DirectUploadInput({
   className?: string;
   label?: string;
   onFilesChange?: (files: File[]) => void;
+  onUploadStateChange?: (state: DirectUploadState) => void;
   showPreviews?: boolean;
   maxFiles?: number;
   helperText?: string;
@@ -177,12 +195,11 @@ export function DirectUploadInput({
   const glass = tone === "glass";
 
   function syncItems(updater: (current: UploadItem[]) => UploadItem[]) {
-    setItems((current) => {
-      const next = updater(current);
-      itemsRef.current = next;
-      onFilesChange?.(next.map((item) => item.file));
-      return next;
-    });
+    const next = updater(itemsRef.current);
+    itemsRef.current = next;
+    setItems(next);
+    onFilesChange?.(next.map((item) => item.file));
+    onUploadStateChange?.(uploadState(next));
   }
 
   function updateItem(key: string, patch: Partial<UploadItem>) {
@@ -362,7 +379,7 @@ export function DirectUploadInput({
         setFormError(
           required && current.length === 0
             ? "Selecciona al menos un archivo."
-            : "Espera a que terminen todas las cargas o quita los archivos con error.",
+            : "Espera a que terminen todas las cargas de los archivos para continuar.",
         );
       }
     };

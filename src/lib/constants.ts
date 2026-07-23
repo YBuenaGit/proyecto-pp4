@@ -95,6 +95,7 @@ export const JURIDICAL_DERIVED_AREAS = [
   "Despacho",
   "Directivo",
   "GUM",
+  "Hacienda",
   "Juzgado Civil / Cial",
   "Juzgado de familia",
   "Medio ambiente",
@@ -102,7 +103,9 @@ export const JURIDICAL_DERIVED_AREAS = [
   "MPF",
   "Obras Publicas",
   "Ojos en alerta",
+  "Policia de la Provincia",
   "Politica social",
+  "Recursos Humanos",
   "Regulacion dominial",
   "Saneamiento",
   "Servicios Urbanos",
@@ -131,6 +134,7 @@ export const DISPATCH_CATEGORY_LABELS: Record<string, string> = {
   DERIVACION_AREA: "Derivacion a otra area",
   SITUACION_VECINAL: "Situacion vecinal",
   ATENCION_GENERAL: "Atencion general",
+  OTROS: "Otros",
 };
 
 export const JURIDICAL_TYPE_LABELS: Record<string, string> = {

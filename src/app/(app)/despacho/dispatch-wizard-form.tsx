@@ -22,7 +22,10 @@ import {
   Trash2,
 } from "lucide-react";
 import { Button, LinkButton } from "@/components/ui/button";
-import { DirectUploadInput } from "@/components/ui/direct-upload-input";
+import {
+  DirectUploadInput,
+  type DirectUploadState,
+} from "@/components/ui/direct-upload-input";
 import { Spinner } from "@/components/ui/spinner";
 import { cn } from "@/components/ui/cn";
 import {
@@ -33,6 +36,12 @@ import {
 } from "@/lib/constants";
 import { formatDateTime, labelFromValue, normalizeName } from "@/lib/format";
 import { parseArgentinaDateTime, toArgentinaDateTimeInputValue } from "@/lib/argentina-time";
+import {
+  hasIntakeComplainantData,
+  hasIntakeComplainantResolution,
+  hasIntakeLinkedPersonData,
+  hasIntakeLinkedPersonResolution,
+} from "@/lib/intake-validation";
 import { sortByLabel } from "@/lib/text";
 
 export type DispatchWizardValues = {
@@ -263,29 +272,6 @@ function cleanLinkedPerson(person: LinkedPersonDraft) {
   };
 }
 
-function hasComplainantData(person: ComplainantDraft) {
-  return Boolean(
-    person.isAnonymous ||
-    person.dni ||
-    person.firstName ||
-    person.lastName ||
-    person.phone1 ||
-    person.phone2 ||
-    person.address,
-  );
-}
-
-function hasLinkedPersonData(person: LinkedPersonDraft) {
-  return Boolean(
-    person.dni ||
-    person.firstName ||
-    person.apellidoApodoManual ||
-    person.phone1 ||
-    person.phone2 ||
-    person.address,
-  );
-}
-
 function validateDni(field: string, value: string, label: string): StepError[] {
   if (!value) return [];
   return dniPattern.test(value)
@@ -349,6 +335,7 @@ function validateAddress(
 function validateStep(
   index: number,
   values: DispatchWizardValues,
+  requirePeopleResolution = true,
 ): StepError[] {
   if (index === 0) {
     const errors: StepError[] = [];
@@ -382,6 +369,26 @@ function validateStep(
 
   if (index === 1) {
     return [
+      ...(requirePeopleResolution &&
+      !hasIntakeComplainantResolution(values.complainants)
+        ? [
+            {
+              field: "complainantSelection",
+              message:
+                "Cargá al menos una persona denunciante o marcá Denunciante anónimo.",
+            },
+          ]
+        : []),
+      ...(requirePeopleResolution &&
+      !hasIntakeLinkedPersonResolution(values)
+        ? [
+            {
+              field: "linkedPersonSelection",
+              message:
+                "Cargá una persona denunciada o vinculada, o marcá que no hay persona denunciada o vinculada.",
+            },
+          ]
+        : []),
       ...values.complainants.flatMap((person, personIndex) => {
         if (person.isAnonymous) return [];
         return [
@@ -454,13 +461,25 @@ function validateStep(
     ];
   }
 
-  if (index === 2 && !values.description.trim()) {
-    return [
-      {
+  if (index === 2) {
+    const errors: StepError[] = [];
+
+    if (!values.description.trim()) {
+      errors.push({
         field: "description",
         message: "La descripción redactada es obligatoria.",
-      },
-    ];
+      });
+    }
+
+    if (!values.initialGuidance.trim()) {
+      errors.push({
+        field: "initialGuidance",
+        message:
+          "La orientación brindada o intervención inicial es obligatoria.",
+      });
+    }
+
+    return errors;
   }
 
   if (
@@ -825,6 +844,16 @@ export function DispatchWizardForm({
   ]);
   const [values, setValues] = useState<DispatchWizardValues>(initialValues);
   const [selectedAttachments, setSelectedAttachments] = useState<File[]>([]);
+  const [attachmentUploadState, setAttachmentUploadState] =
+    useState<DirectUploadState>({
+      totalFiles: 0,
+      uploadingFiles: 0,
+      readyFiles: 0,
+      errorFiles: 0,
+    });
+  const [attachmentAdvanceError, setAttachmentAdvanceError] = useState<
+    string | null
+  >(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const isGeneralEdit = mode === "general-edit";
@@ -862,14 +891,17 @@ export function DispatchWizardForm({
   }, [areas]);
 
   const submittedComplainants = useMemo(
-    () => values.complainants.filter(hasComplainantData).map(cleanComplainant),
+    () =>
+      values.complainants
+        .filter(hasIntakeComplainantData)
+        .map(cleanComplainant),
     [values.complainants],
   );
   const submittedLinkedPersons = useMemo(
     () =>
       values.noLinkedPerson
         ? []
-        : values.linkedPersons.filter(hasLinkedPersonData).map(cleanLinkedPerson),
+        : values.linkedPersons.filter(hasIntakeLinkedPersonData).map(cleanLinkedPerson),
     [values.linkedPersons, values.noLinkedPerson],
   );
   const selectedArea = sortedAreas.find(
@@ -882,7 +914,7 @@ export function DispatchWizardForm({
       isGeneralEdit
         ? [
             validateStep(0, values),
-            validateStep(1, values),
+            validateStep(1, values, false),
             validateStep(3, values),
           ]
         : validateAllSteps(values),
@@ -981,9 +1013,10 @@ export function DispatchWizardForm({
     if (!field) return;
     window.requestAnimationFrame(() => {
       const control = formRef.current?.querySelector<HTMLElement>(
-        `[name="${field.replace(/"/g, '\\"')}"]`,
+        `[name="${field.replace(/"/g, '\\"')}"], [data-error-field="${field.replace(/"/g, '\\"')}"]`,
       );
-      control?.focus();
+      control?.focus({ preventScroll: true });
+      control?.scrollIntoView({ behavior: "smooth", block: "center" });
     });
   }
 
@@ -1020,6 +1053,18 @@ export function DispatchWizardForm({
   }
 
   function openSummary() {
+    if (
+      allowAttachments &&
+      (attachmentUploadState.uploadingFiles > 0 ||
+        attachmentUploadState.errorFiles > 0)
+    ) {
+      setAttachmentAdvanceError(
+        "Espera a que terminen todas las cargas de los archivos para continuar.",
+      );
+      return;
+    }
+
+    setAttachmentAdvanceError(null);
     setAttemptedSteps(visibleSteps.map(() => true));
     const invalidStep = stepErrors.findIndex((errors) => errors.length > 0);
     if (invalidStep >= 0) {
@@ -1807,6 +1852,27 @@ export function DispatchWizardForm({
               )}
             </div>
           </StepCard>
+
+          {errorFor("complainantSelection") ||
+          errorFor("linkedPersonSelection") ? (
+            <div
+              role="alert"
+              tabIndex={-1}
+              data-error-field={
+                errorFor("complainantSelection")
+                  ? "complainantSelection"
+                  : "linkedPersonSelection"
+              }
+              className="rounded-[18px] border border-[var(--danger)]/25 bg-[var(--danger-soft)] px-4 py-3 text-sm font-semibold text-[var(--danger)]"
+            >
+              {errorFor("complainantSelection") ? (
+                <p>{errorFor("complainantSelection")}</p>
+              ) : null}
+              {errorFor("linkedPersonSelection") ? (
+                <p>{errorFor("linkedPersonSelection")}</p>
+              ) : null}
+            </div>
+          ) : null}
         </div>
 
         {!isGeneralEdit ? (
@@ -1832,7 +1898,10 @@ export function DispatchWizardForm({
                   aria-required="true"
                 />
               </Field>
-              <Field label="Orientación brindada / intervención inicial">
+              <Field
+                label="Orientación brindada / intervención inicial"
+                error={errorFor("initialGuidance")}
+              >
                 <textarea
                   name="initialGuidance"
                   value={values.initialGuidance}
@@ -1842,6 +1911,7 @@ export function DispatchWizardForm({
                   onInput={(event) => resizeTextarea(event.currentTarget)}
                   data-autosize="true"
                   className={autosizeTextareaClass}
+                  aria-required="true"
                 />
               </Field>
               <Field label="Notas internas confidenciales">
@@ -1908,10 +1978,23 @@ export function DispatchWizardForm({
                 </Field>
               ) : null}
               {allowAttachments ? (
-                <Field label="Adjuntos" className="md:col-span-2 xl:col-span-3">
+                <Field
+                  label="Adjuntos"
+                  error={attachmentAdvanceError ?? undefined}
+                  className="md:col-span-2 xl:col-span-3"
+                >
                   <DirectUploadInput
                     intent={{ module: "DESPACHO", entityType: "DispatchRecord" }}
                     onFilesChange={setSelectedAttachments}
+                    onUploadStateChange={(state) => {
+                      setAttachmentUploadState(state);
+                      if (
+                        state.uploadingFiles === 0 &&
+                        state.errorFiles === 0
+                      ) {
+                        setAttachmentAdvanceError(null);
+                      }
+                    }}
                   />
                 </Field>
               ) : null}
