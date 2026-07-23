@@ -11,6 +11,7 @@ export type AnnouncementItem = {
   content: string;
   authorName: string;
   authorRole: string;
+  authorAvatarAttachmentId: string | null;
   createdAt: string;
   updatedAt: string;
   deletedAt: string | null;

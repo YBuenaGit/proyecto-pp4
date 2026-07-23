@@ -17,9 +17,21 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
           select: { deletedAt: true },
         })
       : null;
+  const profileOwner =
+    attachment.module === "PERFIL" && attachment.entityType === "UserAvatar"
+      ? await prisma.user.findFirst({
+          where: {
+            id: attachment.entityId,
+            avatarAttachmentId: attachment.id,
+          },
+          select: { id: true },
+        })
+      : null;
   const allowed =
     attachment.module === "ANUNCIOS"
       ? Boolean(announcement && (!announcement.deletedAt || isAdmin(user)))
+      : attachment.module === "PERFIL"
+        ? Boolean(profileOwner)
       : attachment.module === "JURIDICO"
       ? canAccessJuridical(user)
       : attachment.entityType === "InternalExpedient"

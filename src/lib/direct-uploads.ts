@@ -24,6 +24,14 @@ import {
 } from "./rbac";
 
 const UPLOAD_SESSION_TTL_MS = 24 * 60 * 60 * 1000;
+const MAX_AVATAR_FILE_BYTES = 10 * 1024 * 1024;
+const AVATAR_MIME_TYPES = new Set([
+  "image/avif",
+  "image/gif",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
 
 export class DirectUploadError extends Error {
   constructor(message: string, public readonly status = 400) {
@@ -46,6 +54,7 @@ function assertIntentShape(intent: DirectUploadIntent) {
       "LegajoObservation",
     ].includes(intent.entityType)) ||
     (intent.module === "ANUNCIOS" && intent.entityType === "Announcement") ||
+    (intent.module === "PERFIL" && intent.entityType === "UserAvatar") ||
     (intent.module === "RETENCIONES" && intent.entityType === "Retention");
   if (!valid) throw new DirectUploadError("Destino de archivo invalido.");
 }
@@ -84,6 +93,13 @@ export async function assertDirectUploadAccess(user: CurrentUser, intent: Direct
   if (intent.module === "ANUNCIOS") {
     if (intent.scopeId) {
       throw new DirectUploadError("Los archivos de un anuncio existente no se pueden reemplazar.");
+    }
+    return;
+  }
+
+  if (intent.module === "PERFIL") {
+    if (intent.scopeId !== user.id) {
+      throw new DirectUploadError("No autorizado.", 403);
     }
     return;
   }
@@ -146,6 +162,14 @@ export async function initiateDirectUpload(input: {
   }
 
   const requestedMimeType = input.mimeType.trim().toLowerCase();
+  if (
+    input.intent.module === "PERFIL" &&
+    (input.size > MAX_AVATAR_FILE_BYTES || !AVATAR_MIME_TYPES.has(requestedMimeType))
+  ) {
+    throw new DirectUploadError(
+      "La foto de perfil debe ser JPG, PNG, WebP, GIF o AVIF y pesar hasta 10 MB.",
+    );
+  }
   if (
     input.intent.module === "ANUNCIOS" &&
     requestedMimeType !== "application/pdf" &&

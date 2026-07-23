@@ -6,7 +6,6 @@ import {
   useState,
   type ChangeEvent,
 } from "react";
-import Image from "next/image";
 import { RefreshCw, Trash2, Upload } from "lucide-react";
 import {
   DIRECT_UPLOAD_CONCURRENCY,
@@ -50,35 +49,48 @@ class UploadSemaphore {
 
 const uploadSemaphore = new UploadSemaphore();
 
-function LocalFilePreview({ file }: { file: File }) {
-  const [url] = useState(() => URL.createObjectURL(file));
+function ImageFilePreview({ file }: { file: File }) {
+  const imageRef = useRef<HTMLImageElement>(null);
 
   useEffect(() => {
-    return () => URL.revokeObjectURL(url);
-  }, [url]);
+    const image = imageRef.current;
+    if (!image) return;
+    const objectUrl = URL.createObjectURL(file);
+    image.src = objectUrl;
+    return () => {
+      image.removeAttribute("src");
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [file]);
 
-  if (file.type.startsWith("image/")) {
-    return (
-      <Image
-        src={url}
-        alt={`Vista previa de ${file.name}`}
-        width={88}
-        height={88}
-        unoptimized
-        className="h-20 w-20 shrink-0 rounded-sm border border-[#bee5eb] object-cover"
-      />
-    );
-  }
-  if (file.type.startsWith("video/")) {
-    return (
-      <video
-        src={url}
-        controls
-        preload="metadata"
-        className="h-20 w-28 shrink-0 rounded-sm border border-[#bee5eb] bg-black object-cover"
-      />
-    );
-  }
+  // La URL blob se asigna de forma imperativa para recrearla correctamente
+  // durante el doble montaje de React Strict Mode en desarrollo.
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img ref={imageRef} alt={`Vista previa de ${file.name}`} className="h-20 w-20 shrink-0 rounded-sm border border-[#bee5eb] object-cover" />;
+}
+
+function VideoFilePreview({ file }: { file: File }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const objectUrl = URL.createObjectURL(file);
+    video.src = objectUrl;
+    video.load();
+    return () => {
+      video.removeAttribute("src");
+      video.load();
+      URL.revokeObjectURL(objectUrl);
+    };
+  }, [file]);
+
+  return <video ref={videoRef} controls preload="metadata" className="h-20 w-28 shrink-0 rounded-sm border border-[#bee5eb] bg-black object-cover" />;
+}
+
+function LocalFilePreview({ file }: { file: File }) {
+  if (file.type.startsWith("image/")) return <ImageFilePreview file={file} />;
+  if (file.type.startsWith("video/")) return <VideoFilePreview file={file} />;
   return null;
 }
 
@@ -139,6 +151,8 @@ export function DirectUploadInput({
   label = "Seleccionar archivos",
   onFilesChange,
   showPreviews = false,
+  maxFiles = MAX_DIRECT_UPLOAD_FILES,
+  helperText,
 }: {
   intent: DirectUploadIntent;
   accept?: string;
@@ -147,6 +161,8 @@ export function DirectUploadInput({
   label?: string;
   onFilesChange?: (files: File[]) => void;
   showPreviews?: boolean;
+  maxFiles?: number;
+  helperText?: string;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -155,6 +171,7 @@ export function DirectUploadInput({
   const canceledRef = useRef(new Set<string>());
   const [items, setItems] = useState<UploadItem[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
+  const fileLimit = Math.max(1, Math.min(maxFiles, MAX_DIRECT_UPLOAD_FILES));
 
   function syncItems(updater: (current: UploadItem[]) => UploadItem[]) {
     setItems((current) => {
@@ -294,12 +311,12 @@ export function DirectUploadInput({
     event.currentTarget.value = "";
     if (!selected.length) return;
     const existing = new Set(itemsRef.current.map((item) => item.key));
-    const available = Math.max(0, MAX_DIRECT_UPLOAD_FILES - itemsRef.current.length);
+    const available = Math.max(0, fileLimit - itemsRef.current.length);
     const accepted = selected
       .filter((file) => !existing.has(fileKey(file)))
       .slice(0, available);
     if (selected.length > accepted.length) {
-      setFormError(`Se permiten hasta ${MAX_DIRECT_UPLOAD_FILES} archivos por formulario.`);
+      setFormError(`Se permiten hasta ${fileLimit} archivos por formulario.`);
     }
     const valid: UploadItem[] = [];
     for (const file of accepted) {
@@ -368,7 +385,7 @@ export function DirectUploadInput({
         />
       </label>
       <p className="text-xs font-medium text-[#495057]">
-        Hasta {MAX_DIRECT_UPLOAD_FILES} archivos de 1 GB cada uno.
+        {helperText ?? `Hasta ${fileLimit} archivos de 1 GB cada uno.`}
       </p>
       {formError ? (
         <p role="alert" className="rounded-sm border border-[#f5c6cb] bg-[#f8d7da] px-2.5 py-2 text-xs font-semibold text-[#721c24]">

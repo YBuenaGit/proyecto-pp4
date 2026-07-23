@@ -37,6 +37,7 @@ function rowToCurrentUser(row: UserRow): CurrentUser {
     email: row.email,
     role: row.role,
     active: Boolean(row.active),
+    avatarAttachmentId: row.avatarAttachmentId,
   };
 }
 

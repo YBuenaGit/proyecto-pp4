@@ -21,6 +21,7 @@ type AnnouncementRow = {
   createdAt: Date;
   updatedAt: Date;
   deletedAt: Date | null;
+  createdBy: { avatarAttachmentId: string | null };
 };
 
 function groupAttachments(
@@ -39,8 +40,10 @@ function serializeAnnouncement(
   announcement: AnnouncementRow,
   attachments: AnnouncementAttachmentItem[],
 ): AnnouncementItem {
+  const { createdBy, ...historicalFields } = announcement;
   return {
-    ...announcement,
+    ...historicalFields,
+    authorAvatarAttachmentId: createdBy.avatarAttachmentId,
     createdAt: announcement.createdAt.toISOString(),
     updatedAt: announcement.updatedAt.toISOString(),
     deletedAt: announcement.deletedAt?.toISOString() ?? null,
@@ -52,6 +55,9 @@ export async function listAnnouncements(deleted: boolean) {
   const announcements = await prisma.announcement.findMany({
     where: deleted ? { deletedAt: { not: null } } : { deletedAt: null },
     orderBy: { createdAt: "desc" },
+    include: {
+      createdBy: { select: { avatarAttachmentId: true } },
+    },
   });
   if (!announcements.length) return [];
 

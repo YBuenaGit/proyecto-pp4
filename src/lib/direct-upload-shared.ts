@@ -4,7 +4,13 @@ export const DIRECT_UPLOAD_PART_BYTES = 16 * 1024 * 1024;
 export const DIRECT_UPLOAD_CONCURRENCY = 3;
 export const DIRECT_UPLOAD_RETRIES = 3;
 
-export const DIRECT_UPLOAD_MODULES = ["ANUNCIOS", "DESPACHO", "JURIDICO", "RETENCIONES"] as const;
+export const DIRECT_UPLOAD_MODULES = [
+  "ANUNCIOS",
+  "DESPACHO",
+  "JURIDICO",
+  "PERFIL",
+  "RETENCIONES",
+] as const;
 
 export type DirectUploadModule = (typeof DIRECT_UPLOAD_MODULES)[number];
 
@@ -18,6 +24,7 @@ export type DirectUploadIntent = {
     | "JuridicalAction"
     | "LegajoObservation"
     | "Announcement"
+    | "UserAvatar"
     | "Retention";
   scopeId?: string;
 };

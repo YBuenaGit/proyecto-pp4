@@ -14,6 +14,7 @@ export default async function AnnouncementsPage() {
   return (
     <AnnouncementsBoard
       currentUserName={user.name}
+      currentUserAvatarAttachmentId={user.avatarAttachmentId}
       announcements={announcements}
       deletedAnnouncements={deletedAnnouncements}
       canAdminister={canAdminister}

@@ -5,6 +5,7 @@ import type { NavbarNotificationPayload } from "@/lib/deadline-notifications";
 import { visibleModules } from "@/lib/rbac";
 import type { CurrentUser } from "@/lib/types";
 import { NotificationBell } from "./notification-bell";
+import { ProfileAvatarMenu } from "./profile-avatar-menu";
 import { SidebarNav, type NavItem } from "./sidebar-nav";
 
 function buildNav(user: CurrentUser): NavItem[] {
@@ -96,7 +97,13 @@ export function AppShell({
             <div className="hidden text-sm font-medium text-[#212529] lg:block">Sistema interno de gestion juridica y operativa</div>
             <div className="flex items-center gap-2.5">
               <NotificationBell notifications={notifications} />
-              <div className="text-right">
+              <ProfileAvatarMenu
+                key={user.avatarAttachmentId ?? "without-avatar"}
+                userId={user.id}
+                userName={user.name}
+                avatarAttachmentId={user.avatarAttachmentId}
+              />
+              <div className="hidden text-right sm:block">
                 <p className="text-sm font-semibold text-[#212529]">{user.name}</p>
                 <p className="text-xs font-medium text-[#212529]">{ROLE_LABELS[user.role] ?? user.role}</p>
               </div>

@@ -30,6 +30,7 @@ import {
 import { AttachmentPreviewButton } from "@/components/ui/attachment-preview-button";
 import { DirectUploadInput } from "@/components/ui/direct-upload-input";
 import { Spinner } from "@/components/ui/spinner";
+import { UserAvatar } from "@/components/layout/profile-avatar-menu";
 import { formatDateTime } from "@/lib/format";
 import {
   initialAnnouncementActionState,
@@ -39,15 +40,6 @@ import {
 } from "@/lib/announcement-types";
 
 type Flash = { tone: "success" | "error"; message: string } | null;
-
-function initials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase())
-    .join("") || "SM";
-}
 
 function formatContent(content: string) {
   return content
@@ -160,13 +152,16 @@ function ImageLightbox({
 
 function AnnouncementAttachments({
   attachments,
+  tone = "light",
 }: {
   attachments: AnnouncementAttachmentItem[];
+  tone?: "light" | "glass";
 }) {
   const images = useMemo(() => imageAttachments(attachments), [attachments]);
   const videos = useMemo(() => videoAttachments(attachments), [attachments]);
   const others = useMemo(() => otherAttachments(attachments), [attachments]);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
+  const glass = tone === "glass";
 
   if (!attachments.length) return null;
 
@@ -174,14 +169,14 @@ function AnnouncementAttachments({
     <div className="space-y-4">
       {images.length ? (
         <section>
-          <p className="mb-2 text-sm font-semibold text-[#0c5460]">Imágenes adjuntas:</p>
+          <p className={glass ? "mb-2 text-sm font-semibold text-white/85" : "mb-2 text-sm font-semibold text-[#0c5460]"}>Imágenes adjuntas:</p>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
             {images.map((attachment, index) => (
               <div key={attachment.id} className="min-w-0">
                 <button
                   type="button"
                   onClick={() => setLightboxIndex(index)}
-                  className="group block w-full overflow-hidden rounded-sm border border-[#9fdbe5] bg-[#eefaff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff]"
+                  className={glass ? "group block w-full overflow-hidden rounded-md border border-white/35 bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80" : "group block w-full overflow-hidden rounded-sm border border-[#9fdbe5] bg-[#eefaff] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#80bdff]"}
                 >
                   <Image
                     src={`/adjuntos/${attachment.id}`}
@@ -196,7 +191,7 @@ function AnnouncementAttachments({
                   href={`/adjuntos/${attachment.id}`}
                   target="_blank"
                   rel="noreferrer"
-                  className="mt-1 block truncate text-xs font-semibold text-[#0667b0] hover:underline"
+                  className={glass ? "mt-1 block truncate text-xs font-semibold text-[#d8f5ff] hover:text-white hover:underline" : "mt-1 block truncate text-xs font-semibold text-[#0667b0] hover:underline"}
                   title={attachment.originalName}
                 >
                   Ver con más detalle
@@ -209,17 +204,17 @@ function AnnouncementAttachments({
 
       {videos.length ? (
         <section>
-          <p className="mb-2 text-sm font-semibold text-[#0c5460]">Videos adjuntos:</p>
+          <p className={glass ? "mb-2 text-sm font-semibold text-white/85" : "mb-2 text-sm font-semibold text-[#0c5460]"}>Videos adjuntos:</p>
           <div className="grid gap-3 sm:grid-cols-2">
             {videos.map((attachment) => (
-              <div key={attachment.id} className="rounded-sm border border-[#bee5eb] bg-[#eefaff] p-2">
+              <div key={attachment.id} className={glass ? "rounded-md border border-white/30 bg-white/10 p-2 backdrop-blur-sm" : "rounded-sm border border-[#bee5eb] bg-[#eefaff] p-2"}>
                 <video
                   src={`/adjuntos/${attachment.id}`}
                   controls
                   preload="metadata"
                   className="max-h-80 w-full rounded-sm bg-black"
                 />
-                <p className="mt-1 truncate text-xs font-semibold text-[#495057]" title={attachment.originalName}>
+                <p className={glass ? "mt-1 truncate text-xs font-semibold text-white/85" : "mt-1 truncate text-xs font-semibold text-[#495057]"} title={attachment.originalName}>
                   {attachment.originalName}
                 </p>
               </div>
@@ -230,7 +225,7 @@ function AnnouncementAttachments({
 
       {others.length ? (
         <section>
-          <p className="mb-2 text-sm font-semibold text-[#0c5460]">Archivos adjuntos:</p>
+          <p className={glass ? "mb-2 text-sm font-semibold text-white/85" : "mb-2 text-sm font-semibold text-[#0c5460]"}>Archivos adjuntos:</p>
           <div className="flex flex-wrap gap-2">
             {others.map((attachment) => (
               <AttachmentPreviewButton
@@ -255,7 +250,15 @@ function AnnouncementAttachments({
   );
 }
 
-function ComposerForm({ onPublished }: { onPublished: (message: string) => void }) {
+function ComposerForm({
+  onPublished,
+  currentUserName,
+  currentUserAvatarAttachmentId,
+}: {
+  onPublished: (message: string) => void;
+  currentUserName: string;
+  currentUserAvatarAttachmentId?: string | null;
+}) {
   const router = useRouter();
   const submitLockedRef = useRef(false);
   const [actionState, formAction, pending] = useActionState(
@@ -291,14 +294,22 @@ function ComposerForm({ onPublished }: { onPublished: (message: string) => void 
           {actionState.message}
         </p>
       ) : null}
-      <input
-        name="title"
-        required
-        minLength={3}
-        maxLength={160}
-        className="h-10 w-full rounded-full border border-[#9fdbe5] bg-[#eefaff] px-4 text-sm text-[#212529] outline-none focus:border-[#17a2b8] focus:ring-2 focus:ring-[#80bdff]"
-        placeholder="Título del anuncio"
-      />
+      <div className="flex items-center gap-3">
+        <UserAvatar
+          attachmentId={currentUserAvatarAttachmentId}
+          name={currentUserName}
+          size="lg"
+          className="border-[#9fdbe5] ring-2 ring-[#e8f7fa]"
+        />
+        <input
+          name="title"
+          required
+          minLength={3}
+          maxLength={160}
+          className="h-10 min-w-0 flex-1 rounded-full border border-[#9fdbe5] bg-[#eefaff] px-4 text-sm text-[#212529] outline-none focus:border-[#17a2b8] focus:ring-2 focus:ring-[#80bdff]"
+          placeholder="Título del anuncio"
+        />
+      </div>
       <textarea
         name="content"
         required
@@ -353,8 +364,8 @@ function AdminOperationButton({
       }}
       className={
         tone === "success"
-          ? "inline-flex min-h-8 items-center gap-1.5 rounded-sm border border-[#28a745] px-2.5 text-xs font-semibold text-[#218838] hover:bg-[#d4edda] disabled:opacity-60"
-          : "inline-flex min-h-8 items-center gap-1.5 rounded-sm border border-[#dc3545] px-2.5 text-xs font-semibold text-[#c82333] hover:bg-[#f8d7da] disabled:opacity-60"
+          ? "inline-flex min-h-8 items-center gap-1.5 rounded-sm border border-[#28a745] bg-white/90 px-2.5 text-xs font-semibold text-[#218838] hover:bg-[#d4edda] disabled:opacity-60"
+          : "inline-flex min-h-8 items-center gap-1.5 rounded-sm border border-[#dc3545] bg-white/90 px-2.5 text-xs font-semibold text-[#c82333] hover:bg-[#f8d7da] disabled:opacity-60"
       }
     >
       {pending ? <Spinner /> : null}
@@ -387,16 +398,28 @@ function AnnouncementCard({
   }, [onResult, router, updateState]);
 
   return (
-    <article className="mx-auto my-5 max-w-3xl rounded-xl border border-[#9fdbe5] bg-white/95 p-4 text-[#212529] shadow-md">
+    <article className="relative mx-auto my-5 max-w-3xl overflow-hidden rounded-2xl border border-white/45 bg-[#075f9e]/90 p-4 text-white shadow-[0_18px_45px_rgba(3,63,107,0.28)] ring-1 ring-[#17a2b8]/35 backdrop-blur-xl">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_12%_8%,rgba(255,255,255,0.22),transparent_36%),linear-gradient(135deg,rgba(23,162,184,0.32),rgba(4,65,112,0.2))]" />
+      <Image
+        src="/logo-gum1.webp"
+        alt=""
+        width={310}
+        height={380}
+        aria-hidden="true"
+        className="pointer-events-none absolute -bottom-28 -right-12 h-auto w-72 rotate-[-7deg] object-contain opacity-[0.11] brightness-0 invert"
+      />
+      <div className="relative z-10">
       <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#17a2b8] bg-[#d1ecf1] text-sm font-bold text-[#0c5460]">
-          {initials(announcement.authorName)}
-        </div>
+        <UserAvatar
+          attachmentId={announcement.authorAvatarAttachmentId}
+          name={announcement.authorName}
+          className="ring-2 ring-white/35"
+        />
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold text-[#0c5460]">
+          <p className="truncate text-sm font-semibold text-white">
             {announcement.authorName} · {announcement.authorRole}
           </p>
-          <p className="text-xs font-medium text-[#6c757d]">
+          <p className="text-xs font-medium text-[#d8f5ff]">
             {formatDateTime(announcement.createdAt)}
           </p>
         </div>
@@ -415,7 +438,7 @@ function AnnouncementCard({
             required
             minLength={3}
             maxLength={160}
-            className="h-10 w-full rounded-sm border border-[#9fdbe5] bg-[#eefaff] px-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-[#80bdff]"
+            className="h-10 w-full rounded-sm border border-[#9fdbe5] bg-white/95 px-3 text-sm font-semibold text-[#212529] outline-none focus:ring-2 focus:ring-[#80bdff]"
           />
           <textarea
             name="content"
@@ -424,11 +447,11 @@ function AnnouncementCard({
             minLength={3}
             maxLength={10_000}
             rows={5}
-            className="min-h-32 w-full resize-y rounded-sm border border-[#9fdbe5] bg-[#eefaff] px-3 py-2 text-sm leading-6 outline-none focus:ring-2 focus:ring-[#80bdff]"
+            className="min-h-32 w-full resize-y rounded-sm border border-[#9fdbe5] bg-white/95 px-3 py-2 text-sm leading-6 text-[#212529] outline-none focus:ring-2 focus:ring-[#80bdff]"
           />
-          <p className="text-xs font-medium text-[#6c757d]">Los archivos existentes se conservarán sin cambios.</p>
+          <p className="text-xs font-medium text-white/75">Los archivos existentes se conservarán sin cambios.</p>
           <div className="flex justify-end gap-2">
-            <button type="button" onClick={() => setEditing(false)} disabled={updatePending} className="rounded-sm border border-[#6c757d] px-3 py-1.5 text-sm font-semibold text-[#495057] hover:bg-[#e9ecef]">
+            <button type="button" onClick={() => setEditing(false)} disabled={updatePending} className="rounded-sm border border-white/70 bg-white/90 px-3 py-1.5 text-sm font-semibold text-[#495057] hover:bg-white">
               Cancelar
             </button>
             <button type="submit" disabled={updatePending} className="inline-flex items-center gap-2 rounded-sm border border-[#28a745] bg-[#28a745] px-3 py-1.5 text-sm font-semibold text-white hover:bg-[#218838] disabled:opacity-60">
@@ -438,17 +461,17 @@ function AnnouncementCard({
         </form>
       ) : (
         <>
-          <h2 className="my-4 text-center text-xl font-semibold text-[#0667b0]">{announcement.title}</h2>
-          <p className="mb-4 whitespace-pre-wrap text-sm leading-6 text-[#212529] md:text-base">
+          <h2 className="my-4 text-center text-xl font-semibold tracking-[-0.01em] text-white">{announcement.title}</h2>
+          <p className="mb-4 whitespace-pre-wrap text-sm leading-6 text-white/95 md:text-base">
             {formatContent(announcement.content)}
           </p>
-          <AnnouncementAttachments attachments={announcement.attachments} />
+          <AnnouncementAttachments attachments={announcement.attachments} tone="glass" />
         </>
       )}
 
       {canAdminister && !isEditing ? (
-        <div className="mt-4 flex flex-wrap gap-2 border-t border-[#d1ecf1] pt-3">
-          <button type="button" onClick={() => setEditing(true)} className="inline-flex min-h-8 items-center gap-1.5 rounded-sm border border-[#17a2b8] px-2.5 text-xs font-semibold text-[#0c5460] hover:bg-[#d1ecf1]">
+        <div className="mt-4 flex flex-wrap gap-2 border-t border-white/25 pt-3">
+          <button type="button" onClick={() => setEditing(true)} className="inline-flex min-h-8 items-center gap-1.5 rounded-sm border border-white/60 bg-white/90 px-2.5 text-xs font-semibold text-[#0c5460] hover:bg-white">
             <Pencil className="h-3.5 w-3.5" /> Editar
           </button>
           <AdminOperationButton
@@ -461,6 +484,7 @@ function AnnouncementCard({
           </AdminOperationButton>
         </div>
       ) : null}
+      </div>
     </article>
   );
 }
@@ -522,11 +546,13 @@ function DeletedAnnouncements({
 
 export function AnnouncementsBoard({
   currentUserName,
+  currentUserAvatarAttachmentId,
   announcements,
   deletedAnnouncements,
   canAdminister,
 }: {
   currentUserName: string;
+  currentUserAvatarAttachmentId?: string | null;
   announcements: AnnouncementItem[];
   deletedAnnouncements: AnnouncementItem[];
   canAdminister: boolean;
@@ -569,6 +595,8 @@ export function AnnouncementsBoard({
         <ComposerForm
           key={composerKey}
           onPublished={handlePublished}
+          currentUserName={currentUserName}
+          currentUserAvatarAttachmentId={currentUserAvatarAttachmentId}
         />
 
         <div className="mx-auto my-7 max-w-4xl">

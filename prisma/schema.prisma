@@ -9,17 +9,19 @@ datasource db {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  name         String
-  username     String   @unique
-  email        String?  @unique
-  passwordHash String
-  role         String
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now()) @db.Timestamptz(3)
-  updatedAt    DateTime @updatedAt @db.Timestamptz(3)
+  id                 String   @id @default(cuid())
+  name               String
+  username           String   @unique
+  email              String?  @unique
+  passwordHash       String
+  role               String
+  active             Boolean  @default(true)
+  avatarAttachmentId String?  @unique
+  createdAt          DateTime @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime @updatedAt @db.Timestamptz(3)
 
   sessions               Session[]
+  avatarAttachment       Attachment?             @relation("UserAvatarAttachment", fields: [avatarAttachmentId], references: [id], onDelete: SetNull)
   dispatchRecords        DispatchRecord[]        @relation("DispatchCreatedBy")
   dispatchFollowUps      DispatchFollowUp[]      @relation("DispatchFollowUpCreatedBy")
   juridicalInterventions JuridicalIntervention[] @relation("JuridicalCreatedBy")
@@ -40,22 +42,22 @@ model User {
   retentionHistories     RetentionHistory[]      @relation("RetentionEditedBy")
   retentionAttachments   RetentionAttachment[]   @relation("RetentionAttachmentUploadedBy")
   notificationReads      NotificationRead[]
-  announcements          Announcement[]           @relation("AnnouncementCreatedBy")
+  announcements          Announcement[]          @relation("AnnouncementCreatedBy")
 
   @@index([role])
   @@index([active])
 }
 
 model Announcement {
-  id             String    @id @default(cuid())
-  title          String
-  content        String
-  authorName     String
-  authorRole     String
-  createdById    String
-  createdAt      DateTime  @default(now()) @db.Timestamptz(3)
-  updatedAt      DateTime  @updatedAt @db.Timestamptz(3)
-  deletedAt      DateTime? @db.Timestamptz(3)
+  id          String    @id @default(cuid())
+  title       String
+  content     String
+  authorName  String
+  authorRole  String
+  createdById String
+  createdAt   DateTime  @default(now()) @db.Timestamptz(3)
+  updatedAt   DateTime  @updatedAt @db.Timestamptz(3)
+  deletedAt   DateTime? @db.Timestamptz(3)
 
   createdBy User @relation("AnnouncementCreatedBy", fields: [createdById], references: [id])
 
@@ -447,7 +449,8 @@ model Attachment {
   uploadedById      String
   createdAt         DateTime @default(now()) @db.Timestamptz(3)
 
-  uploadedBy User @relation("AttachmentUploadedBy", fields: [uploadedById], references: [id])
+  uploadedBy    User  @relation("AttachmentUploadedBy", fields: [uploadedById], references: [id])
+  avatarForUser User? @relation("UserAvatarAttachment")
 
   @@index([module])
   @@index([entityType, entityId])
