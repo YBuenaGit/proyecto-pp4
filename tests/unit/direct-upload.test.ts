@@ -46,6 +46,23 @@ test("conserva los endpoints multipart y previews compatibles con Strict Mode", 
   assert.match(service, /const updatedSessions = await tx\.uploadSession\.updateMany/);
 });
 
+test("retenciones vincula hasta treinta archivos sin agotar la transaccion", () => {
+  const service = source("../../src/lib/direct-uploads.ts");
+  const functionStart = service.indexOf(
+    "export async function consumeRetentionUploads",
+  );
+  assert.notEqual(functionStart, -1);
+  const retentionConsumer = service.slice(functionStart);
+
+  assert.match(
+    retentionConsumer,
+    /tx\.retentionAttachment\.createManyAndReturn/,
+  );
+  assert.match(retentionConsumer, /tx\.uploadSession\.updateMany/);
+  assert.doesNotMatch(retentionConsumer, /for \(const session of sessions\)/);
+  assert.match(retentionConsumer, /updatedSessions\.count !== sessions\.length/);
+});
+
 test("despacho bloquea la revision mientras haya archivos sin terminar", () => {
   const input = source("../../src/components/ui/direct-upload-input.tsx");
   const dispatchWizard = source(

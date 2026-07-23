@@ -540,25 +540,43 @@ export async function consumeRetentionUploads(input: {
   });
   if (!sessions.length) return [];
   return prisma.$transaction(async (tx) => {
-    const attachments = [];
-    for (const session of sessions) {
-      attachments.push(await tx.retentionAttachment.create({
-        data: {
-          retentionId: input.retentionId,
-          objectKey: session.objectKey,
-          encryptionVersion: 0,
-          fileName: session.fileName,
-          originalName: session.originalName,
-          mimeType: session.mimeType,
-          size: session.size,
-          uploadedById: input.uploadedById,
-        },
-      }));
-      await tx.uploadSession.update({
-        where: { id: session.id },
-        data: { status: "CONSUMED", consumedAt: new Date() },
-      });
+    const attachments = await tx.retentionAttachment.createManyAndReturn({
+      data: sessions.map((session) => ({
+        retentionId: input.retentionId,
+        objectKey: session.objectKey,
+        encryptionVersion: 0,
+        fileName: session.fileName,
+        originalName: session.originalName,
+        mimeType: session.mimeType,
+        size: session.size,
+        uploadedById: input.uploadedById,
+      })),
+    });
+    const sessionIds = sessions.map((session) => session.id);
+    const updatedSessions = await tx.uploadSession.updateMany({
+      where: { id: { in: sessionIds }, status: "READY" },
+      data: { status: "CONSUMED", consumedAt: new Date() },
+    });
+    if (
+      attachments.length !== sessions.length ||
+      updatedSessions.count !== sessions.length
+    ) {
+      throw new DirectUploadError(
+        "No se pudieron vincular todos los archivos de la retencion.",
+      );
     }
-    return attachments;
+
+    const attachmentsByObjectKey = new Map(
+      attachments.map((attachment) => [attachment.objectKey, attachment]),
+    );
+    return sessions.map((session) => {
+      const attachment = attachmentsByObjectKey.get(session.objectKey);
+      if (!attachment) {
+        throw new DirectUploadError(
+          "No se pudieron vincular todos los archivos de la retencion.",
+        );
+      }
+      return attachment;
+    });
   });
 }
