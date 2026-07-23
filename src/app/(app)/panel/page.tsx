@@ -12,7 +12,7 @@ import {
 } from "@/lib/constants";
 import { argentinaDayRange, toArgentinaDateKey } from "@/lib/argentina-time";
 import { APPOINTMENT_STATUS_LABELS, APPOINTMENT_TYPE_LABELS, type CalendarScope } from "@/lib/appointment-constants";
-import { canAccessAgenda, getAllowedCalendarScopes } from "@/lib/appointment-permissions";
+import { canAccessAgenda, getGroupCalendarScopes } from "@/lib/appointment-permissions";
 import { formatDateTime, labelFromValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { canAccessDispatch, canAccessExpedients, canAccessJuridical, isAdmin, isDirectivo } from "@/lib/rbac";
@@ -575,9 +575,8 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
   const canDashboardExpedients = canAccessExpedients(user) || hasDashboardOverview;
   const canDashboardAgenda = canAccessAgenda(user) || hasDashboardOverview;
   const canDashboardReferrals = canDashboardDispatch || canDashboardJuridical || hasDashboardOverview;
-  const dashboardGroupScopes: CalendarScope[] = hasDashboardOverview
-    ? ["lawyers", "dispatch"]
-    : getAllowedCalendarScopes(user).filter((scope) => scope === "lawyers" || scope === "dispatch");
+  const dashboardGroupScopes: CalendarScope[] = getGroupCalendarScopes(user);
+  const isDirectorsAgenda = isDirectivo(user);
 
   const availablePanels: DashboardPanel[] = [
     ...(canDashboardDispatch ? (["dispatch"] as const) : []),
@@ -685,10 +684,10 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
       key: "groupAgenda",
       panel: "groupAgenda" as const,
       visible: canDashboardAgenda,
-      label: dayPanelCopy.groupAgenda.label,
+      label: isDirectorsAgenda ? "Agenda de directivos" : dayPanelCopy.groupAgenda.label,
       value: todayGroupAgendaPage.total,
       icon: <Users className="h-5 w-5" />,
-      hint: "Agendas compartidas",
+      hint: isDirectorsAgenda ? "Compartida solo entre directivos" : "Agendas compartidas",
       href: dayHref("groupAgenda"),
       active: selectedDayPanel === "groupAgenda",
     },
@@ -778,7 +777,21 @@ export default async function DashboardPage({ searchParams }: { searchParams?: P
       </div>
 
       {selectedDayPanel ? (
-        <DaySummaryTable panel={selectedDayPanel} page={page} pageSize={pageSize} result={dayPage} />
+        <DaySummaryTable
+          panel={selectedDayPanel}
+          page={page}
+          pageSize={pageSize}
+          result={dayPage}
+          copyOverride={
+            selectedDayPanel === "groupAgenda" && isDirectorsAgenda
+              ? {
+                  label: "Agenda de directivos",
+                  title: "Agenda de directivos de hoy",
+                  empty: "No hay compromisos de directivos agendados para hoy.",
+                }
+              : undefined
+          }
+        />
       ) : (
         <DashboardTable panel={selectedPanel} page={page} pageSize={pageSize} result={dashboardPage} />
       )}
@@ -791,13 +804,15 @@ function DaySummaryTable({
   result,
   page,
   pageSize,
+  copyOverride,
 }: {
   panel: DayPanel;
   result: TablePage<DayRow>;
   page: number;
   pageSize: number;
+  copyOverride?: { label: string; title: string; empty: string };
 }) {
-  const copy = dayPanelCopy[panel];
+  const copy = copyOverride ?? dayPanelCopy[panel];
 
   return (
     <div className="mt-4">

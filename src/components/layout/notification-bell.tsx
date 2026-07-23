@@ -13,11 +13,13 @@ function countLabel(value: number) {
   return value > 99 ? "99+" : String(value);
 }
 
-function kindLabel(kind: "deadline" | "referral") {
+function kindLabel(kind: "agenda" | "deadline" | "referral") {
+  if (kind === "agenda") return "Agenda";
   return kind === "deadline" ? "Plazo" : "Derivacion";
 }
 
-function kindClass(kind: "deadline" | "referral") {
+function kindClass(kind: "agenda" | "deadline" | "referral") {
+  if (kind === "agenda") return "border-[#9ec5fe] bg-[#0d6efd] text-white";
   return kind === "deadline"
     ? "border-[#f1aeb5] bg-[#dc3545] text-white"
     : "border-[#75b798] bg-[#198754] text-white";
@@ -155,7 +157,7 @@ export function NotificationBell({ notifications }: { notifications: NavbarNotif
               ) : null}
             </>
           ) : (
-            <p className="px-3 py-4 text-sm text-[#495057]">No hay plazos vencidos ni derivaciones activas para tu rol.</p>
+            <p className="px-3 py-4 text-sm text-[#495057]">No hay eventos de agenda, plazos vencidos ni derivaciones activas para tu rol.</p>
           )}
         </div>
       ) : null}

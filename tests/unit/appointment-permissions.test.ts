@@ -6,6 +6,7 @@ import {
   canEditAppointment,
   canViewAppointment,
   getAllowedAgendaViewScopes,
+  getGroupCalendarScopes,
 } from "../../src/lib/appointment-permissions";
 
 const juridicalUser = {
@@ -54,7 +55,7 @@ test("limita agenda personal al propietario y habilita agenda juridica", () => {
   assert.deepEqual(getAllowedAgendaViewScopes(juridicalUser), ["personal", "lawyers"]);
 });
 
-test("directivo administra cualquier alcance y cita de agenda", () => {
+test("directivo incorpora una agenda grupal exclusiva", () => {
   const appointment = {
     calendarScope: "lawyers",
     ownerUserId: "otra-persona",
@@ -62,13 +63,22 @@ test("directivo administra cualquier alcance y cita de agenda", () => {
     assignedLawyerId: "otra-persona",
     assignedArea: "lawyers",
   };
+  const directorsAppointment = {
+    calendarScope: "directors",
+    ownerUserId: null,
+    createdByUserId: "otro-directivo",
+  };
 
-  assert.deepEqual(getAllowedAgendaViewScopes(executiveUser), ["personal", "lawyers", "dispatch", "all"]);
+  assert.deepEqual(getAllowedAgendaViewScopes(executiveUser), ["personal", "directors", "lawyers", "dispatch", "all"]);
+  assert.deepEqual(getGroupCalendarScopes(executiveUser), ["directors"]);
   assert.equal(canCreateAppointment(executiveUser, "personal"), true);
+  assert.equal(canCreateAppointment(executiveUser, "directors"), true);
   assert.equal(canCreateAppointment(executiveUser, "lawyers"), true);
   assert.equal(canCreateAppointment(executiveUser, "dispatch"), true);
   assert.equal(canViewAppointment(executiveUser, appointment), true);
+  assert.equal(canViewAppointment(executiveUser, directorsAppointment), true);
   assert.equal(canEditAppointment(executiveUser, appointment), true);
+  assert.equal(canEditAppointment(executiveUser, directorsAppointment), true);
   assert.equal(canDeleteAppointment(executiveUser, appointment), true);
 });
 
@@ -83,9 +93,36 @@ test("admin administra todos los alcances y citas de agenda", () => {
 
   assert.deepEqual(getAllowedAgendaViewScopes(adminUser), ["personal", "lawyers", "dispatch", "all"]);
   assert.equal(canCreateAppointment(adminUser, "personal"), true);
+  assert.equal(canCreateAppointment(adminUser, "directors"), false);
   assert.equal(canCreateAppointment(adminUser, "lawyers"), true);
   assert.equal(canCreateAppointment(adminUser, "dispatch"), true);
   assert.equal(canViewAppointment(adminUser, appointment), true);
   assert.equal(canEditAppointment(adminUser, appointment), true);
   assert.equal(canDeleteAppointment(adminUser, appointment), true);
+  assert.equal(
+    canViewAppointment(adminUser, {
+      calendarScope: "directors",
+      createdByUserId: executiveUser.id,
+    }),
+    false,
+  );
+});
+
+test("la agenda de directivos queda oculta para los demas roles", () => {
+  const directorsAppointment = {
+    calendarScope: "directors",
+    createdByUserId: executiveUser.id,
+  };
+
+  assert.equal(canViewAppointment(juridicalUser, directorsAppointment), false);
+  assert.equal(canViewAppointment(adminUser, directorsAppointment), false);
+});
+
+test("cada rol recibe notificaciones de su propia agenda grupal", () => {
+  const dispatchUser = { ...juridicalUser, id: "despacho-1", role: "despacho" };
+
+  assert.deepEqual(getGroupCalendarScopes(juridicalUser), ["lawyers"]);
+  assert.deepEqual(getGroupCalendarScopes(dispatchUser), ["dispatch"]);
+  assert.deepEqual(getGroupCalendarScopes(executiveUser), ["directors"]);
+  assert.deepEqual(getGroupCalendarScopes(adminUser), ["lawyers", "dispatch"]);
 });

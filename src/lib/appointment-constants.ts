@@ -1,11 +1,12 @@
-export const CALENDAR_SCOPES = ["personal", "lawyers", "dispatch"] as const;
-export const AGENDA_VIEW_SCOPES = ["personal", "lawyers", "dispatch", "all"] as const;
+export const CALENDAR_SCOPES = ["personal", "directors", "lawyers", "dispatch"] as const;
+export const AGENDA_VIEW_SCOPES = ["personal", "directors", "lawyers", "dispatch", "all"] as const;
 
 export type CalendarScope = (typeof CALENDAR_SCOPES)[number];
 export type AgendaViewScope = (typeof AGENDA_VIEW_SCOPES)[number];
 
 export const CALENDAR_SCOPE_LABELS: Record<AgendaViewScope, string> = {
   personal: "Mi agenda",
+  directors: "Agenda de directivos",
   lawyers: "Agenda abogados",
   dispatch: "Agenda despacho",
   all: "Todas",
@@ -13,6 +14,7 @@ export const CALENDAR_SCOPE_LABELS: Record<AgendaViewScope, string> = {
 
 export const CALENDAR_SCOPE_BADGE_CLASS: Record<CalendarScope, string> = {
   personal: "bg-slate-100 text-slate-700 ring-slate-200",
+  directors: "bg-blue-50 text-blue-800 ring-blue-200",
   lawyers: "bg-indigo-50 text-indigo-800 ring-indigo-200",
   dispatch: "bg-cyan-50 text-cyan-800 ring-cyan-200",
 };

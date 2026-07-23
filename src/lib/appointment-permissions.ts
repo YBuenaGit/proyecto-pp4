@@ -33,9 +33,18 @@ export function isAgendaViewScope(value: string | null | undefined): value is Ag
 }
 
 export function getAllowedCalendarScopes(user: CurrentUser): CalendarScope[] {
-  if (isAgendaManager(user)) return ["personal", "lawyers", "dispatch"];
+  if (user.role === ROLES.directivo) return ["personal", "directors", "lawyers", "dispatch"];
+  if (user.role === ROLES.admin) return ["personal", "lawyers", "dispatch"];
   if (user.role === ROLES.juridico) return ["personal", "lawyers"];
   if (user.role === ROLES.despacho) return ["personal", "dispatch"];
+  return [];
+}
+
+export function getGroupCalendarScopes(user: CurrentUser): CalendarScope[] {
+  if (user.role === ROLES.directivo) return ["directors"];
+  if (user.role === ROLES.juridico) return ["lawyers"];
+  if (user.role === ROLES.despacho) return ["dispatch"];
+  if (user.role === ROLES.admin) return ["lawyers", "dispatch"];
   return [];
 }
 
@@ -59,6 +68,7 @@ function isAssignedToUserOrArea(user: CurrentUser, appointment: AppointmentPermi
 
 export function canViewAppointment(user: CurrentUser | null, appointment: AppointmentPermissionShape) {
   if (!user) return false;
+  if (appointment.calendarScope === "directors") return user.role === ROLES.directivo;
   if (isAgendaManager(user)) return true;
 
   if (appointment.calendarScope === "personal") {

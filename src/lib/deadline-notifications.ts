@@ -1,5 +1,16 @@
 import "server-only";
 
+import type { Prisma } from "@prisma/client";
+import {
+  CALENDAR_SCOPE_LABELS,
+  type CalendarScope,
+} from "./appointment-constants";
+import {
+  CLOSED_APPOINTMENT_NOTIFICATION_STATUSES,
+  isAppointmentNotificationActive,
+} from "./appointment-notification-rules";
+import { canAccessAgenda, getGroupCalendarScopes } from "./appointment-permissions";
+import { parseArgentinaDateTime, toArgentinaDateKey } from "./argentina-time";
 import { formatDateTime, labelFromValue } from "./format";
 import { notificationDestinationModulesForUser, shouldRestrictDeadlineNotificationsToOwn } from "./notification-rules";
 import { prisma } from "./prisma";
@@ -13,7 +24,7 @@ export type NavbarNotification = {
   title: string;
   description: string;
   meta: string;
-  kind: "deadline" | "referral";
+  kind: "agenda" | "deadline" | "referral";
   isRead: boolean;
   sortAt: Date;
 };
@@ -68,8 +79,10 @@ export async function getNavbarNotifications(user: CurrentUser): Promise<NavbarN
   const canSeeDispatch = canAccessDispatch(user);
   const canSeeJuridical = canAccessJuridical(user);
   const canSeeExpedients = canAccessExpedients(user);
+  const canSeeAgenda = canAccessAgenda(user);
   const onlyOwnDeadlines = shouldRestrictDeadlineNotificationsToOwn();
   const destinationModules = notificationDestinationModulesForUser(user);
+  const todayKey = toArgentinaDateKey(now);
 
   const dispatchRecordWhere = {
     deadlineAt: { lte: now },
@@ -100,6 +113,17 @@ export async function getNavbarNotifications(user: CurrentUser): Promise<NavbarN
     destinationModule: { in: destinationModules },
     status: { in: activeReferralStatuses },
   };
+  const groupCalendarScopes = getGroupCalendarScopes(user);
+  const appointmentWhere: Prisma.AppointmentWhereInput = {
+    date: { lte: todayKey },
+    status: { notIn: [...CLOSED_APPOINTMENT_NOTIFICATION_STATUSES] },
+    OR: [
+      { calendarScope: "personal", ownerUserId: user.id },
+      ...(groupCalendarScopes.length
+        ? [{ calendarScope: { in: groupCalendarScopes } }]
+        : []),
+    ],
+  };
 
   const [
     dispatchRecords,
@@ -114,6 +138,8 @@ export async function getNavbarNotifications(user: CurrentUser): Promise<NavbarN
     expedientTotal,
     referrals,
     referralTotal,
+    appointments,
+    appointmentTotal,
   ] = await Promise.all([
     canSeeDispatch
       ? prisma.dispatchRecord.findMany({
@@ -190,6 +216,24 @@ export async function getNavbarNotifications(user: CurrentUser): Promise<NavbarN
         })
       : [],
     destinationModules.length ? prisma.referral.count({ where: referralWhere }) : 0,
+    canSeeAgenda
+      ? prisma.appointment.findMany({
+          where: appointmentWhere,
+          select: {
+            id: true,
+            title: true,
+            date: true,
+            startTime: true,
+            calendarScope: true,
+            status: true,
+            clientName: true,
+            location: true,
+          },
+          orderBy: [{ date: "desc" }, { startTime: "desc" }],
+          take: 50,
+        })
+      : [],
+    canSeeAgenda ? prisma.appointment.count({ where: appointmentWhere }) : 0,
   ]);
 
   const rawItems = [
@@ -253,6 +297,31 @@ export async function getNavbarNotifications(user: CurrentUser): Promise<NavbarN
       kind: "referral" as const,
       sortAt: referral.referredAt,
     })),
+    ...appointments
+      .filter((appointment) =>
+        isAppointmentNotificationActive({
+          date: appointment.date,
+          status: appointment.status,
+          todayKey,
+        }),
+      )
+      .map((appointment) => {
+        const startsAt = parseArgentinaDateTime(`${appointment.date}T${appointment.startTime}`);
+        const scope = appointment.calendarScope as CalendarScope;
+        const scopeLabel = CALENDAR_SCOPE_LABELS[scope] ?? labelFromValue(appointment.calendarScope);
+        const details = [appointment.clientName, appointment.location].filter(Boolean).join(" - ");
+
+        return {
+          id: `agenda-${appointment.id}`,
+          notificationKey: `agenda:${appointment.id}:${appointment.date}:${appointment.startTime}`,
+          href: `/agenda?scope=${appointment.calendarScope}&month=${appointment.date.slice(0, 7)}&day=${appointment.date}`,
+          title: `Agenda: ${appointment.title}`,
+          description: truncate(details || scopeLabel),
+          meta: `${scopeLabel} - ${formatDateTime(startsAt)}`,
+          kind: "agenda" as const,
+          sortAt: startsAt,
+        };
+      }),
   ]
     .sort((a, b) => {
       return b.sortAt.getTime() - a.sortAt.getTime();
@@ -280,7 +349,8 @@ export async function getNavbarNotifications(user: CurrentUser): Promise<NavbarN
     juridicalInterventionTotal +
     juridicalActionTotal +
     expedientTotal +
-    referralTotal;
+    referralTotal +
+    appointmentTotal;
 
   const unreadCount = items.filter((item) => !item.isRead).length;
 
