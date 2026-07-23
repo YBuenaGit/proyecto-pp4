@@ -694,6 +694,7 @@ export async function addDispatchObservation(
     entityType: "LegajoObservation",
     entityId: observation.id,
     scopeId: recordId,
+    scopeEntityType: "DispatchRecord",
     uploadedById: user.id,
   });
 
@@ -952,9 +953,6 @@ export async function createExpedient(formData: FormData) {
 export async function updateExpedient(expedientId: string, formData: FormData) {
   const user = await requireUser();
   assertAccess(canAccessExpedients(user));
-  const before = await prisma.internalExpedient.findUniqueOrThrow({
-    where: { id: expedientId },
-  });
   const parsed = expedientSchema.parse({
     expedienteNumber: optionalText(formData, "expedienteNumber"),
     codigo: optionalText(formData, "codigo"),
@@ -969,19 +967,93 @@ export async function updateExpedient(expedientId: string, formData: FormData) {
     throw new Error("El plazo no es válido.");
   }
 
-  const after = await prisma.internalExpedient.update({
-    where: { id: expedientId },
-    data: { ...parsed, deadlineAt },
+  await prisma.$transaction(async (tx) => {
+    const before = await tx.internalExpedient.findUniqueOrThrow({
+      where: { id: expedientId },
+    });
+    const hasChanges =
+      before.expedienteNumber !== parsed.expedienteNumber ||
+      before.codigo !== parsed.codigo ||
+      before.category !== parsed.category ||
+      before.area !== parsed.area ||
+      before.description !== parsed.description ||
+      before.observation !== parsed.observation ||
+      before.status !== parsed.status ||
+      before.deadlineAt?.getTime() !== deadlineAt?.getTime();
+
+    if (!hasChanges) return;
+
+    const after = await tx.internalExpedient.update({
+      where: { id: expedientId },
+      data: { ...parsed, deadlineAt },
+    });
+    await tx.auditLog.create({
+      data: {
+        module: "DESPACHO",
+        entityType: "InternalExpedient",
+        entityId: expedientId,
+        action: before.status !== after.status ? "STATUS_CHANGE" : "UPDATE",
+        createdById: user.id,
+        beforeJson: JSON.stringify(before),
+        afterJson: JSON.stringify(after),
+      },
+    });
   });
-  await writeAuditLog({
-    module: "DESPACHO",
-    entityType: "InternalExpedient",
-    entityId: expedientId,
-    action: before.status !== after.status ? "STATUS_CHANGE" : "UPDATE",
-    createdById: user.id,
-    before,
-    after,
+  revalidatePath(`/despacho/expedientes/${expedientId}`);
+  redirect(`/despacho/expedientes/${expedientId}`);
+}
+
+export async function addExpedientFollowUp(
+  expedientId: string,
+  formData: FormData,
+) {
+  const user = await requireUser();
+  assertAccess(canAccessExpedients(user));
+  const content = sentenceText(formData, "content");
+  if (content.length < 3) {
+    throw new Error("El seguimiento debe tener al menos tres caracteres.");
+  }
+
+  await prisma.$transaction(async (tx) => {
+    const expedient = await tx.internalExpedient.findUnique({
+      where: { id: expedientId },
+      select: { id: true },
+    });
+    if (!expedient) throw new Error("Expediente no encontrado.");
+
+    const observation = await tx.legajoObservation.create({
+      data: {
+        module: "DESPACHO",
+        entityType: "InternalExpedient",
+        entityId: expedientId,
+        content,
+        createdById: user.id,
+      },
+    });
+    const attachments = await consumeAttachmentUploads({
+      formData,
+      module: "DESPACHO",
+      entityType: "LegajoObservation",
+      entityId: observation.id,
+      scopeId: expedientId,
+      scopeEntityType: "InternalExpedient",
+      uploadedById: user.id,
+      required: true,
+      transaction: tx,
+    });
+
+    await tx.auditLog.create({
+      data: {
+        module: "DESPACHO",
+        entityType: "InternalExpedient",
+        entityId: expedientId,
+        action: "FOLLOW_UP",
+        createdById: user.id,
+        afterJson: JSON.stringify({ observation, attachments }),
+      },
+    });
   });
+
   revalidatePath(`/despacho/expedientes/${expedientId}`);
   redirect(`/despacho/expedientes/${expedientId}`);
 }

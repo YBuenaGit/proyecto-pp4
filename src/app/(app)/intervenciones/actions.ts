@@ -538,6 +538,7 @@ export async function addJuridicalObservation(interventionId: string, formData: 
     entityType: "LegajoObservation",
     entityId: observation.id,
     scopeId: interventionId,
+    scopeEntityType: "JuridicalIntervention",
     uploadedById: user.id,
     isPrivate: true,
   });

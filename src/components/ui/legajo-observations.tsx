@@ -185,6 +185,10 @@ function ObservationForm({
             module: uploadModule,
             entityType: "LegajoObservation",
             scopeId,
+            scopeEntityType:
+              uploadModule === "DESPACHO"
+                ? "DispatchRecord"
+                : "JuridicalIntervention",
           }}
         />
       </div>

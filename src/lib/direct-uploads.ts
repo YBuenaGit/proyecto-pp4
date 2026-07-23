@@ -1,6 +1,7 @@
 import "server-only";
 
 import { randomUUID } from "node:crypto";
+import type { Attachment, UploadSession } from "@prisma/client";
 import type { CurrentUser } from "./types";
 import {
   DIRECT_UPLOAD_PART_BYTES,
@@ -33,6 +34,40 @@ const AVATAR_MIME_TYPES = new Set([
   "image/webp",
 ]);
 
+type UploadSessionReader = {
+  uploadSession: {
+    findMany: (args: {
+      where: { id: { in: string[] } };
+    }) => Promise<UploadSession[]>;
+  };
+};
+
+type AttachmentUploadClient = UploadSessionReader & {
+  uploadSession: UploadSessionReader["uploadSession"] & {
+    update: (args: {
+      where: { id: string };
+      data: { status: string; consumedAt: Date };
+    }) => Promise<UploadSession>;
+  };
+  attachment: {
+    create: (args: {
+      data: {
+        module: string;
+        entityType: string;
+        entityId: string;
+        fileName: string;
+        originalName: string;
+        objectKey: string;
+        encryptionVersion: number;
+        mimeType: string;
+        size: number;
+        uploadedById: string;
+        isPrivate: boolean;
+      };
+    }) => Promise<Attachment>;
+  };
+};
+
 export class DirectUploadError extends Error {
   constructor(message: string, public readonly status = 400) {
     super(message);
@@ -41,7 +76,7 @@ export class DirectUploadError extends Error {
 }
 
 function assertIntentShape(intent: DirectUploadIntent) {
-  const valid =
+  const validDestination =
     (intent.module === "DESPACHO" && [
       "DispatchRecord",
       "DispatchFollowUp",
@@ -56,7 +91,35 @@ function assertIntentShape(intent: DirectUploadIntent) {
     (intent.module === "ANUNCIOS" && intent.entityType === "Announcement") ||
     (intent.module === "PERFIL" && intent.entityType === "UserAvatar") ||
     (intent.module === "RETENCIONES" && intent.entityType === "Retention");
-  if (!valid) throw new DirectUploadError("Destino de archivo invalido.");
+  const validScope =
+    intent.entityType === "LegajoObservation"
+      ? Boolean(
+          intent.scopeId &&
+            ((intent.module === "DESPACHO" &&
+              (intent.scopeEntityType === "DispatchRecord" ||
+                intent.scopeEntityType === "InternalExpedient")) ||
+              (intent.module === "JURIDICO" &&
+                intent.scopeEntityType === "JuridicalIntervention")),
+        )
+      : intent.scopeEntityType === undefined;
+  if (!validDestination || !validScope) {
+    throw new DirectUploadError("Destino de archivo invalido.");
+  }
+}
+
+function persistedScopeId(input: {
+  entityType: string;
+  scopeId?: string;
+  scopeEntityType?: DirectUploadIntent["scopeEntityType"];
+}) {
+  if (
+    input.entityType === "LegajoObservation" &&
+    input.scopeId &&
+    input.scopeEntityType
+  ) {
+    return `${input.scopeEntityType}:${input.scopeId}`;
+  }
+  return input.scopeId;
 }
 
 async function isDispatchDerivedOut(recordId: string) {
@@ -105,7 +168,10 @@ export async function assertDirectUploadAccess(user: CurrentUser, intent: Direct
   }
 
   if (intent.module === "DESPACHO") {
-    const isExpedient = intent.entityType === "InternalExpedient";
+    const isExpedient =
+      intent.entityType === "InternalExpedient" ||
+      (intent.entityType === "LegajoObservation" &&
+        intent.scopeEntityType === "InternalExpedient");
     if (!(isExpedient ? canAccessExpedients(user) : canAccessDispatch(user))) {
       throw new DirectUploadError("No autorizado.", 404);
     }
@@ -197,7 +263,7 @@ export async function initiateDirectUpload(input: {
         id,
         module: input.intent.module,
         entityType: input.intent.entityType,
-        scopeId: input.intent.scopeId || null,
+        scopeId: persistedScopeId(input.intent) || null,
         objectKey,
         multipartId,
         originalName,
@@ -359,12 +425,13 @@ async function readySessions(input: {
   module: string;
   entityType: string;
   scopeId?: string;
-}) {
+  scopeEntityType?: DirectUploadIntent["scopeEntityType"];
+}, db: UploadSessionReader = prisma) {
   if (input.ids.length > MAX_DIRECT_UPLOAD_FILES || new Set(input.ids).size !== input.ids.length) {
     throw new DirectUploadError(`Se permiten hasta ${MAX_DIRECT_UPLOAD_FILES} archivos por envio.`);
   }
   if (!input.ids.length) return [];
-  const sessions = await prisma.uploadSession.findMany({
+  const sessions = await db.uploadSession.findMany({
     where: { id: { in: input.ids } },
   });
   const byId = new Map(sessions.map((session) => [session.id, session]));
@@ -377,7 +444,7 @@ async function readySessions(input: {
       session.expiresAt <= new Date() ||
       session.module !== input.module ||
       session.entityType !== input.entityType ||
-      (session.scopeId ?? undefined) !== input.scopeId
+      (session.scopeId ?? undefined) !== persistedScopeId(input)
     ) {
       throw new DirectUploadError("Uno de los archivos no pertenece a este formulario.");
     }
@@ -391,8 +458,11 @@ export async function consumeAttachmentUploads(input: {
   entityType: string;
   entityId: string;
   scopeId?: string;
+  scopeEntityType?: DirectUploadIntent["scopeEntityType"];
   uploadedById: string;
   isPrivate?: boolean;
+  required?: boolean;
+  transaction?: AttachmentUploadClient;
 }) {
   const sessions = await readySessions({
     ids: uploadSessionIds(input.formData),
@@ -400,9 +470,18 @@ export async function consumeAttachmentUploads(input: {
     module: input.module,
     entityType: input.entityType,
     scopeId: input.scopeId,
-  });
-  if (!sessions.length) return [];
-  return prisma.$transaction(async (tx) => {
+    scopeEntityType: input.scopeEntityType,
+  }, input.transaction ?? prisma);
+  if (!sessions.length) {
+    if (input.required) {
+      throw new DirectUploadError("Adjunta al menos un archivo.");
+    }
+    return [];
+  }
+
+  const consume = async (
+    tx: AttachmentUploadClient,
+  ) => {
     const attachments = [];
     for (const session of sessions) {
       attachments.push(await tx.attachment.create({
@@ -426,7 +505,11 @@ export async function consumeAttachmentUploads(input: {
       });
     }
     return attachments;
-  });
+  };
+
+  return input.transaction
+    ? consume(input.transaction)
+    : prisma.$transaction((tx) => consume(tx));
 }
 
 export async function consumeRetentionUploads(input: {

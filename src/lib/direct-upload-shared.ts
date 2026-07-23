@@ -27,6 +27,10 @@ export type DirectUploadIntent = {
     | "UserAvatar"
     | "Retention";
   scopeId?: string;
+  scopeEntityType?:
+    | "DispatchRecord"
+    | "InternalExpedient"
+    | "JuridicalIntervention";
 };
 
 export type DirectUploadSessionResponse = {

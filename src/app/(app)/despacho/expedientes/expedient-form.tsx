@@ -73,7 +73,7 @@ export function ExpedientForm({
             ))}
           </select>
         </FormField>
-        <FormField label="Observacion" className="md:col-span-2 xl:col-span-3">
+        <FormField label="Observación inicial" className="md:col-span-2 xl:col-span-3">
           <textarea name="observation" defaultValue={record?.observation ?? ""} className={textareaClass} />
         </FormField>
         {!record ? (

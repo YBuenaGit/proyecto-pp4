@@ -318,3 +318,154 @@ test("conserva multiples observaciones con autor, fecha y orden", async () => {
     if (userId) await prisma.user.deleteMany({ where: { id: userId } });
   }
 });
+
+test("registra seguimientos de expediente con archivos y revierte altas incompletas", async () => {
+  const suffix = randomUUID();
+  const username = `integration-expedient-follow-up-${suffix}`;
+  const internalNumber = `IT-EXP-${suffix.slice(0, 12).toUpperCase()}`;
+  const objectKey = `integration/${suffix}/respuesta.pdf`;
+  let userId: string | undefined;
+  let expedientId: string | undefined;
+  let observationId: string | undefined;
+
+  try {
+    const user = await prisma.user.create({
+      data: {
+        name: "Prueba Seguimiento Expediente",
+        username,
+        passwordHash: "integration-test-only",
+        role: "despacho",
+      },
+    });
+    userId = user.id;
+
+    const expedient = await prisma.internalExpedient.create({
+      data: {
+        internalNumber,
+        expedienteNumber: `EXP-${suffix.slice(0, 8)}`,
+        category: "ADMINISTRATIVO",
+        area: "SECRETARIA",
+        description: "Expediente temporal para comprobar seguimientos.",
+        createdById: user.id,
+      },
+    });
+    expedientId = expedient.id;
+
+    const saved = await prisma.$transaction(async (tx) => {
+      const observation = await tx.legajoObservation.create({
+        data: {
+          module: "DESPACHO",
+          entityType: "InternalExpedient",
+          entityId: expedient.id,
+          content: "Respuesta recibida con documentación.",
+          createdById: user.id,
+        },
+      });
+      const attachment = await tx.attachment.create({
+        data: {
+          module: "DESPACHO",
+          entityType: "LegajoObservation",
+          entityId: observation.id,
+          fileName: "respuesta.pdf",
+          originalName: "Respuesta.pdf",
+          objectKey,
+          encryptionVersion: 0,
+          mimeType: "application/pdf",
+          size: 512,
+          uploadedById: user.id,
+        },
+      });
+      const audit = await tx.auditLog.create({
+        data: {
+          module: "DESPACHO",
+          entityType: "InternalExpedient",
+          entityId: expedient.id,
+          action: "FOLLOW_UP",
+          createdById: user.id,
+          afterJson: JSON.stringify({ observation, attachments: [attachment] }),
+        },
+      });
+      return { observation, attachment, audit };
+    });
+    observationId = saved.observation.id;
+
+    assert.equal(saved.attachment.entityId, saved.observation.id);
+    assert.equal(saved.audit.action, "FOLLOW_UP");
+    assert.equal(
+      await prisma.legajoObservation.count({
+        where: {
+          entityType: "InternalExpedient",
+          entityId: expedient.id,
+        },
+      }),
+      1,
+    );
+
+    await assert.rejects(
+      prisma.$transaction(async (tx) => {
+        await tx.legajoObservation.create({
+          data: {
+            module: "DESPACHO",
+            entityType: "InternalExpedient",
+            entityId: expedient.id,
+            content: "Este seguimiento debe revertirse.",
+            createdById: user.id,
+          },
+        });
+        throw new Error("Archivo requerido inválido.");
+      }),
+      /Archivo requerido inválido/,
+    );
+
+    assert.equal(
+      await prisma.legajoObservation.count({
+        where: {
+          entityType: "InternalExpedient",
+          entityId: expedient.id,
+          content: "Este seguimiento debe revertirse.",
+        },
+      }),
+      0,
+    );
+  } finally {
+    if (expedientId) {
+      const observations = await prisma.legajoObservation.findMany({
+        where: {
+          entityType: "InternalExpedient",
+          entityId: expedientId,
+        },
+        select: { id: true },
+      });
+      const observationIds = observations.map((observation) => observation.id);
+      if (observationId && !observationIds.includes(observationId)) {
+        observationIds.push(observationId);
+      }
+      if (observationIds.length) {
+        await prisma.attachment.deleteMany({
+          where: {
+            entityType: "LegajoObservation",
+            entityId: { in: observationIds },
+          },
+        });
+      }
+      await prisma.auditLog.deleteMany({
+        where: {
+          entityType: "InternalExpedient",
+          entityId: expedientId,
+        },
+      });
+      await prisma.legajoObservation.deleteMany({
+        where: {
+          entityType: "InternalExpedient",
+          entityId: expedientId,
+        },
+      });
+      await prisma.internalExpedient.deleteMany({
+        where: { id: expedientId },
+      });
+    } else {
+      await prisma.attachment.deleteMany({ where: { objectKey } });
+    }
+    if (userId) await prisma.user.deleteMany({ where: { id: userId } });
+  }
+});
