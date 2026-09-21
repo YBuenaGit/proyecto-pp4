@@ -40,6 +40,8 @@ export type AppointmentWithRelations = {
   createdBy: AgendaUserOption | null;
   assignedUser: AgendaUserOption | null;
   assignedLawyer: AgendaUserOption | null;
+  lastEditedBy: AgendaUserOption | null;
+  lastEditedAt: Date | string | null;
 };
 
 export type AgendaFilters = {
@@ -85,6 +87,8 @@ function rowToAppointment(record: AppointmentRecord): AppointmentWithRelations {
     createdBy: record.createdBy,
     assignedUser: record.assignedUser,
     assignedLawyer: record.assignedLawyer,
+    lastEditedBy: null,
+    lastEditedAt: null,
   };
 }
 
@@ -118,7 +122,37 @@ export async function getVisibleAppointments(input: {
     orderBy: [{ date: "asc" }, { startTime: "asc" }],
   });
 
-  return rows.map(rowToAppointment).filter((appointment) => canViewAppointment(input.user, appointment));
+  const appointments = rows.map(rowToAppointment).filter((appointment) => canViewAppointment(input.user, appointment));
+  if (!appointments.length) return appointments;
+
+  const editLogs = await prisma.auditLog.findMany({
+    where: {
+      module: "AGENDA",
+      entityType: "Appointment",
+      action: "UPDATE",
+      entityId: { in: appointments.map((appointment) => appointment.id) },
+    },
+    select: {
+      entityId: true,
+      createdAt: true,
+      createdBy: { select: { id: true, name: true, role: true } },
+    },
+    orderBy: { createdAt: "desc" },
+  });
+
+  const latestEditByAppointment = new Map<string, (typeof editLogs)[number]>();
+  for (const log of editLogs) {
+    if (!latestEditByAppointment.has(log.entityId)) latestEditByAppointment.set(log.entityId, log);
+  }
+
+  return appointments.map((appointment) => {
+    const latestEdit = latestEditByAppointment.get(appointment.id);
+    return {
+      ...appointment,
+      lastEditedBy: latestEdit?.createdBy ?? null,
+      lastEditedAt: latestEdit?.createdAt ?? null,
+    };
+  });
 }
 
 export async function getAppointmentById(id: string) {

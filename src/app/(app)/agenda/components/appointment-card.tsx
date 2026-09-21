@@ -15,7 +15,7 @@ import {
 import { AppModal } from "@/components/ui/app-modal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/components/ui/cn";
-import { labelFromValue } from "@/lib/format";
+import { formatDateTime, labelFromValue } from "@/lib/format";
 import type { CurrentUser } from "@/lib/types";
 import {
   APPOINTMENT_TYPE_LABELS,
@@ -109,6 +109,20 @@ export function AppointmentCard({
 
       {appointment.notes ? (
         <p className="mt-2 truncate rounded-lg bg-[#f3f8fb] px-2.5 py-1.5 text-xs leading-5 text-[#607589] ring-1 ring-[#e6eef4]">{appointment.notes}</p>
+      ) : null}
+
+      {appointment.calendarScope !== "personal" || appointment.lastEditedBy ? (
+        <div className="mt-2 space-y-1 text-[11px] font-medium text-[#607589]">
+          {appointment.calendarScope !== "personal" && appointment.createdBy ? (
+            <p>Creada por {appointment.createdBy.name} · {formatDateTime(appointment.createdAt)}</p>
+          ) : null}
+          {appointment.lastEditedBy ? (
+            <p>
+              Editada por {appointment.lastEditedBy.name}
+              {appointment.lastEditedAt ? ` · ${formatDateTime(appointment.lastEditedAt)}` : null}
+            </p>
+          ) : null}
+        </div>
       ) : null}
 
       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-[#e6eef4] pt-2.5">

@@ -95,7 +95,7 @@ export function canEditAppointment(user: CurrentUser | null, appointment: Appoin
   if (!user || !canViewAppointment(user, appointment)) return false;
   if (isAgendaManager(user)) return true;
   if (appointment.calendarScope === "personal") return appointment.ownerUserId === user.id;
-  return appointment.createdByUserId === user.id && canCreateAppointment(user, appointment.calendarScope as CalendarScope);
+  return isCalendarScope(appointment.calendarScope) && canCreateAppointment(user, appointment.calendarScope);
 }
 
 export function canDeleteAppointment(user: CurrentUser | null, appointment: AppointmentPermissionShape) {

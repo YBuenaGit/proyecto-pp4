@@ -18,6 +18,15 @@ const juridicalUser = {
   active: true,
 };
 
+const dispatchUser = {
+  ...juridicalUser,
+  id: "despacho-1",
+  name: "Usuario Despacho",
+  username: "despacho1",
+  email: "despacho@example.test",
+  role: "despacho",
+};
+
 const executiveUser = {
   id: "directivo-1",
   name: "Andrea Puig",
@@ -53,6 +62,52 @@ test("limita agenda personal al propietario y habilita agenda juridica", () => {
   assert.equal(canViewAppointment(juridicalUser, juridicalAppointment), true);
   assert.equal(canDeleteAppointment(juridicalUser, juridicalAppointment), true);
   assert.deepEqual(getAllowedAgendaViewScopes(juridicalUser), ["personal", "lawyers"]);
+});
+
+test("juridico puede editar y eliminar citas creadas por otro usuario en su agenda grupal", () => {
+  const appointment = {
+    calendarScope: "lawyers",
+    ownerUserId: null,
+    createdByUserId: "otro-juridico",
+    assignedLawyerId: "otro-juridico",
+    assignedArea: "lawyers",
+  };
+
+  assert.equal(canViewAppointment(juridicalUser, appointment), true);
+  assert.equal(canEditAppointment(juridicalUser, appointment), true);
+  assert.equal(canDeleteAppointment(juridicalUser, appointment), true);
+});
+
+test("despacho puede editar y eliminar citas creadas por otro usuario en su agenda grupal", () => {
+  const appointment = {
+    calendarScope: "dispatch",
+    ownerUserId: null,
+    createdByUserId: "otro-despacho",
+    assignedUserId: "otro-despacho",
+    assignedArea: "dispatch",
+  };
+
+  assert.equal(canViewAppointment(dispatchUser, appointment), true);
+  assert.equal(canEditAppointment(dispatchUser, appointment), true);
+  assert.equal(canDeleteAppointment(dispatchUser, appointment), true);
+});
+
+test("los roles operativos no pueden modificar agendas ajenas", () => {
+  const juridicalAppointment = {
+    calendarScope: "lawyers",
+    ownerUserId: null,
+    createdByUserId: juridicalUser.id,
+    assignedArea: "lawyers",
+  };
+  const otherPersonalAppointment = {
+    calendarScope: "personal",
+    ownerUserId: "otra-persona",
+    createdByUserId: "otra-persona",
+  };
+
+  assert.equal(canEditAppointment(dispatchUser, juridicalAppointment), false);
+  assert.equal(canDeleteAppointment(dispatchUser, juridicalAppointment), false);
+  assert.equal(canEditAppointment(juridicalUser, otherPersonalAppointment), false);
 });
 
 test("directivo incorpora una agenda grupal exclusiva", () => {
@@ -119,8 +174,6 @@ test("la agenda de directivos queda oculta para los demas roles", () => {
 });
 
 test("cada rol recibe notificaciones de su propia agenda grupal", () => {
-  const dispatchUser = { ...juridicalUser, id: "despacho-1", role: "despacho" };
-
   assert.deepEqual(getGroupCalendarScopes(juridicalUser), ["lawyers"]);
   assert.deepEqual(getGroupCalendarScopes(dispatchUser), ["dispatch"]);
   assert.deepEqual(getGroupCalendarScopes(executiveUser), ["directors"]);
