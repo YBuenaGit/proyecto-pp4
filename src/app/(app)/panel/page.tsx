@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Table, Td } from "@/components/ui/table";
 import { requireUser } from "@/lib/auth";
+import { primaryComplainantDisplay } from "@/lib/complainant-display";
 import {
   DISPATCH_CATEGORY_LABELS,
   EXPEDIENT_CATEGORY_LABELS,
@@ -17,7 +18,6 @@ import { formatDateTime, labelFromValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { canAccessDispatch, canAccessExpedients, canAccessJuridical, isAdmin, isDirectivo } from "@/lib/rbac";
 import { pagination, param } from "@/lib/search";
-import { personDisplayName } from "@/lib/text";
 import type { SearchParams } from "@/lib/types";
 
 const pendingDispatchStatuses = ["RECIBIDO", "EN_ANALISIS", "EN_GESTION"];
@@ -128,14 +128,6 @@ function truncate(value: string | null | undefined, max = 86) {
   return value.length > max ? `${value.slice(0, max - 3)}...` : value;
 }
 
-function requesterFrom(record: {
-  nameSnapshot?: string | null;
-  linkedPersons?: Array<{ firstName: string | null; apellidoApodoManual: string | null }>;
-}) {
-  const linkedPerson = record.linkedPersons?.[0];
-  return personDisplayName(linkedPerson?.apellidoApodoManual, linkedPerson?.firstName) || record.nameSnapshot || "Sin datos";
-}
-
 function categoryLabel(labels: Record<string, string>, value: string | null | undefined) {
   if (!value) return "Sin datos";
   return labels[value] ?? labelFromValue(value);
@@ -239,7 +231,7 @@ async function getTodayNews({
       where,
       include: {
         createdBy: { select: { name: true } },
-        linkedPersons: { orderBy: { sortOrder: "asc" }, take: 1 },
+        complainants: { orderBy: { sortOrder: "asc" }, take: 1 },
       },
       orderBy: { createdAt: "desc" },
       skip,
@@ -255,7 +247,7 @@ async function getTodayNews({
       href: `/despacho/${record.id}`,
       time: formatDateTime(record.attendedAt),
       type: categoryLabel(DISPATCH_CATEGORY_LABELS, record.category),
-      detail: requesterFrom(record),
+      detail: primaryComplainantDisplay(record).name,
       owner: reportedBy(record.createdBy.name),
       status: record.status,
     })),
@@ -282,7 +274,7 @@ async function getTodayJuridical({
       where,
       include: {
         createdBy: { select: { name: true } },
-        linkedPersons: { orderBy: { sortOrder: "asc" }, take: 1 },
+        complainants: { orderBy: { sortOrder: "asc" }, take: 1 },
       },
       orderBy: { createdAt: "desc" },
       skip,
@@ -298,7 +290,7 @@ async function getTodayJuridical({
       href: `/intervenciones/${intervention.id}`,
       time: formatDateTime(intervention.attendedAt),
       type: categoryLabel(JURIDICAL_TYPE_LABELS, intervention.type),
-      detail: requesterFrom(intervention),
+      detail: primaryComplainantDisplay(intervention).name,
       owner: reportedBy(intervention.createdBy.name),
       status: intervention.status,
     })),
@@ -384,7 +376,7 @@ async function getRowsForPanel({
         where,
         include: {
           createdBy: { select: { name: true } },
-          linkedPersons: { orderBy: { sortOrder: "asc" }, take: 1 },
+          complainants: { orderBy: { sortOrder: "asc" }, take: 1 },
         },
         orderBy: { createdAt: "desc" },
         skip,
@@ -401,7 +393,7 @@ async function getRowsForPanel({
         href: `/despacho/${record.id}`,
         dateTime: dateValue(record.createdAt),
         reportedBy: reportedBy(record.createdBy.name),
-        requester: requesterFrom(record),
+        requester: primaryComplainantDisplay(record).name,
         category: categoryLabel(DISPATCH_CATEGORY_LABELS, record.category),
         priority: record.priority,
         status: record.status,
@@ -416,7 +408,7 @@ async function getRowsForPanel({
         where,
         include: {
           createdBy: { select: { name: true } },
-          linkedPersons: { orderBy: { sortOrder: "asc" }, take: 1 },
+          complainants: { orderBy: { sortOrder: "asc" }, take: 1 },
         },
         orderBy: { createdAt: "desc" },
         skip,
@@ -433,7 +425,7 @@ async function getRowsForPanel({
         href: `/intervenciones/${intervention.id}`,
         dateTime: dateValue(intervention.createdAt),
         reportedBy: reportedBy(intervention.createdBy.name),
-        requester: requesterFrom(intervention),
+        requester: primaryComplainantDisplay(intervention).name,
         category: categoryLabel(JURIDICAL_TYPE_LABELS, intervention.type),
         priority: intervention.urgency,
         status: intervention.status,
@@ -448,7 +440,7 @@ async function getRowsForPanel({
         where,
         include: {
           createdBy: { select: { name: true } },
-          linkedPersons: { orderBy: { sortOrder: "asc" }, take: 1 },
+          complainants: { orderBy: { sortOrder: "asc" }, take: 1 },
         },
         orderBy: { createdAt: "desc" },
         skip,
@@ -465,7 +457,7 @@ async function getRowsForPanel({
         href: `/intervenciones/${intervention.id}`,
         dateTime: dateValue(intervention.createdAt),
         reportedBy: reportedBy(intervention.createdBy.name),
-        requester: requesterFrom(intervention),
+        requester: primaryComplainantDisplay(intervention).name,
         category: categoryLabel(JURIDICAL_TYPE_LABELS, intervention.type),
         priority: intervention.urgency,
         status: intervention.status,
@@ -823,7 +815,7 @@ function DaySummaryTable({
         page={page}
         pageSize={pageSize}
         showPagination
-        headers={["Hora", "Tipo", "Detalle", "Responsable", "Estado"]}
+        headers={["Hora", "Tipo", panel === "news" || panel === "juridicalToday" ? "Personas" : "Detalle", "Responsable", "Estado"]}
         empty={!result.rows.length}
       >
         {result.rows.map((row) => (
@@ -861,7 +853,7 @@ function DashboardTable({
   const isReferralsPanel = panel === "referrals";
   const headers = isReferralsPanel
     ? ["Legajo", "Derivada / Por", "Resumen", "Origen / Destino", "Estado"]
-    : ["Numero", "Carga / Reportado por", "Solicitante", "Categoria", "Prioridad / Estado"];
+    : ["Numero", "Carga / Reportado por", panel === "expedients" ? "Descripción" : "Solicitante", "Categoria", "Prioridad / Estado"];
 
   return (
     <div className="mt-4">

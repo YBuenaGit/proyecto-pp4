@@ -13,12 +13,13 @@ import {
   PRIORITIES,
 } from "@/lib/constants";
 import { requireUser } from "@/lib/auth";
+import { primaryComplainantDisplay } from "@/lib/complainant-display";
 import { formatDateTime, labelFromValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessDispatch } from "@/lib/rbac";
 import { dateRangeWhere, pagination, param } from "@/lib/search";
 import type { SearchParams } from "@/lib/types";
-import { personDisplayName, sortByLabel } from "@/lib/text";
+import { sortByLabel } from "@/lib/text";
 import { createDispatchRecord } from "./actions";
 import { DispatchForm } from "./dispatch-form";
 
@@ -92,7 +93,7 @@ export default async function DispatchListPage({
         person: true,
         createdBy: true,
         originReferrals: true,
-        linkedPersons: { orderBy: { sortOrder: "asc" } },
+        complainants: { orderBy: { sortOrder: "asc" }, take: 1 },
       },
       orderBy: { attendedAt: "desc" },
       skip,
@@ -197,11 +198,9 @@ export default async function DispatchListPage({
             </Td>
             <Td>
               <div className="font-medium text-[#212529]">
-                {personDisplayName(record.linkedPersons[0]?.apellidoApodoManual, record.linkedPersons[0]?.firstName) ||
-                  record.nameSnapshot ||
-                  "Sin identificar"}
+                {primaryComplainantDisplay(record).name}
               </div>
-              <div className="text-xs text-[#212529]">{record.dniSnapshot ?? "Sin DNI"}</div>
+              <div className="text-xs text-[#212529]">{primaryComplainantDisplay(record).dni ?? "Sin DNI"}</div>
             </Td>
             <Td>{categories.find((item) => item.value === record.category)?.label ?? labelFromValue(record.category)}</Td>
             <Td>

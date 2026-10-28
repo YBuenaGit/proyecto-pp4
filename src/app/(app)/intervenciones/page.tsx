@@ -13,12 +13,12 @@ import {
   PRIORITIES,
 } from "@/lib/constants";
 import { requireUser } from "@/lib/auth";
+import { primaryComplainantDisplay } from "@/lib/complainant-display";
 import { formatDateTime, labelFromValue } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
 import { assertAccess, canAccessJuridical } from "@/lib/rbac";
 import { dateRangeWhere, pagination, param } from "@/lib/search";
 import type { SearchParams } from "@/lib/types";
-import { personDisplayName } from "@/lib/text";
 import { createJuridicalIntervention } from "./actions";
 import { InterventionForm } from "./intervention-form";
 
@@ -91,7 +91,7 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
         person: true,
         createdBy: true,
         destinationReferrals: true,
-        linkedPersons: { orderBy: { sortOrder: "asc" }, take: 1 },
+        complainants: { orderBy: { sortOrder: "asc" }, take: 1 },
       },
       orderBy: { attendedAt: "desc" },
       skip,
@@ -168,9 +168,9 @@ export default async function InterventionsListPage({ searchParams }: { searchPa
             </Td>
             <Td>
               <div className="font-medium text-[#212529]">
-                {personDisplayName(intervention.linkedPersons[0]?.apellidoApodoManual, intervention.linkedPersons[0]?.firstName) || intervention.nameSnapshot || "Sin identificar"}
+                {primaryComplainantDisplay(intervention).name}
               </div>
-              <div className="text-xs text-[#212529]">{intervention.dniSnapshot ?? "Sin DNI"}</div>
+              <div className="text-xs text-[#212529]">{primaryComplainantDisplay(intervention).dni ?? "Sin DNI"}</div>
             </Td>
             <Td>{types.find((item) => item.value === intervention.type)?.label ?? labelFromValue(intervention.type)}</Td>
             <Td>
