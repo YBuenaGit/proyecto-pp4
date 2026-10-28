@@ -1,5 +1,9 @@
+"use client";
+
+import { useId, useState } from "react";
 import { CalendarPlus, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/components/ui/cn";
 import { SubmitButton } from "@/components/ui/submit-button";
 import { FormField, FormGrid, inputClass, textareaClass } from "@/components/ui/form-controls";
 import {
@@ -29,27 +33,50 @@ export function AppointmentForm({
   submitLabel,
   modal = false,
 }: AppointmentFormProps) {
+  const [scopeError, setScopeError] = useState(false);
+  const scopeErrorId = useId();
   const scope = isCalendarScope(appointment?.calendarScope)
     ? appointment.calendarScope
-    : allowedScopes.includes("personal")
-      ? "personal"
-      : allowedScopes[0];
+    : "";
   const sortedScopes = sortByLabel(allowedScopes, (item) => CALENDAR_SCOPE_LABELS[item]);
 
   return (
     <form action={action} className="space-y-4">
       <FormGrid className="xl:grid-cols-4">
-        <FormField label="Titulo" className="xl:col-span-2">
-          <input name="title" className={inputClass} defaultValue={appointment?.title ?? ""} required />
-        </FormField>
         <FormField label="Agenda destino" className="rounded-sm border-2 border-[#0667b0] bg-[#e8f2ff] p-2 xl:col-span-2">
-          <select name="calendarScope" className={`${inputClass} border-[#0667b0] font-semibold text-[#064f87]`} defaultValue={scope} required>
+          <select
+            name="calendarScope"
+            className={cn(
+              inputClass,
+              "font-semibold text-[#064f87]",
+              scopeError ? "border-[#dc3545] focus:border-[#dc3545]" : "border-[#0667b0]",
+            )}
+            defaultValue={scope}
+            required
+            aria-invalid={scopeError || undefined}
+            aria-describedby={scopeError ? scopeErrorId : undefined}
+            onInvalid={(event) => {
+              event.preventDefault();
+              setScopeError(true);
+              event.currentTarget.focus();
+            }}
+            onChange={() => setScopeError(false)}
+          >
+            <option value="" disabled>Seleccione destino</option>
             {sortedScopes.map((item) => (
               <option key={item} value={item}>
                 {CALENDAR_SCOPE_LABELS[item]}
               </option>
             ))}
           </select>
+          {scopeError ? (
+            <p id={scopeErrorId} role="alert" className="mt-1 text-xs font-medium text-[#dc3545]">
+              Seleccione una agenda de destino.
+            </p>
+          ) : null}
+        </FormField>
+        <FormField label="Titulo" className="xl:col-span-2">
+          <input name="title" className={inputClass} defaultValue={appointment?.title ?? ""} required />
         </FormField>
         <FormField label="Fecha">
           <input name="date" type="date" className={inputClass} defaultValue={appointment?.date ?? defaultDate} required />
